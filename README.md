@@ -18,7 +18,7 @@ In addition there is support for demonstrating the app, including a load generat
 A range of tutorials will be developed and added to the sample over time that explore additional SaaS patterns.
 
 ## License
-Microsoft Wingtip Tickets Azure Data Platform demo and hands-on-lab is licensed under the MIT license. See the [LICENSE](https://github.com/Microsoft/WingtipSaaS/blob/master/license) file for more details.
+Microsoft Wingtip SaaS sample application and tutorials are licensed under the MIT license. See the [LICENSE](https://github.com/Microsoft/WingtipSaaS/blob/master/license) file for more details.
 
 # Contributing
 
