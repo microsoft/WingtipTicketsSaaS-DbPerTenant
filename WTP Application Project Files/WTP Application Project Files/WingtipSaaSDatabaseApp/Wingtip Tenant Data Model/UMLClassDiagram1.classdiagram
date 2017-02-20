@@ -1,0 +1,507 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<logicalClassDesignerModel xmlns:dm0="http://schemas.microsoft.com/VisualStudio/2008/DslTools/Core" xmlns:dm1="http://schemas.microsoft.com/dsltools/Kernel" xmlns:dm2="http://schemas.microsoft.com/dsltools/Component" xmlns:dm3="http://schemas.microsoft.com/dsltools/Activity" xmlns:dm4="http://schemas.microsoft.com/dsltools/UseCase" xmlns:dm5="http://schemas.microsoft.com/dsltools/Interaction" xmlns:dm6="http://schemas.microsoft.com/dsltools/UmlModelLibrary" xmlns:dm7="http://schemas.microsoft.com/dsltools/UmlDiagrams" xmlns:dm8="http://schemas.microsoft.com/dsltools/ModelStore" dslVersion="1.0.0.0" Id="02d65703-2538-493b-b12b-4fd9ff150525" name="Wingtip SaaS Data Model" linkedPackageId="6589e924-a277-47f9-8328-741251599d0a" xmlns="http://schemas.microsoft.com/dsltools/LogicalClassDesigner">
+  <ownedCommentsInternal>
+    <comment Id="f2126ad4-20f4-4eb0-bb27-e071659ecdb2">
+      <elementDefinition Id="f65a0508-909e-477f-9db6-9b9f13bd8725" />
+      <body>Reference Data</body>
+      <annotatedElements>
+        <classMoniker Id="57ae3fe5-f6fc-4c17-9dae-354f8f39e5f6" LastKnownName="VenueType" />
+        <classMoniker Id="b91fbd3b-4789-4d2b-9789-830754fc9b24" LastKnownName="Country" />
+      </annotatedElements>
+    </comment>
+  </ownedCommentsInternal>
+  <packagedElements>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="17368707-98be-4ac4-8cc9-e1b80754a3b4" name="Event" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="999b02f6-fd96-47b7-93e1-0db4e06d171f" />
+        <targetEnds>
+          <association Id="1d63e176-2404-4c6e-b291-257de5d7200b" isDerived="false" sourceEndRoleName="Event" targetEndRoleName="TicketLevels" isLeaf="false" isAbstract="false">
+            <classMoniker Id="4bfacfb3-8b20-4f8e-970b-08e73f0fcd4f" LastKnownName="EventSection" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="870e67cd-717b-46bd-9ff4-17321ed4ded3" name="Event" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="Composite" isComposite="false" isNavigableOwned="false">
+                  <elementDefinition Id="5e47bec7-5acb-44c7-9c87-e005520d63b0" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="441c97f1-0820-404a-a4b6-0ee848f6ef24" name="TicketLevels" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="true">
+                  <lowerValueInternal>
+                    <literalString Id="6267276f-6feb-4071-bcbf-76e8df1aae41" name="Lower" value="*">
+                      <elementDefinition Id="a600b612-2e33-4236-99d8-5c0c825399f4" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="f1e5d3bc-be12-46d5-8ed4-c8425a134526" name="Upper" value="*">
+                      <elementDefinition Id="f8097bdf-696e-4fcb-9d00-a253c15dec48" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="3a47e500-b0aa-4113-8dd5-f9e327210ee7" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="5e21c380-7b41-49e2-a21f-cb559c8826fc" />
+          </association>
+        </targetEnds>
+        <ownedAttributesInternal>
+          <property Id="4fda4df5-4a8e-43b2-8a5a-6787d4bbb067" name="Date" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="259b042b-d6db-40b2-a75d-ab4ba1d75eeb" />
+          </property>
+          <property Id="3c4f0656-ea04-45a0-a1af-9884499e468f" name="EventName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="c5b5339a-f38f-4055-9180-2d16b25e93d6" />
+          </property>
+          <property Id="e086d757-c007-4138-b8f4-7e069828987a" name="Subtitle" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="50446f10-6947-4f10-b114-1b0484e3dabf" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="1bed46f9-aa9f-4f9e-bc1f-486a32ca8c01" name="Customer" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="bb8acf93-aa00-4b47-a87f-f28ab92c7611" />
+        <targetEnds>
+          <association Id="483c3e55-d6d2-45b2-a8d0-fa1acf0eea76" isDerived="false" sourceEndRoleName="Customer" targetEndRoleName="Country" isLeaf="false" isAbstract="false">
+            <classMoniker Id="b91fbd3b-4789-4d2b-9789-830754fc9b24" LastKnownName="Country" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="96b8fdde-9d91-4a9f-8e0e-cfc641b23821" name="Customer" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false" isNavigableOwned="false">
+                  <lowerValueInternal>
+                    <literalString Id="6bd35642-20e0-4cdd-8010-8b9a6a040407" name="Lower" value="*">
+                      <elementDefinition Id="18f1fc49-03b7-4855-a70a-7c2d1af148b4" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="a6bc7603-0f16-4c08-9412-3354c2bd1484" name="Upper" value="*">
+                      <elementDefinition Id="79c7e1dc-3340-453b-896a-502574a6122f" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="10b95ee0-ea73-4f42-9669-5d3565881ab3" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="aeb13763-74fc-41a5-9f91-14c423aa7ebd" name="Country" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+                  <elementDefinition Id="4ecd339f-9c32-4285-a46f-e17c689cba53" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="132a174e-3788-419b-9e0b-3ab21e4703c4" />
+          </association>
+        </targetEnds>
+        <ownedAttributesInternal>
+          <property Id="be3fe996-b315-4866-860f-b3ae0db7e5df" name="FirstName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="eee0c9a6-9725-4eb5-9afd-726c8df4ddbf" />
+          </property>
+          <property Id="64f78be5-662b-48ac-bf04-96a7b7fea802" name="LastName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="315e574a-ffc8-4ecf-9dc5-aee02927958e" />
+          </property>
+          <property Id="e1091e01-6538-49b1-9cf0-3b2b22cc2fa3" name="Email" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="77c65f8a-33a0-43bc-b224-dc989c66621b" />
+          </property>
+          <property Id="173f9cbe-2e05-44f4-8c0e-58ee1e20508a" name="Password" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="6ba8611c-b853-4686-853d-722d1922eaaa" />
+          </property>
+          <property Id="c6aadbd6-1b83-4781-ac86-87fa9ebd6b1e" name="PostalCode" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="bd536a12-b44f-48e8-b108-6dd52a0a9790" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="57ae3fe5-f6fc-4c17-9dae-354f8f39e5f6" name="VenueType" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="e1f8d4ea-3876-46f3-a52c-dfc69524d102" />
+        <ownedAttributesInternal>
+          <property Id="65f2d6eb-9394-4b33-85f7-8153d89b664b" name="EventTypeNamePlural" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="d661e271-ba42-4da5-93bb-238cc047b9dc" />
+          </property>
+          <property Id="4e8e888c-63a5-43c9-93b1-c660eedd2064" name="EventTypeNamePlural" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="aaea4e8e-d9a1-4adc-a5e3-cffe8c22b2f3" />
+          </property>
+          <property Id="eeec73b8-add5-483f-b241-9a2213c9a3e9" name="VenueTypeName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="05886582-64e1-4f33-9d65-49f798cd71d9" />
+          </property>
+          <property Id="b6704e7a-a855-4037-bbc3-19ce3f22f4e1" name="Language" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="df409b20-5300-4f7e-9890-0cb1fb4a51cf" />
+          </property>
+          <property Id="4bc393fa-7a03-40bb-8e5b-325c5c351b9c" name="VenueType" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="69235b9f-73c5-4afc-a2a5-5f113df6eec0" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="0d86c077-45e1-43e6-b558-78ca0108bcaf" name="Venue" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="673be2b0-7e84-44a2-82ac-48f58e96b3dc" />
+        <targetEnds>
+          <association Id="563d704e-5439-4cc6-a4e2-1128aa3261d1" isDerived="false" sourceEndRoleName="Venue" targetEndRoleName="SeatSections" isLeaf="false" isAbstract="false">
+            <classMoniker Id="dfd84dbf-f715-41a3-a7ba-d23b4633e3dd" LastKnownName="Section" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="0947dcef-4954-4b94-8014-3ebe7f1bd225" name="Venue" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="Composite" isComposite="false" isNavigableOwned="false">
+                  <elementDefinition Id="d9f705b1-926e-4a3d-b207-4aa92e3d6feb" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="5f183f8f-6781-4960-8d2f-56d77d4fb111" name="SeatSections" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="true">
+                  <lowerValueInternal>
+                    <literalString Id="dae6167e-55a9-441e-b723-1f434fa82f57" name="Lower" value="*">
+                      <elementDefinition Id="ab6f385d-f6c4-421f-8502-3cac30dc588e" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="3d17d008-0117-412f-9e89-35a3423f26eb" name="Upper" value="*">
+                      <elementDefinition Id="b3de111f-1b91-42c8-9929-f21af3c7a210" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="dfb65d4f-9370-4372-8e40-5811a5f8c8c9" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="14ebcbdb-86dc-493b-a82d-248a8838bc55" />
+          </association>
+          <association Id="11841da9-9f60-4063-91c0-13fa41586b72" isDerived="false" sourceEndRoleName="Venue" targetEndRoleName="Event" isLeaf="false" isAbstract="false">
+            <classMoniker Id="17368707-98be-4ac4-8cc9-e1b80754a3b4" LastKnownName="Event" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="26d9df62-10cc-4f43-a969-8bd5bb6a09af" name="Venue" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="Composite" isComposite="false" isNavigableOwned="false">
+                  <elementDefinition Id="eb3af8f0-4c65-4f55-bcc2-162a69216154" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="8b68aa9d-99ac-4b1f-9f92-96d9ba1a3382" name="Event" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="true">
+                  <lowerValueInternal>
+                    <literalString Id="36aae21e-1465-4290-b8ba-f934d6c9345a" name="Lower" value="*">
+                      <elementDefinition Id="8cbef9bf-37a9-4346-a374-1fb922348557" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="1a2cdedf-95df-4abe-9181-b1e766a1335f" name="Upper" value="*">
+                      <elementDefinition Id="eccb8fdc-ac89-4fb0-b521-c5933a0cab46" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="26652493-3b19-49cb-8459-e6d80401b7e2" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="02e66b2a-e822-47cb-95cc-bcc5b5fa59a4" />
+          </association>
+          <association Id="9b82471e-efa0-4011-88aa-41f3667a51f4" isDerived="false" sourceEndRoleName="Venue" targetEndRoleName="EventType" isLeaf="false" isAbstract="false">
+            <classMoniker Id="57ae3fe5-f6fc-4c17-9dae-354f8f39e5f6" LastKnownName="VenueType" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="53ac97d5-d6f8-46c6-b499-3d883019f6dc" name="Venue" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false" isNavigableOwned="false">
+                  <lowerValueInternal>
+                    <literalString Id="0314900a-4f5f-47ea-89f3-f6826d48939a" name="Lower" value="*">
+                      <elementDefinition Id="565a94d1-12c1-4f97-b14d-8a8a9554fd83" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="0c5a0fa2-7961-44bd-be33-bab2483f020f" name="Upper" value="*">
+                      <elementDefinition Id="2b66f678-dc55-4609-9328-938a6fbc535c" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="61e8aed8-66b7-4d31-98c4-30b0b8dcab4f" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="65bd70de-8a05-4a6f-a228-03ca2c6f441f" name="EventType" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+                  <lowerValueInternal>
+                    <literalString Id="fac9f555-2495-4ba3-85d9-be14cd0dbbee" name="Lower" value="0">
+                      <elementDefinition Id="709ed5e1-8bb5-40d6-93a7-588d1756cd41" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="a5bd2b7f-bec7-4777-80a9-3c654573daca" name="Upper" value="1">
+                      <elementDefinition Id="37453cbd-cae8-4f11-b954-98f3b4c8a4a5" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="80a02a71-15b2-46f2-b10b-7bd758ee010e" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="22d2d9eb-75a6-4451-872f-f88027defff1" />
+          </association>
+          <association Id="af9bd3b6-e80d-4274-ab8c-76c89dd2d27a" isDerived="false" sourceEndRoleName="Venue" targetEndRoleName="Customers" isLeaf="false" isAbstract="false">
+            <classMoniker Id="1bed46f9-aa9f-4f9e-bc1f-486a32ca8c01" LastKnownName="Customer" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="66db0765-953c-4adb-ab6c-77060a345ddf" name="Venue" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="Composite" isComposite="false" isNavigableOwned="false">
+                  <elementDefinition Id="a506295f-886b-43fe-b077-0e53cd82e64f" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="5576d125-3f24-4127-8019-2ad2bf6cf337" name="Customers" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="true">
+                  <lowerValueInternal>
+                    <literalString Id="326fce1f-37e7-404e-be55-dd8951cf45dc" name="Lower" value="*">
+                      <elementDefinition Id="aba00ce0-c590-4f23-a8c6-1ac6230e49df" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="e1ed6c05-4a89-456f-8cf3-266385550f6d" name="Upper" value="*">
+                      <elementDefinition Id="59e7c976-87f8-47c2-9518-035e7312062d" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="b7b84dbe-327d-4d33-bdb7-04b99839adb6" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="9255d891-1c89-49d9-ad7a-798ae4dc49cc" />
+          </association>
+          <association Id="b7f340ba-7212-4d9f-a621-1ec33e637d29" isDerived="false" sourceEndRoleName="Venue" targetEndRoleName="Country" isLeaf="false" isAbstract="false">
+            <classMoniker Id="b91fbd3b-4789-4d2b-9789-830754fc9b24" LastKnownName="Country" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="8f0d4bcc-6272-4408-8e31-fe7168c1204d" name="Venue" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false" isNavigableOwned="false">
+                  <lowerValueInternal>
+                    <literalString Id="ab6a7d66-c69d-43c0-b719-8b62588b3ad3" name="Lower" value="*">
+                      <elementDefinition Id="720b2ec2-6746-466a-ab75-406489f5ccba" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="99e88b26-6f3e-42ca-8df2-3a00e1134eff" name="Upper" value="*">
+                      <elementDefinition Id="6d0539fa-415e-4f96-a02d-e0dc7b78b9aa" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="683ce90a-3402-4a57-a8bc-f8b9f67fd45f" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="2576963f-3580-4c06-aa0b-b43fe517fb9d" name="Country" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+                  <lowerValueInternal>
+                    <literalString Id="ff425c1a-b064-4f66-aad5-edb750217697" name="Lower" value="0">
+                      <elementDefinition Id="9a101b1b-15cc-4e8a-bdbb-0f1f9ea1d9ec" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="52a8a15b-6856-4083-bcf6-4e2134b49998" name="Upper" value="1">
+                      <elementDefinition Id="ad6f9397-06b7-4abb-8066-54c5c4fd8a78" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="69402078-681c-484a-9ef0-193d70d092b0" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="2294a5be-1894-4cf9-a10d-3370c59d915c" />
+          </association>
+        </targetEnds>
+        <ownedAttributesInternal>
+          <property Id="30e8fb3a-1322-4b0e-a61f-c1046d3c74a7" name="VenueName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="86c7e9e7-c7ea-4b7b-9575-e245e5ea4765" />
+          </property>
+          <property Id="b7749b6f-73ce-432b-8dc1-745ef2ea43fe" name="PostalCode" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="a8281aee-9ed8-425b-9a50-cab04632574e" />
+          </property>
+          <property Id="00a6c595-9047-48aa-a688-578e01d33b90" name="AdminEmail" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="472bec98-9139-4a83-af53-12d0a21e8ecc" />
+          </property>
+          <property Id="a2e77ccd-64f0-42cb-972a-ef4632c25652" name="AdminPassword" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="782a48e9-7bb0-408c-9c07-66e69d70590b" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="dfd84dbf-f715-41a3-a7ba-d23b4633e3dd" name="Section" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="b7f38d80-489f-482d-ba13-e01177025c1d" />
+        <ownedAttributesInternal>
+          <property Id="912ccdcb-7377-4be6-ac1c-4fabeb008c61" name="SectionName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="b967616f-b46d-42bc-aeef-79311c980e0e" />
+          </property>
+          <property Id="ebc91cdd-e384-4a09-8bf4-fc3d0b609f5f" name="SeatRows" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="1cf06adf-9b63-4355-a216-5733a4e3cb22" />
+          </property>
+          <property Id="c134c51e-e596-40c6-baeb-ec31fb215575" name="SeatsPerRow" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="66dedd7d-b366-4b7d-b063-bc8c24e0eef3" />
+          </property>
+          <property Id="0e0be1aa-c26f-4c46-950f-613ab9bda813" name="StandardPrice" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="d7189cdc-6caf-4884-b4fc-f1550dec8aaa" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="0f2567d7-0424-4f14-bbea-af3e2b0d19dc" name="Ticket" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="0dc4579b-c2e7-4030-8bcb-6dfa07064630" />
+        <targetEnds>
+          <association Id="91eacce0-d766-4851-9508-78a1ae7111e5" isDerived="false" sourceEndRoleName="Ticket" targetEndRoleName="EventSection" isLeaf="false" isAbstract="false">
+            <classMoniker Id="4bfacfb3-8b20-4f8e-970b-08e73f0fcd4f" LastKnownName="EventSection" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="9f715c6b-1b3a-4d41-984a-8ab832ff9dec" name="Ticket" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false" isNavigableOwned="false">
+                  <lowerValueInternal>
+                    <literalString Id="69653bed-d937-4097-857b-635f1e836f25" name="Lower" value="*">
+                      <elementDefinition Id="022fbd55-670a-4ae6-a5b4-65a198cca6df" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="fb00c85a-10b5-47d3-bf45-85ee098f6d31" name="Upper" value="*">
+                      <elementDefinition Id="3ede0480-e9e1-4481-8386-0c68ef2cdf64" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="0e418ef1-09b7-4c6f-a57d-bb6bda72dc4f" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="a7edf8ef-c78f-41e9-83fa-824726476867" name="EventSection" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+                  <elementDefinition Id="d7a5c248-c43b-4daa-a2b2-a5451eb4bbe1" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="e6bf5761-8b66-4df6-b81f-240b3c74fd1a" />
+          </association>
+        </targetEnds>
+        <ownedAttributesInternal>
+          <property Id="119f53ac-7d1b-49e3-b049-e5bbbbe2f80a" name="SeatNumber" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="ff8e3187-7bfe-4ca8-abc3-0383368b4d0d" />
+          </property>
+          <property Id="d9007dd0-ab0f-4031-9fe6-8688990a972b" name="SeatRow" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="32809c60-b469-4009-adaf-d39297301700" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="4bfacfb3-8b20-4f8e-970b-08e73f0fcd4f" name="EventSection" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="1895da1f-d0ba-43b3-99c9-72622092fe9b" />
+        <targetEnds>
+          <association Id="b6769065-7df2-46f9-bcbd-c02236346e28" isDerived="false" sourceEndRoleName="TicketLevel" targetEndRoleName="SeatSection" isLeaf="false" isAbstract="false">
+            <classMoniker Id="dfd84dbf-f715-41a3-a7ba-d23b4633e3dd" LastKnownName="Section" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="18277869-b1a9-4568-86db-0c5edaf7da03" name="TicketLevel" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false" isNavigableOwned="false">
+                  <lowerValueInternal>
+                    <literalString Id="78ee07c4-978d-4ade-b778-9054f052b28e" name="Lower" value="*">
+                      <elementDefinition Id="9d28010f-9315-4467-a3d0-e04d4f94a5cf" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="e3ad5a2b-819a-4616-906b-040ffa909984" name="Upper" value="*">
+                      <elementDefinition Id="0aa2523d-ab36-4bae-8496-ff36f0ee5c0c" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="32b28cad-9107-4dcb-8fbf-a6fe35dc4dfe" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="3c8ad268-50f0-499f-b33a-b42629b672a5" name="SeatSection" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+                  <lowerValueInternal>
+                    <literalString Id="16c51f1c-8198-4a03-929c-09cb707ca9c6" name="Lower" value="1">
+                      <elementDefinition Id="33f3ff09-0d08-462d-9a88-1c9a5b021aba" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="6ecdec63-1499-436a-99dd-6c2211876b6c" name="Upper" value="1">
+                      <elementDefinition Id="48996549-5c69-4d16-b3e8-b90a9d521527" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="eef1297d-73c6-4d69-ac92-fad30c0144d9" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="36d0b716-587e-4326-a061-ae75820a7d28" />
+          </association>
+        </targetEnds>
+        <ownedAttributesInternal>
+          <property Id="6932c83a-77bb-4a1a-98e3-abb9d44be632" name="Price" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="24993043-4f5f-475c-aa98-5e0bcce797cc" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="b91fbd3b-4789-4d2b-9789-830754fc9b24" name="Country" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="12276017-74a4-40d1-9412-c50c9d4fc859" />
+        <ownedAttributesInternal>
+          <property Id="24e0aa65-97c5-4e7d-9097-e6fdc1c81f20" name="CountryName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="7ae9edbf-a291-4f54-b4d1-a0ecd416ddd8" />
+          </property>
+          <property Id="0fbe2a17-10e6-4eea-b7dc-32029940b711" name="Language" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="199e0c78-8c89-4ed3-a191-46cf23685a8d" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="2fee9de2-c08a-4585-919c-7a5fb74e591b" name="TicketPurchase" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="0df55ffa-cda1-4077-9f17-1ff477cea78b" />
+        <targetEnds>
+          <association Id="e89e6ca4-6324-46a0-ad8c-bb155aef571d" isDerived="false" sourceEndRoleName="TicketPurchase" targetEndRoleName="Ticket" isLeaf="false" isAbstract="false">
+            <classMoniker Id="0f2567d7-0424-4f14-bbea-af3e2b0d19dc" LastKnownName="Ticket" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="f42cc306-f0e7-435a-ab2f-400af48087ea" name="TicketPurchase" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="Composite" isComposite="false" isNavigableOwned="false">
+                  <elementDefinition Id="7a0a9b7e-1b88-4129-bde3-0f7354c51ac6" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="22610f8a-396e-4b72-b833-c084c89dc2bb" name="Ticket" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="true">
+                  <lowerValueInternal>
+                    <literalString Id="bac0b430-87cd-40ff-a143-f537ca378f09" name="Lower" value="*">
+                      <elementDefinition Id="dcaffb8c-7c77-4498-af00-208e9ef3ea3c" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="c7ec00c3-8ed7-4420-b69b-89bddf3bef81" name="Upper" value="*">
+                      <elementDefinition Id="5488c67c-2dd5-4b03-ac65-67e76ec89a9c" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="c17cb920-b162-4391-94b7-a355d3a45ff5" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="c6f73d5f-8c78-449c-a843-033e07c3b6b3" />
+          </association>
+          <association Id="285f3e78-b74f-4920-bbf5-b07d0da90db2" isDerived="false" sourceEndRoleName="TicketPurchase" targetEndRoleName="Customer" isLeaf="false" isAbstract="false">
+            <classMoniker Id="1bed46f9-aa9f-4f9e-bc1f-486a32ca8c01" LastKnownName="Customer" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="4807edf4-5578-4d78-bfc9-1ae13229ca39" name="TicketPurchase" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false" isNavigableOwned="false">
+                  <lowerValueInternal>
+                    <literalString Id="85720c68-277a-442a-9d55-6db17dd5ba22" name="Lower" value="*">
+                      <elementDefinition Id="0c8b3582-a454-4098-9dfe-f920b54de2f6" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="c5ff5537-ade5-4b1c-9f03-43630bd9d981" name="Upper" value="*">
+                      <elementDefinition Id="4013dd04-852a-4c7b-919e-03a12889cd30" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="841585f8-2f31-4a89-a01e-36e3ba7d0387" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="646990b9-67c4-47e7-ba74-e6cced5c00e5" name="Customer" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+                  <elementDefinition Id="0eac6945-6c42-4a25-b23b-17df1f49da78" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="f57e661a-423f-4b54-8d9c-8c447bdf281c" />
+          </association>
+        </targetEnds>
+        <ownedAttributesInternal>
+          <property Id="30bb0044-a896-4887-8ddc-83746c5f68c6" name="PuchaseDate" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="b8bc086b-9fb6-4258-8fe0-b05593f6b343" />
+          </property>
+          <property Id="b636921c-171f-409e-98f0-f79ce69b49ca" name="PurchaseTotal" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="923d0714-1d4f-4e5a-b8c4-ae61f04966cd" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+  </packagedElements>
+  <package Id="6589e924-a277-47f9-8328-741251599d0a" name="Wingtip Tenant Data Model">
+    <elementDefinition Id="61dc7e66-5faa-482b-9723-50884875f1c2" />
+    <profileInstances>
+      <packageHasProfileInstances Id="fc3ac4ca-ede3-4f56-aca9-355b3ce1db3e">
+        <profileInstance Id="9375a47a-7dce-4743-91e3-605fcd5ac9ae" name="StandardProfileL2">
+          <elementDefinition Id="e34d544e-0fea-4ed6-ac5e-1b74119ac791" />
+        </profileInstance>
+        <elementDefinition Id="0caec977-1f8c-4ba3-a7db-8cc9ad9cc73b" />
+      </packageHasProfileInstances>
+      <packageHasProfileInstances Id="b6693ace-7540-46f7-85b6-d85a367714ca">
+        <profileInstance Id="b4911491-c482-4a0d-948b-e0c146b2a001" name="StandardProfileL3">
+          <elementDefinition Id="532ea607-fb19-44b8-8502-3351b05452be" />
+        </profileInstance>
+        <elementDefinition Id="29349502-908c-4fda-9054-c48619c59ed0" />
+      </packageHasProfileInstances>
+    </profileInstances>
+  </package>
+</logicalClassDesignerModel>
