@@ -35,6 +35,8 @@
     "tenantDogwoodDojoStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/',variables('tenantDogwoodDojo'),'.bacpac')]",
     "catalogDatabaseStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/','wingtipcatalogdb.bacpac')]",
     "catalogServer": "[concat(variables('catalogServerName'),'-', variables('lowerCaseUser'))]",
+    "wtpBaseTenantDatabase": "wtpBaseTenantDB",
+    "wtpBaseTenantDatabaseStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/','wingtiptenantdb.bacpac')]",
     "wtpTenantUserTrafficManagerUniqueDnsName": "[concat('events.wtp.',variables('lowerCaseUser'))]",
     "wtpTenantUser": "[concat('eventswtp-',variables('lowerCaseUser'))]",
     "wtpTenantUserAppPackageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-packages2/tenantUserAppPackage.zip"
@@ -222,6 +224,39 @@
             "endIpAddress": "255.255.255.255"
           },
           "type": "firewallrules"
+        }
+      ]
+    },
+    {
+      "dependsOn": [
+        "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
+      ],
+      "name": "[concat(variables('catalogServer'),'/',variables('wtpBaseTenantDatabase'))]",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "collation": "[variables('customerCatalogCollation')]",
+        "edition": "[variables('CustomerCatalogEdition')]",
+        "maxSizeBytes": "1073741824",
+        "requestedServiceObjectiveName": "[variables('requestedServiceObjectiveName')]"
+      },
+      "resources": [
+        {
+          "name": "Import",
+          "type": "extensions",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('wtpBaseTenantDatabase'))]"
+          ],
+          "properties": {
+            "storageKeyType": "SharedAccessKey",
+            "storageKey": "?",
+            "storageUri": "[variables('wtpBaseTenantDatabaseStorageUri')]",
+            "administratorLogin": "[concat(variables('administratorLogin'),'@',variables('catalogServer'))]",
+            "administratorLoginPassword": "[variables('administratorLoginPassword')]",
+            "operationMode": "Import"
+          }
         }
       ]
     },
