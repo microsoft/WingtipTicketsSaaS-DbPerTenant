@@ -30,16 +30,16 @@
     "customerCatalogEdition": "Standard",
     "webAppSku": "Standard",
     "tenantServer": "[concat(variables('tenantservername'),'-', variables('lowerCaseUser'))]",
-    "tenantContosoConcertHallStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/',variables('tenantContosoConcertHall'),'.bacpac')]",
-    "tenantFabrikamJazzClubStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/',variables('tenantFabrikamJazzClub'),'.bacpac')]",
-    "tenantDogwoodDojoStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/',variables('tenantDogwoodDojo'),'.bacpac')]",
-    "catalogDatabaseStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/','wingtipcatalogdb.bacpac')]",
+    "tenantContosoConcertHallStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvnext/',variables('tenantContosoConcertHall'),'.bacpac')]",
+    "tenantFabrikamJazzClubStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvnext/',variables('tenantFabrikamJazzClub'),'.bacpac')]",
+    "tenantDogwoodDojoStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvnext/',variables('tenantDogwoodDojo'),'.bacpac')]",
+    "catalogDatabaseStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvnext/','wingtipcatalogdb.bacpac')]",
     "catalogServer": "[concat(variables('catalogServerName'),'-', variables('lowerCaseUser'))]",
     "wtpBaseTenantDatabase": "wtpBaseTenantDB",
-    "wtpBaseTenantDatabaseStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/','wingtiptenantdb.bacpac')]",
+    "wtpBaseTenantDatabaseStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvnext/','wingtiptenantdb.bacpac')]",
     "wtpTenantUserTrafficManagerUniqueDnsName": "[concat('events.wtp.',variables('lowerCaseUser'))]",
     "wtpTenantUser": "[concat('eventswtp-',variables('lowerCaseUser'))]",
-    "wtpTenantUserAppPackageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-packages2/tenantUserAppPackage.zip"
+    "wtpTenantUserAppPackageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-packagesvnext/tenantUserAppPackage.zip"
   },
   "resources": [
     {
