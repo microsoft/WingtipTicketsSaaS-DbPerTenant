@@ -1,5 +1,5 @@
 ﻿CREATE VIEW TenantsExtended AS
-SELECT TenantId, TenantName, ServerName, DatabaseName
+SELECT tenant.TenantId, tenant.TenantName, shard.ServerName, shard.DatabaseName
     FROM [dbo].[Tenants] AS tenant
     INNER JOIN [__ShardManagement].[ShardMappingsGlobal] AS mapping 
         ON tenant.TenantId = mapping.MinValue 

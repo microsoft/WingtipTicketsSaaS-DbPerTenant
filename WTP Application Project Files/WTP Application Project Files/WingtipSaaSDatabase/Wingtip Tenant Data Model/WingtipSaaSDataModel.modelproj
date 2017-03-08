@@ -7,7 +7,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{fd5181df-efe7-4cd5-804f-7ff65c077d24}</ProjectGuid>
     <ArchitectureToolsVersion>2.0.0.0</ArchitectureToolsVersion>
-    <Name>Wingtip Tenant Data Model</Name>
+    <Name>WingtipSaaSDataModel</Name>
     <RootNamespace>Wingtip Tenant Data Model</RootNamespace>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -22,12 +22,19 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\ArchitectureTools\Microsoft.VisualStudio.TeamArchitect.ModelingProject.targets" Condition="'$(VSToolsPath)' != ''" />
   <ItemGroup>
-    <Content Include="UMLClassDiagram1.classdiagram">
+    <Content Include="TenantDataModel.classdiagram">
       <SubType>Content</SubType>
     </Content>
-    <Content Include="UMLClassDiagram1.classdiagram.layout">
+    <Content Include="TenantDataModel.classdiagram.layout">
       <SubType>Content</SubType>
-      <DependentUpon>UMLClassDiagram1.classdiagram</DependentUpon>
+      <DependentUpon>TenantDataModel.classdiagram</DependentUpon>
+    </Content>
+    <Content Include="WingtipSaaSCatalogDataModel.classdiagram">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="WingtipSaaSCatalogDataModel.classdiagram.layout">
+      <SubType>Content</SubType>
+      <DependentUpon>WingtipSaaSCatalogDataModel.classdiagram</DependentUpon>
     </Content>
     <Folder Include="ModelDefinition\" />
     <Content Include="ModelDefinition\Wingtip Tenant Data Model.uml">

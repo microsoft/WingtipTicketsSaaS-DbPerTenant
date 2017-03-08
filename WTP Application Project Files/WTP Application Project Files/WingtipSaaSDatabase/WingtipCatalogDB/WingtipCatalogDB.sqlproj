@@ -64,24 +64,9 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Tenants.sql" />
-    <None Include="dbo\Views\TenantsExtended.sql" />
+    <Build Include="dbo\Views\TenantsExtended.sql" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\WingtipTenantDB\WingtipTenantDB.sqlproj">
-      <Name>WingtipTenantDB</Name>
-      <Project>{7cb694e8-3eb8-4633-8886-1b1829c79751}</Project>
-      <Private>True</Private>
-      <SuppressMissingDependenciesErrors>True</SuppressMissingDependenciesErrors>
-      <DatabaseSqlCmdVariable>WingtipTenantDB</DatabaseSqlCmdVariable>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <SqlCmdVariable Include="WingtipTenantDB">
-      <DefaultValue>WingtipTenantDB</DefaultValue>
-      <Value>$(SqlCmdVar__1)</Value>
-    </SqlCmdVariable>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="wingtipcatalogdb.publish.xml" />
+    <None Include="WingtipCatalogDB.publish.xml" />
   </ItemGroup>
 </Project>
