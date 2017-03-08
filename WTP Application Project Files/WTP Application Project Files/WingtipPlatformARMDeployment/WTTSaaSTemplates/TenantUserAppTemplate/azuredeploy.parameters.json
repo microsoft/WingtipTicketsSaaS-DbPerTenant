@@ -1,0 +1,9 @@
+﻿{
+  "contentVersion": "1.0.0.0",
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "parameters": {
+    "user": {
+      "value": "user name"
+    }
+  }
+}
