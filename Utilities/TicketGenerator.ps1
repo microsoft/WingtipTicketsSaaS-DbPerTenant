@@ -43,6 +43,8 @@ $AdminPassword = "P@ssword1"
 
 $ServerName = "customers1-" + $WtpUser.ToLower()
     
+$WtpResourceGroupName = "wingtip-gold"
+$ServerName = "wingtip-tenants-gold"
 
 $FullyQualifiedServerName = $ServerName + ".database.windows.net" 
 
