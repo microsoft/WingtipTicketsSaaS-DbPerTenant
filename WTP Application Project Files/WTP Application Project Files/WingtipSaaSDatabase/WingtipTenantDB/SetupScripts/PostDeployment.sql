@@ -22,17 +22,24 @@ GO
 INSERT INTO [dbo].[VenueTypes]
     ([VenueType],[VenueTypeName],[EventTypeName],[EventTypeShortName],[EventTypeShortNamePlural],[Language])
 VALUES
-    ('MultiPurposeVenue','Multi Purpose Venue','Event', 'Event','Events','en-us'),
-    ('ClassicalConcertHall','Classical Concert Hall','Classical Concert','Concert','Concerts','en-us'),
-    ('JazzClub','Jazz Club','Jazz Session','Session','Sessions','en-us'),
-    ('JudoClub','Judo Club','Judo Tournament','Tournament','Tournaments','en-us'),
-    ('SoccerClub','Soccer Club','Soccer Match', 'Match','Matches','en-us'),
-    ('MotorRacing','Motor Racing','Car Race', 'Race','Races','en-us'),
-    ('DanceStudio', 'Dance Studio', 'Performance', 'Performance', 'Performances','en-us'),
-    ('BluesClub', 'Blues Club', 'Blues Session', 'Session','Sessions','en-us' ),
-    ('RockMusicVenue','Rock Music Venue','Rock Concert','Concert', 'Concerts','en-us'),
-    ('Opera','Opera','Opera','Opera','Operas','en-us');      
+    ('multipurpose','Multi-Purpose Venue','Event', 'Event','Events','en-us'),
+    ('classicalmusic','Classical Music Venue','Classical Concert','Concert','Concerts','en-us'),
+    ('jazz','Jazz Venue','Jazz Session','Session','Sessions','en-us'),
+    ('judo','Judo Venue','Judo Tournament','Tournament','Tournaments','en-us'),
+    ('soccer','Soccer Venue','Soccer Match', 'Match','Matches','en-us'),
+    ('motorracing','Motor Racing Venue','Car Race', 'Race','Races','en-us'),
+    ('dance', 'Dance Venue', 'Dance Performance', 'Performance', 'Performances','en-us'),
+    ('blues', 'Blues Venue', 'Blues Session', 'Session','Sessions','en-us' ),
+    ('rockmusic','Rock Music Venue','Rock Concert','Concert', 'Concerts','en-us'),
+    ('opera','Opera Venue','Opera','Opera','Operas','en-us');      
 GO
+
+INSERT INTO [dbo].Venue
+    ([VenueName],[VenueType],[AdminEmail],[CountryCode],[Lock])         
+VALUES
+    ('Venue Name','multipurpose','admin@email.com','USA','X')
+GO
+
 
 -- Sections
 SET IDENTITY_INSERT [dbo].[Sections] ON;
@@ -55,7 +62,8 @@ VALUES
     (1,'Event 1','Performer 1','2017-02-11 20:00:00'),
     (2,'Event 2','Performer 2','2017-02-12 20:00:00'),
     (3,'Event 3','Performer 3','2017-02-13 20:00:00'),
-    (4,'Event 4','Performer 4','2017-02-14 20:00:00');
+    (4,'Event 4','Performer 4','2017-02-14 20:00:00'),
+    (5,'Event 5','Performer 5','2017-02-14 20:00:00');
 
 SET IDENTITY_INSERT [dbo].[Events] OFF
 GO
@@ -71,5 +79,7 @@ VALUES
     (3,1,40.00),
     (3,2,20.00),
     (4,1,40.00),
-    (4,2,20.00);
+    (4,2,20.00),
+    (5,1,40.00),
+    (5,2,20.00);
 GO

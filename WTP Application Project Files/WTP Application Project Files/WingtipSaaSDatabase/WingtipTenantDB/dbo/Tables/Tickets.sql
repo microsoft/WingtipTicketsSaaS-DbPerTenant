@@ -6,7 +6,7 @@
     [SectionId]             INT         NOT NULL,
     [TicketPurchaseId]      INT         NOT NULL,
     PRIMARY KEY CLUSTERED ([TicketId] ASC), 
-    CONSTRAINT [FK_Tickets_TicketPurchases] FOREIGN KEY ([TicketPurchaseId]) REFERENCES [TicketPurchases]([TicketPurchaseId]), 
+    CONSTRAINT [FK_Tickets_TicketPurchases] FOREIGN KEY ([TicketPurchaseId]) REFERENCES [TicketPurchases]([TicketPurchaseId]) ON DELETE CASCADE, 
     CONSTRAINT [FK_Tickets_EventSections] FOREIGN KEY ([EventId], [SectionId]) REFERENCES [EventSections]([EventId],[SectionId])
 );
 

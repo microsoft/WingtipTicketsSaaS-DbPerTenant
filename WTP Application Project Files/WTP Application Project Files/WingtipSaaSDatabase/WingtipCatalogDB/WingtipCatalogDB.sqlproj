@@ -64,7 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Tenants.sql" />
-    <Build Include="dbo\Views\TenantsExtended.sql" />
+    <None Include="dbo\Views\TenantsExtended.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="WingtipCatalogDB.publish.xml" />

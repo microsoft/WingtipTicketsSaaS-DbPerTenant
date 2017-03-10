@@ -62,9 +62,10 @@
     <Folder Include="dbo\StoredProcedures" />
     <Folder Include="SetupScripts" />
     <Folder Include="DemoScripts" />
+    <Folder Include="dbo\Views" />
   </ItemGroup>
   <ItemGroup>
-    <Build Include="dbo\Tables\Venues.sql" />
+    <Build Include="dbo\Tables\Venue.sql" />
     <Build Include="dbo\Tables\Tickets.sql" />
     <Build Include="dbo\Tables\EventSections.sql" />
     <Build Include="dbo\Tables\Sections.sql" />
@@ -80,6 +81,8 @@
     <None Include="SetupScripts\FabrikamJazzClub.sql" />
     <PostDeploy Include="SetupScripts\PostDeployment.sql" />
     <None Include="DemoScripts\UpdateVenueTypes.sql" />
+    <Build Include="dbo\StoredProcedures\sp_RemoveShardManagement.sql" />
+    <Build Include="dbo\Views\EventsWithNoTickets.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="WingtipTenantDB.publish.xml" />

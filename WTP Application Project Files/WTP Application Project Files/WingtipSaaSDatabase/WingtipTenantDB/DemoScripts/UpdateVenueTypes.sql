@@ -2,18 +2,18 @@
 --
 MERGE INTO [dbo].[VenueTypes] AS [target]
 USING (VALUES
-    ('MultiPurposeVenue','Multi Purpose Venue','Event', 'Event','Events','en-us'),
-    ('ClassicalConcertHall','Classical Concert Hall','Classical Concert','Concert','Concerts','en-us'),
-    ('JazzClub','Jazz Club','Jazz Session','Session','Sessions','en-us'),
-    ('JudoClub','Judo Club','Judo Tournament','Tournament','Tournaments','en-us'),
-    ('SoccerClub','Soccer Club','Soccer Match', 'Match','Matches','en-us'),
-    ('MotorRacing','Motor Racing','Car Race', 'Race','Races','en-us'),
-    ('DanceStudio', 'Dance Studio', 'Performance', 'Performance', 'Performances','en-us'),
-    ('BluesClub', 'Blues Club', 'Blues Session', 'Session','Sessions','en-us' ),
-    ('RockMusicVenue','Rock Music Venue','Rock Concert','Concert', 'Concerts','en-us'),
-    ('Opera','Opera','Opera','Opera','Operas','en-us'),
-    ('MotorCycleRacing','Motorcycle Racing','Motorcycle Race', 'Race', 'Races', 'en-us'), -- NEW
-    ('SwimmingClub','Swimming Club','Swimming Race','Race','Races','en-us') -- NEW
+    ('multipurpose','Multi-Purpose Venue','Event', 'Event','Events','en-us'),
+    ('classicalmusic','Classical Music Venue','Classical Concert','Concert','Concerts','en-us'),
+    ('jazz','Jazz Venue','Jazz Session','Session','Sessions','en-us'),
+    ('judo','Judo Venue','Judo Tournament','Tournament','Tournaments','en-us'),
+    ('soccer','Soccer Venue','Soccer Match', 'Match','Matches','en-us'),
+    ('motorracing','Motor Racing Venue','Car Race', 'Race','Races','en-us'),
+    ('dance', 'Dance Venue', 'Dance Performance', 'Performance', 'Performances','en-us'),
+    ('blues', 'Blues Venue', 'Blues Session', 'Session','Sessions','en-us' ),
+    ('rockmusic','Rock Music Venue','Rock Concert','Concert', 'Concerts','en-us'),
+    ('opera','Opera Venue','Opera','Opera','Operas','en-us'), 
+    ('motorcycleracing','Motorcycle Racing Venue','Motorcycle Race', 'Race', 'Races', 'en-us'), -- NEW
+    ('swimming','Swimming Venue','Swimming Meet','Meet','Meets','en-us') -- NEW
 ) AS source(
     VenueType,VenueTypeName,EventTypeName,EventTypeShortName,EventTypeShortNamePlural,[Language]
 )              

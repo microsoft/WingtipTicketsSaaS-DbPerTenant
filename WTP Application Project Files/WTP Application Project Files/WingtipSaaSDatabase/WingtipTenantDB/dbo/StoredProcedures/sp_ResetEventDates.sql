@@ -6,7 +6,7 @@ AS
 
     DECLARE @EventId int
     DECLARE @Index int = 1
-    DECLARE @Offset int = -5    -- offset in days from current date of the first event   
+    DECLARE @Offset int = -5    -- offset of the first event in days from current date   
     DECLARE @Interval int = 3   -- interval between each event
     DECLARE @OldEventDate datetime
     DECLARE @NewEventDate datetime
