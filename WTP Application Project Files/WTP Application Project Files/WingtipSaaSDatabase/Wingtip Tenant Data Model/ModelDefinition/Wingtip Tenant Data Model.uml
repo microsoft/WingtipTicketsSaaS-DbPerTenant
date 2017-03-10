@@ -18,6 +18,10 @@
           LastKnownLocation="Wingtip Tenant Data Model.uml" />
       </annotatedElements>
     </comment>
+    <comment
+      Id="4582adea-8e25-4ea5-8ddb-327ba5f82f94">
+      <body>Implemented via the mapping in the catalog</body>
+    </comment>
   </ownedCommentsInternal>
   <profileInstances>
     <packageHasProfileInstances
@@ -1992,7 +1996,7 @@
             isComposite="false" />
           <property
             Id="fc4dce5d-67c1-4223-a3b9-10c5510ba1b4"
-            name="MaxDatabases"
+            name="DatabasesMax"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2036,7 +2040,7 @@
             isComposite="false" />
           <property
             Id="5c444923-3fb3-4dc9-851f-63cf08a65158"
-            name="TriggerDatabases"
+            name="DatabasesThreshold"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2169,7 +2173,7 @@
             isComposite="false" />
           <property
             Id="92d20b2c-964c-46d8-90ac-c3714bb66d29"
-            name="BufferDatabases"
+            name="DatabasesBuffer"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2213,7 +2217,7 @@
             isComposite="false" />
           <property
             Id="9500be21-24b6-4984-b87f-95b0b29c7eae"
-            name="NewPoolThresholdDatabases"
+            name="DatabasesThreshold"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2244,28 +2248,6 @@
         isLeaf="false"
         isActiveClass="false">
         <ownedAttributesInternal>
-          <property
-            Id="b6854cc1-c993-4d6e-a6c9-40a20b66d068"
-            name="TenantServerNameStem"
-            isLeaf="false"
-            isStatic="false"
-            isReadOnly="false"
-            isUnique="false"
-            isDerived="false"
-            isDerivedUnion="false"
-            aggregation="None"
-            isComposite="false" />
-          <property
-            Id="f01f36a8-ae87-4392-9037-afb5427df7dd"
-            name="ElasticPoolNameStem"
-            isLeaf="false"
-            isStatic="false"
-            isReadOnly="false"
-            isUnique="false"
-            isDerived="false"
-            isDerivedUnion="false"
-            aggregation="None"
-            isComposite="false" />
           <property
             Id="e8c55c72-01b1-406d-8941-162194561166"
             name="PrimaryServerRegion"
@@ -2335,6 +2317,127 @@
           <property
             Id="fc46bbbe-9bb7-416c-b65c-d6e8076646aa"
             name="Error"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+        </ownedAttributesInternal>
+      </class>
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <class
+        Id="ae81e42a-30b2-45c7-9756-03633dbad740"
+        name="Configuration"
+        isAbstract="false"
+        isLeaf="false"
+        isActiveClass="false">
+        <ownedAttributesInternal>
+          <property
+            Id="7ae97bb9-8578-4e5d-99f0-9a62b15d5be7"
+            name="ServerDatabasesMax"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="1f8c3c9d-8b12-47c5-b52c-33998c6cf6e1"
+            name="PoolDatabasesMax"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="64910348-f487-47e6-9ca6-ac8878e163aa"
+            name="PoolDtu"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="021214e0-e71b-41ef-b621-ca30b9cbb43b"
+            name="PoolDatabaseMaxDtu"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="efb683d0-11e3-4c19-a84e-4956d14be40a"
+            name="PoolDatabaseMinDtu"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="2779da6e-953d-4db0-8eff-85c368929f09"
+            name="PoolDatabasesThreshold"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="02d3c164-fc4c-42ce-bac2-bb057ca1890f"
+            name="ServerDatabasesThreshold"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="8f0a98ec-169d-47e6-986a-854f9b5a3cd0"
+            name="PoolDatabasesBuffer"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="ed39d140-8dd1-4680-b965-51c5f47bb5be"
+            name="PoolNameStem"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="d9e03a8f-6f50-4e5d-bafe-0a83a8d9cd3c"
+            name="ServerNameStem"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
