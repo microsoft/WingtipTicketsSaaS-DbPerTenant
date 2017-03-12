@@ -1,4 +1,35 @@
-﻿Import-Module $PSScriptRoot\..\Common\CatalogAndDatabaseManagement -Force
+﻿Import-Module $PSScriptRoot\..\AppVersionSpecific -Force
+Import-Module $PSScriptRoot\AzureShardManagement -Force
+
+<#
+.SYNOPSIS
+    Returns the raw key used within the shard map for the tenant  Returned as an object containing both the 
+    byte array and a text representation suitable for insert into SQL.
+#>
+function Get-TenantRawKey
+{
+    param
+    (
+        # Integer tenant key value
+        [parameter(Mandatory=$true)]
+        [int]$TenantKey
+    )
+
+    # retrieve the byte array 'raw' key from the integer tenant key - the key value used in the catalog database. 
+    $shardKey = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardKey($TenantKey)
+    $rawValueBytes = $shardKey.RawValue
+
+    # convert the raw key value to text for insert into the database
+    $rawValueString = [BitConverter]::ToString($rawValueBytes)
+    $rawValueString = "0x" + $rawValueString.Replace("-", "")
+
+    $tenantRawKey = New-Object PSObject -Property @{
+        RawKeyBytes = $shardKeyRawValueBytes
+        RawKeyHexString = $rawValueString 
+    }
+
+    return $tenantRawKey
+}
 
 <#
 .SYNOPSIS
@@ -15,28 +46,24 @@ function Get-Catalog
         [parameter(Mandatory=$true)]
         [string]$WtpUser
     )
-    
-    $catalogServerName = "catalog-" + $WtpUser
-    $catalogServerFullyQualifiedName = $catalogServerName + ".database.windows.net"
-    $adminUserName = "developer"
-    $adminPassword = "P@ssword1"
+    $config = Get-Configuration
 
-    $catalogDatabaseName = "customercatalog"
-    $shardMapName = "customercatalog"
+    $catalogServerName = $($config.CatalogNameStem) + $WtpUser
+    $catalogServerFullyQualifiedName = $catalogServerName + ".database.windows.net"
     
     # Check catalog database exists
     $catalogDatabase = Get-AzureRmSqlDatabase `
         -ResourceGroupName $ResourceGroupName `
         -ServerName $catalogServerName `
-        -DatabaseName $catalogDatabaseName `
+        -DatabaseName $($config.CatalogDatabaseName) `
         -ErrorAction Stop
 
     # Initialize shard map manager from catalog database
     [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMapManager]$shardMapManager = Get-ShardMapManager `
         -SqlServerName $catalogServerFullyQualifiedName `
-        -UserName $adminUserName `
-        -Password $adminPassword `
-        -SqlDatabaseName $catalogDatabaseName `
+        -UserName $($config.CatalogAdminUserName) `
+        -Password $($config.CatalogAdminPassword) `
+        -SqlDatabaseName $($config.CatalogDatabaseName) `
 
     if (!$shardmapManager)
     {
@@ -47,7 +74,7 @@ function Get-Catalog
     [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMap]$shardMap = Get-ListShardMap `
         -KeyType $([int]) `
         -ShardMapManager $shardMapManager `
-        -ListShardMapName $shardMapName
+        -ListShardMapName $($config.CatalogShardMapName)
  
     If (!$shardMap)
     {
@@ -60,7 +87,7 @@ function Get-Catalog
             ShardMap=$shardMap
             ServerName = $catalogServerName
             FullyQualifiedServerName = $catalogServerFullyQualifiedName
-            DatabaseName = $catalogDatabaseName
+            DatabaseName = $($config.CatalogDatabaseName)
             } 
 
         return $catalog
@@ -114,7 +141,7 @@ function New-TenantDatabase
         [string]$TenantName,
 
         [parameter(Mandatory=$false)]
-        [string]$VenueType = "MultiPurposeVenue",
+        [string]$VenueType,
 
         [parameter(Mandatory=$false)]
         [string]$PostalCode = '98052',
@@ -122,6 +149,10 @@ function New-TenantDatabase
         [parameter(Mandatory=$false)]
         [string]$CountryCode = 'USA'                
     )
+    
+    $config = Get-Configuration
+
+    if(!$VenueType) {$VenueType = $config.DefaultVenueType}
 
     # Check the server exists
     $Server = Get-AzureRmSqlServer -ResourceGroupName $ResourceGroupName -ServerName $ServerName 
@@ -131,7 +162,7 @@ function New-TenantDatabase
         throw "Could not find tenant server '$ServerName'."
     }
 
-    $normalizedTenantName = $TenantName.Replace(' ', '').ToLower()
+    $normalizedTenantName = $TenantName.Replace(' ','').ToLower()
     
     # Check the tenant database does not exist
 
@@ -147,24 +178,21 @@ function New-TenantDatabase
 
     # Use an ARM template to deploy the tenant database and import the initialization bacpac
     $deployment = New-AzureRmResourceGroupDeployment `
-        -TemplateFile "$PSScriptRoot\TenantDatabaseTemplate.json" `
+        -TemplateFile ($PSScriptRoot + "\" + $($config.TenantDatabaseTemplate)) `
         -Location $($Server.Location) `
         -ResourceGroupName $ResourceGroupName `
         -ServerName $ServerName `
-        -AdminUserName "developer" `
-        -AdminUserPassword "P@ssword1" `
+        -AdminUserName $($config.TenantAdminUsername) `
+        -AdminUserPassword $($config.TenantAdminPassword) `
         -DatabaseName $normalizedTenantName `
         -ElasticPoolName $ElasticPoolName `
-        -BacpacUrl "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvold/wingtiptenantdb.bacpac" `
-        -StorageKeyType "SharedAccessKey" `
-        -StorageKey (ConvertTo-SecureString -String "?" -AsPlainText -Force) `
+        -BacpacUrl $($config.TenantBacpacUrl) `
+        -StorageKeyType $($config.StorageKeyType) `
+        -StorageKey $($config.StorageAccessKey) `
         -ErrorAction Stop `
         -Verbose
 
-    # Initialize tenant info in the tenant database (idempotent) 
-    
-    $adminUserName = 'developer'
-    $adminPassword = 'P@ssword1'
+    # Initialize tenant info in the tenant database (idempotent)    
     $emaildomain = $normalizedTenantName
     if ($emailDomain.Length -gt 20) {$emailDomain = $emailDomain.Substring(0,20)}
     $VenueAdminEmail = "admin@" + $emailDomain + ".com"
@@ -174,17 +202,18 @@ function New-TenantDatabase
         INSERT INTO Venues 
             (VenueName, VenueType, AdminEmail, PostalCode, CountryCode  )
         VALUES 
-            ('$TenantName', '$VenueType','$VenueAdminEmail', '$PostalCode', '$CountryCode');"
+            ('$TenantName', '$VenueType','$VenueAdminEmail', '$PostalCode', '$CountryCode');
+        EXEC sp_ResetEventDates;"
 
     Invoke-Sqlcmd `
         -ServerInstance $($ServerName + ".database.windows.net") `
-        -Username $adminUserName `
-        -Password $adminPassword `
+        -Username $($config.TenantAdminuserName) `
+        -Password $($config.TenantAdminPassword) `
         -Database $normalizedTenantName `
         -Query $commandText `
         -ConnectionTimeout 30 `
         -QueryTimeout 30 `
-        -EncryptConnection          
+        -EncryptConnection                 
             
     # Return the created database
     Get-AzureRmSqlDatabase -ResourceGroupName $ResourceGroupName `
@@ -217,8 +246,7 @@ function Add-TenantDatabaseToCatalog
     # Add the database to the catalog shard map (idempotent)
     Add-Shard -ShardMap $($Catalog.ShardMap) `
         -SqlServerName $tenantServerFullyQualifiedName `
-        -SqlDatabaseName $($TenantDatabase.DatabaseName) `
-        -Verbose
+        -SqlDatabaseName $($TenantDatabase.DatabaseName)
 
     # Add the tenant-to-database mapping to the catalog (idempotent)
     Add-ListMapping `
@@ -252,8 +280,7 @@ function Add-ExtendedTenantMetaDataToCatalog
         [string]$TenantName    
     )
 
-    $adminUserName = "developer"
-    $adminPassword = "P@ssword1"
+    $config = Get-Configuration
 
     # Get the raw tenant key value used within the shard map
     $tenantRawKey = Get-TenantRawKey ($TenantKey)
@@ -274,8 +301,8 @@ function Add-ExtendedTenantMetaDataToCatalog
 
     Invoke-Sqlcmd `
         -ServerInstance $($Catalog.FullyQualifiedServerName) `
-        -Username $adminUserName `
-        -Password $adminPassword `
+        -Username $($config.TenantAdminuserName) `
+        -Password $($config.TenantAdminPassword) `
         -Database $($Catalog.DatabaseName) `
         -Query $commandText `
         -ConnectionTimeout 30 `
@@ -297,15 +324,14 @@ function Get-TenantNameFromTenantDatabase
         [string]$TenantDatabaseName         
     )
      
-    $adminUserName = 'developer'
-    $adminPassword = 'P@ssword1'
+    $config = Get-Configuration
 
     $commandText = "Select Top 1 VenueName from Venues"
 
     Invoke-Sqlcmd `
         -ServerInstance $TenantServerFullyQualifiedName `
-        -Username $adminUserName `
-        -Password $adminPassword `
+        -Username $($config.TenantAdminuserName) `
+        -Password $($config.TenantAdminPassword) `
         -Database $TenantDatabaseName `
         -Query $commandText `
         -ConnectionTimeout 30 `

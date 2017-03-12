@@ -31,12 +31,11 @@ Param(
 
 $WtpUser = $WtpUser.ToLower()
 
-Import-Module $PSScriptRoot\..\Common\AzureShardManagement -Force
+#Import-Module $PSScriptRoot\..\Common\AzureShardManagement -Force
 Import-Module $PSScriptRoot\..\Common\SubscriptionManagement -Force
 Import-Module $PSScriptRoot\..\Common\CatalogAndDatabaseManagement -Force
 
-#Import Wingtip App Tenant Registration dll [required for vOLD only] 
-Add-Type -Path $PSScriptRoot\..\Common\WingtipApp_TenantRegistration.dll
+$config = Get-Configuration
 
 ## MAIN SCRIPT ## ----------------------------------------------------------------------------
 
@@ -55,8 +54,8 @@ if (Test-TenantKeyInCatalog -Catalog $catalog -TenantKey $tenantKey)
     throw "A tenant with name '$TenantName' is already registered in the catalog."    
 }
 
-$tenantServerName = "customers1-" + $WtpUser
-$tenantPoolName = "Pool1"
+$tenantServerName = $config.TenantServerNameStem + $WtpUser
+$tenantPoolName = $config.TenantPoolNameStem + "1"
 
 # Deploy and initialize a database for this tenant 
 $tenantDatabase = New-TenantDatabase `
