@@ -22,9 +22,3 @@ $TenantName = "Venue Name"
     -WtpUser $WtpUser `
     -TenantName $TenantName
 #>
-
-<# Add any un-registered databases to the catalog
-. $PSScriptRoot\Add-TenantDatabasesToCatalog.ps1 `
-    -WtpResourceGroupName $WtpResourceGroupName `
-    -WtpUser $WtpUser
-#>
