@@ -1,0 +1,848 @@
+{
+  "contentVersion": "1.0.0.0",
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "parameters": {
+    "user": {
+      "type": "string",
+      "metadata": {
+        "description": "User parameter will be used to create a unique Wingtip Platform Demo"
+      }
+    }
+  },
+  "variables": {
+    "lowerCaseUser": "[toLower(parameters('user'))]",
+    "location": "[resourceGroup().location]",
+    "tenantServerName": "customers1",
+    "elasticPoolEdition": "Standard",
+    "elasticPoolName": "Pool1",
+    "poolDtu": "50",
+    "databaseDtuMin": "0",
+    "databaseDtuMax": "50",
+    "administratorLogin": "developer",
+    "administratorLoginPassword": "P@ssword1",
+    "tenantContosoConcertHall": "contosoconcerthall",
+    "tenantFabrikamJazzClub": "fabrikamjazzclub",
+    "tenantDogwoodDojo": "dogwooddojo",
+    "requestedServiceObjectiveName": "S0",
+    "catalogServerName": "catalog",
+    "catalogDatabaseName": "customercatalog",
+    "baseTenantDB": "baseTenantDB",
+    "customerCatalogCollation": "SQL_Latin1_General_CP1_CI_AS",
+    "customerCatalogEdition": "Standard",
+    "webAppSku": "Standard",
+    "tenantServer": "[concat(variables('tenantservername'),'-', variables('lowerCaseUser'))]",
+    "tenantContosoConcertHallStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvold/',variables('tenantContosoConcertHall'),'.bacpac')]",
+    "tenantFabrikamJazzClubStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvold/',variables('tenantFabrikamJazzClub'),'.bacpac')]",
+    "tenantDogwoodDojoStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvold/',variables('tenantDogwoodDojo'),'.bacpac')]",
+    "catalogDatabaseStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvold/','wingtipcatalogdb.bacpac')]",
+    "baseTenantDatabaseStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvold/','wingtiptenantdb.bacpac')]",
+    "catalogServer": "[concat(variables('catalogServerName'),'-', variables('lowerCaseUser'))]",
+    "wtpOperationsTrafficManagerUniqueDnsName": "[concat('operations','.wtp','.',variables('lowerCaseUser'))]",
+    "wtpOperations": "[concat('operationswtp-',variables('lowerCaseUser'))]",
+    "wtpOperationsPackageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-packagesvold/wtpOperationsPackage.zip",
+    "wtpTenantAdmintrafficManagerUniqueDnsName": "[concat('admin.wtp.',variables('lowerCaseUser'))]",
+    "wtpTenantAdmin": "[concat('adminwtp-',variables('lowerCaseUser'))]",
+    "wtpTenantAdminPackageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-packagesvold/wtpTenantAdminPackage.zip",
+    "wtpTenantRegistrationTrafficManagerUniqueDnsName": "[concat('register','.wtp.',variables('lowerCaseUser'))]",
+    "wtpTenantRegistrationApp": "[concat('registerwtp-',variables('lowerCaseUser'))]",
+    "wtpTenantRegistrationAppPackageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-packagesvold/wtpTenantRegistrationAppPackage.zip",
+    "wtpTenantUserTrafficManagerUniqueDnsName": "[concat('events.wtp.',variables('lowerCaseUser'))]",
+    "wtpTenantUser": "[concat('eventswtp-',variables('lowerCaseUser'))]",
+    "wtpTenantUserAppPackageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-packagesvold/tenantUserAppPackage.zip",
+    "demoAssistant": "[concat('demowtp-', variables('lowerCaseUser'))]",
+    "demoAssistantAppPackageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-packagesvold/demoAssistantAppPackage.zip",
+    "demoAssistantTrafficManagerUniqueDnsName": "[concat('demo','.wtp','.',variables('lowerCaseUser'))]"
+  },
+  "resources": [
+    {
+      "name": "[variables('tenantServer')]",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "version": "12.0",
+        "administratorLogin": "[variables('administratorLogin')]",
+        "administratorLoginPassword": "[variables('administratorLoginPassword')]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('tenantserver'))]"
+          ],
+          "name": "AllowAllAzureIps",
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+          },
+          "type": "firewallrules"
+        },
+        {
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]"
+          ],
+          "name": "Open",
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "255.255.255.255"
+          },
+          "type": "firewallrules"
+        }
+      ]
+    },
+    {
+      "dependsOn": [
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]"
+      ],
+      "name": "[concat(variables('tenantServer'),'/',variables('elasticPoolName'))]",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Sql/servers/elasticpools",
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "edition": "[variables('elasticPoolEdition')]",
+        "dtu": "[variables('poolDtu')]",
+        "databaseDtuMin": "[variables('databaseDtuMin')]",
+        "databaseDtuMax": "[variables('databaseDtuMax')]"
+      }
+    },
+    {
+      "dependsOn": [
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]"
+      ],
+      "name": "[concat(variables('tenantServer'),'/',variables('tenantContosoConcertHall'))]",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "requestedServiceObjectiveName": "ElasticPool",
+        "elasticPoolName": "[variables('elasticPoolName')]"
+      },
+      "resources": [
+        {
+          "name": "Import",
+          "type": "extensions",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantContosoConcertHall'))]"
+          ],
+          "properties": {
+            "storageKeyType": "SharedAccessKey",
+            "storageKey": "?",
+            "storageUri": "[variables('tenantContosoConcertHallStorageUri')]",
+            "administratorLogin": "[concat(variables('administratorLogin'),'@',variables('tenantServer'))]",
+            "administratorLoginPassword": "[variables('administratorLoginPassword')]",
+            "operationMode": "Import"
+          }
+        }
+      ]
+    },
+    {
+      "dependsOn": [
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]"
+      ],
+      "name": "[concat(variables('tenantServer'),'/',variables('tenantFabrikamJazzClub'))]",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "requestedServiceObjectiveName": "ElasticPool",
+        "elasticPoolName": "[variables('elasticPoolName')]"
+      },
+      "resources": [
+        {
+          "name": "Import",
+          "type": "extensions",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantFabrikamJazzClub'))]"
+          ],
+          "properties": {
+            "storageKeyType": "SharedAccessKey",
+            "storageKey": "?",
+            "storageUri": "[variables('tenantFabrikamJazzClubStorageUri')]",
+            "administratorLogin": "[concat(variables('administratorLogin'),'@',variables('tenantServer'))]",
+            "administratorLoginPassword": "[variables('administratorLoginPassword')]",
+            "operationMode": "Import"
+          }
+        }
+      ]
+    },
+    {
+      "dependsOn": [
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]"
+      ],
+      "name": "[concat(variables('tenantServer'),'/',variables('tenantDogwoodDojo'))]",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "requestedServiceObjectiveName": "ElasticPool",
+        "elasticPoolName": "[variables('elasticPoolName')]"
+      },
+      "resources": [
+        {
+          "name": "Import",
+          "type": "extensions",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantDogwoodDojo'))]"
+          ],
+          "properties": {
+            "storageKeyType": "SharedAccessKey",
+            "storageKey": "?",
+            "storageUri": "[variables('tenantDogwoodDojoStorageUri')]",
+            "administratorLogin": "[concat(variables('administratorLogin'),'@',variables('tenantServer'))]",
+            "administratorLoginPassword": "[variables('administratorLoginPassword')]",
+            "operationMode": "Import"
+          }
+        }
+      ]
+    },
+    {
+      "name": "[variables('catalogServer')]",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "version": "12.0",
+        "administratorLogin": "[variables('administratorLogin')]",
+        "administratorLoginPassword": "[variables('administratorLoginPassword')]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
+          ],
+          "name": "AllowAllAzureIps",
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+          },
+          "type": "firewallrules"
+        },
+        {
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
+          ],
+          "name": "Open",
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "255.255.255.255"
+          },
+          "type": "firewallrules"
+        }
+      ]
+    },
+    {
+      "dependsOn": [
+        "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
+      ],
+      "name": "[concat(variables('catalogServer'),'/',variables('catalogDatabaseName'))]",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "collation": "[variables('customerCatalogCollation')]",
+        "edition": "[variables('CustomerCatalogEdition')]",
+        "maxSizeBytes": "1073741824",
+        "requestedServiceObjectiveName": "[variables('requestedServiceObjectiveName')]"
+      },
+      "resources": [
+        {
+          "name": "Import",
+          "type": "extensions",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('catalogDatabaseName'))]"
+          ],
+          "properties": {
+            "storageKeyType": "SharedAccessKey",
+            "storageKey": "?",
+            "storageUri": "[variables('catalogDatabaseStorageUri')]",
+            "administratorLogin": "[concat(variables('administratorLogin'),'@',variables('catalogServer'))]",
+            "administratorLoginPassword": "[variables('administratorLoginPassword')]",
+            "operationMode": "Import"
+          }
+        }
+      ]
+    },
+    {
+      "dependsOn": [
+        "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
+      ],
+      "name": "[concat(variables('catalogServer'),'/',variables('baseTenantDB'))]",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "collation": "[variables('customerCatalogCollation')]",
+        "edition": "[variables('CustomerCatalogEdition')]",
+        "maxSizeBytes": "1073741824",
+        "requestedServiceObjectiveName": "[variables('requestedServiceObjectiveName')]"
+      },
+      "resources": [
+        {
+          "name": "Import",
+          "type": "extensions",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('baseTenantDB'))]"
+          ],
+          "properties": {
+            "storageKeyType": "SharedAccessKey",
+            "storageKey": "?",
+            "storageUri": "[variables('baseTenantDatabaseStorageUri')]",
+            "administratorLogin": "[concat(variables('administratorLogin'),'@',variables('catalogServer'))]",
+            "administratorLoginPassword": "[variables('administratorLoginPassword')]",
+            "operationMode": "Import"
+          }
+        }
+      ]
+    },
+    {
+      "name": "[variables('wtpOperations')]",
+      "apiVersion": "2014-06-01",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Web/serverfarms",
+      "properties": {
+        "name": "[variables('wtpOperations')]",
+        "sku": "[variables('webAppSku')]"
+      }
+    },
+    {
+      "name": "[variables('wtpOperations')]",
+      "apiVersion": "2015-08-01",
+      "type": "Microsoft.Web/sites",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpOperations'))]"
+      ],
+      "properties": {
+        "name": "[variables('wtpOperations')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('wtpOperations'))]",
+        "siteConfig": {
+          "appSettings": [
+          ]
+        }
+      },
+      "resources": [
+        {
+          "name": "MSDeploy",
+          "type": "extensions",
+          "location": "[variables('location')]",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/',variables('wtpOperations'))]"
+          ],
+          "properties": {
+            "packageUri": "[variables('wtpOperationsPackageUri')]"
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "type": "config",
+          "name": "appsettings",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/',variables('wtpOperations'))]",
+            "MSDeploy"
+          ],
+          "properties": {
+            "databaseUserName": "developer",
+            "databaseUserPassword": "P@ssword1",
+            "ServerSuffix": ".database.windows.net",
+            "PrimaryDatabaseServer": "[variables('tenantServer')]",
+            "SecondaryDatabaseServer": "[variables('tenantServer')]",
+            "ShardDatabaseServer": "[variables('catalogServer')]",
+            "CustomerCatalogServer": "[variables('catalogServer')]",
+            "CustomerCatalogDatabase": "[variables('catalogDatabaseName')]",
+            "ShardManager": "[variables('catalogDatabaseName')]",
+            "TrafficManagerSuffix": "trafficmanager.net",
+            "elasticPoolName": "Pool1",
+            "ImageUrl": "https://wtpdeploystorageaccount.blob.core.windows.net/images/",
+            "User": "[variables('lowerCaseUser')]",
+            "LearnHowFooterUrl": "https://docs.microsoft.com/azure/sql-database/sql-database-saas-tutorial/"
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "2015-11-01",
+      "type": "Microsoft.Network/trafficManagerProfiles",
+      "name": "[concat(variables('wtpOperations'))]",
+      "location": "global",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpOperations'))]",
+        "[concat('Microsoft.Web/sites/',variables('wtpOperations'))]"
+      ],
+      "properties": {
+        "profileStatus": "Enabled",
+        "trafficRoutingMethod": "Priority",
+        "dnsConfig": {
+          "relativeName": "[variables('wtpOperationstrafficManagerUniqueDnsName')]",
+          "ttl": 30
+        },
+        "monitorConfig": {
+          "protocol": "HTTP",
+          "port": 80,
+          "path": "/"
+        },
+        "endpoints": [
+          {
+            "apiVersion": "2015-11-01",
+            "dependsOn": [
+              "[concat('Microsoft.Network/trafficManagerProfiles/',variables('wtpOperations'))]",
+              "[concat('Microsoft.Web/sites/',variables('wtpOperations'))]"
+            ],
+            "location": "global",
+            "name": "[concat(variables('wtpOperations'))]",
+            "properties": {
+              "targetResourceId": "[resourceId('Microsoft.Web/sites/',variables('wtpOperations'))]",
+              "endpointStatus": "Enabled"
+            },
+            "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints"
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('wtpTenantUser')]",
+      "apiVersion": "2014-06-01",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Web/serverfarms",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpOperations'))]"
+      ],
+      "properties": {
+        "name": "[variables('wtpTenantUser')]",
+        "sku": "[variables('webAppSku')]"
+      }
+    },
+    {
+      "name": "[variables('wtpTenantUser')]",
+      "apiVersion": "2015-08-01",
+      "type": "Microsoft.Web/sites",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantUser'))]"
+      ],
+      "properties": {
+        "name": "[variables('wtpTenantUser')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('wtpTenantUser'))]",
+        "siteConfig": {
+          "appSettings": []
+        }
+      },
+      "resources": [
+        {
+          "name": "MSDeploy",
+          "type": "extensions",
+          "location": "[variables('location')]",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/',variables('wtpTenantUser'))]"
+          ],
+          "properties": {
+            "packageUri": "[variables('wtpTenantUserAppPackageUri')]"
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "type": "config",
+          "name": "appsettings",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/',variables('wtpTenantUser'))]",
+            "MSDeploy"
+          ],
+          "properties": {
+            "databaseUserName": "developer",
+            "databaseUserPassword": "P@ssword1",
+            "ServerSuffix": ".database.windows.net",
+            "PrimaryDatabaseServer": "[variables('tenantServer')]",
+            "SecondaryDatabaseServer": "[variables('tenantServer')]",
+            "ShardDatabaseServer": "[variables('catalogServer')]",
+            "CustomerCatalogServer": "[variables('catalogServer')]",
+            "CustomerCatalogDatabase": "[variables('catalogDatabaseName')]",
+            "ShardManager": "[variables('catalogDatabaseName')]",
+            "TrafficManagerSuffix": "trafficmanager.net",
+            "elasticPoolName": "Pool1",
+            "ImageUrl": "https://wtpdeploystorageaccount.blob.core.windows.net/images/",
+            "User": "[variables('lowerCaseUser')]",
+            "LearnHowFooterUrl": "https://docs.microsoft.com/azure/sql-database/sql-database-saas-tutorial/"
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "2015-11-01",
+      "type": "Microsoft.Network/trafficManagerProfiles",
+      "name": "[variables('wtpTenantUser')]",
+      "location": "global",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantUser'))]",
+        "[concat('Microsoft.Web/sites/',variables('wtpTenantUser'))]"
+      ],
+      "properties": {
+        "profileStatus": "Enabled",
+        "trafficRoutingMethod": "Priority",
+        "dnsConfig": {
+          "relativeName": "[variables('wtpTenantUserTrafficManagerUniqueDnsName')]",
+          "ttl": 30
+        },
+        "monitorConfig": {
+          "protocol": "HTTP",
+          "port": 80,
+          "path": "/"
+        },
+        "endpoints": [
+          {
+            "dependsOn": [
+              "[resourceId('Microsoft.Network/trafficManagerProfiles/',variables('wtpTenantUser'))]",
+              "[concat('Microsoft.Web/sites/',variables('wtpTenantUser'))]"
+            ],
+            "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
+            "location": "global",
+            "name": "[variables('wtpTenantUser')]",
+            "apiVersion": "2015-11-01",
+            "properties": {
+              "targetResourceId": "[resourceId('Microsoft.Web/sites/',variables('wtpTenantUser'))]",
+              "endpointStatus": "Enabled"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('wtpTenantAdmin')]",
+      "apiVersion": "2014-06-01",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Web/serverfarms",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantUser'))]"
+      ],
+      "properties": {
+        "name": "[variables('wtpTenantAdmin')]",
+        "sku": "[variables('webAppSku')]"
+      }
+    },
+    {
+      "name": "[variables('wtpTenantAdmin')]",
+      "apiVersion": "2015-08-01",
+      "type": "Microsoft.Web/sites",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantAdmin'))]"
+      ],
+      "properties": {
+        "name": "[variables('wtpTenantAdmin')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('wtpTenantAdmin'))]",
+        "siteConfig": {
+          "appSettings": []
+        }
+      },
+      "resources": [
+        {
+          "name": "MSDeploy",
+          "type": "extensions",
+          "location": "[variables('location')]",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/',variables('wtpTenantAdmin'))]"
+          ],
+          "properties": {
+            "packageUri": "[variables('wtpTenantAdminPackageUri')]"
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "type": "config",
+          "name": "appsettings",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/',variables('wtpTenantAdmin'))]",
+            "MSDeploy"
+          ],
+          "properties": {
+            "databaseUserName": "developer",
+            "databaseUserPassword": "P@ssword1",
+            "ServerSuffix": ".database.windows.net",
+            "PrimaryDatabaseServer": "[variables('tenantServer')]",
+            "SecondaryDatabaseServer": "[variables('tenantServer')]",
+            "ShardDatabaseServer": "[variables('catalogServer')]",
+            "CustomerCatalogServer": "[variables('catalogServer')]",
+            "CustomerCatalogDatabase": "[variables('catalogDatabaseName')]",
+            "ShardManager": "[variables('catalogDatabaseName')]",
+            "TrafficManagerSuffix": "trafficmanager.net",
+            "elasticPoolName": "Pool1",
+            "ImageUrl": "https://wtpdeploystorageaccount.blob.core.windows.net/images/",
+            "User": "[variables('lowerCaseUser')]",
+            "LearnHowFooterUrl": "https://docs.microsoft.com/azure/sql-database/sql-database-saas-tutorial/"
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "2015-11-01",
+      "type": "Microsoft.Network/trafficManagerProfiles",
+      "name": "[variables('wtpTenantAdmin')]",
+      "location": "global",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantAdmin'))]",
+        "[concat('Microsoft.Web/sites/',variables('wtpTenantAdmin'))]"
+      ],
+      "properties": {
+        "profileStatus": "Enabled",
+        "trafficRoutingMethod": "Priority",
+        "dnsConfig": {
+          "relativeName": "[variables('wtpTenantAdmintrafficManagerUniqueDnsName')]",
+          "ttl": 30
+        },
+        "monitorConfig": {
+          "protocol": "HTTP",
+          "port": 80,
+          "path": "/"
+        },
+        "endpoints": [
+          {
+            "dependsOn": [
+              "[resourceId('Microsoft.Network/trafficManagerProfiles/',variables('wtpTenantAdmin'))]",
+              "[variables('wtpTenantAdmin')]"
+            ],
+            "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
+            "location": "global",
+            "name": "[variables('wtpTenantAdmin')]",
+            "apiVersion": "2015-11-01",
+            "properties": {
+              "targetResourceId": "[resourceId('Microsoft.Web/sites/',variables('wtpTenantAdmin'))]",
+              "endpointStatus": "Enabled"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('demoAssistant')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "[variables('location')]",
+      "apiVersion": "2014-06-01",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantAdmin'))]"
+      ],
+      "properties": {
+        "name": "[variables('demoAssistant')]",
+        "sku": "[variables('webAppSku')]"
+      }
+    },
+    {
+      "name": "[variables('demoAssistant')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[variables('location')]",
+      "apiVersion": "2015-08-01",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('demoAssistant'))]"
+      ],
+      "tags": {
+      },
+      "properties": {
+        "name": "[variables('demoAssistant')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('demoAssistant'))]"
+      },
+      "resources": [
+        {
+          "name": "MSDeploy",
+          "type": "extensions",
+          "location": "[variables('location')]",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/',variables('demoAssistant'))]"
+          ],
+          "properties": {
+            "packageUri": "[variables('demoAssistantAppPackageUri')]"
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "type": "config",
+          "name": "appsettings",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/',variables('demoAssistant'))]",
+            "MSDeploy"
+          ],
+          "properties": {
+            "databaseUserName": "developer",
+            "databaseUserPassword": "P@ssword1",
+            "ServerSuffix": ".database.windows.net",
+            "PrimaryDatabaseServer": "[variables('tenantServer')]",
+            "SecondaryDatabaseServer": "[variables('tenantServer')]",
+            "ShardDatabaseServer": "[variables('catalogServer')]",
+            "CustomerCatalogServer": "[variables('catalogServer')]",
+            "CustomerCatalogDatabase": "[variables('catalogDatabaseName')]",
+            "ShardManager": "[variables('catalogDatabaseName')]",
+            "TrafficManagerSuffix": "trafficmanager.net",
+            "elasticPoolName": "Pool1",
+            "ImageUrl": "https://wtpdeploystorageaccount.blob.core.windows.net/images/",
+            "User": "[variables('lowerCaseUser')]",
+            "LearnHowFooterUrl": "https://docs.microsoft.com/azure/sql-database/sql-database-saas-tutorial/"
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "2015-11-01",
+      "type": "Microsoft.Network/trafficManagerProfiles",
+      "name": "[variables('demoAssistant')]",
+      "location": "global",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('demoAssistant'))]",
+        "[concat('Microsoft.Web/sites/',variables('demoAssistant'))]"
+      ],
+      "properties": {
+        "profileStatus": "Enabled",
+        "trafficRoutingMethod": "Priority",
+        "dnsConfig": {
+          "relativeName": "[variables('demoAssistantTrafficManagerUniqueDnsName')]",
+          "ttl": 30
+        },
+        "monitorConfig": {
+          "protocol": "HTTP",
+          "port": 80,
+          "path": "/"
+        },
+        "endpoints": [
+          {
+            "dependsOn": [
+              "[resourceId('Microsoft.Network/trafficManagerProfiles/',variables('demoAssistant'))]",
+              "[concat('Microsoft.Web/sites/',variables('demoAssistant'))]"
+            ],
+            "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
+            "location": "global",
+            "name": "[variables('demoAssistant')]",
+            "apiVersion": "2015-11-01",
+            "properties": {
+              "targetResourceId": "[resourceId('Microsoft.Web/sites/',variables('demoAssistant'))]",
+              "endpointStatus": "Enabled"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('wtpTenantRegistrationApp')]",
+      "apiVersion": "2014-06-01",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Web/serverfarms",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('demoAssistant'))]"
+      ],
+      "properties": {
+        "name": "[variables('wtpTenantRegistrationApp')]",
+        "sku": "[variables('webAppSku')]"
+      }
+    },
+    {
+      "name": "[variables('wtpTenantRegistrationApp')]",
+      "apiVersion": "2015-08-01",
+      "type": "Microsoft.Web/sites",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantRegistrationApp'))]"
+      ],
+      "properties": {
+        "name": "[variables('wtpTenantRegistrationApp')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('wtpTenantRegistrationApp'))]",
+        "siteConfig": {
+          "appSettings": []
+        }
+      },
+      "resources": [
+        {
+          "name": "MSDeploy",
+          "type": "extensions",
+          "location": "[variables('location')]",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/',variables('wtpTenantRegistrationApp'))]"
+          ],
+          "properties": {
+            "packageUri": "[variables('wtpTenantRegistrationAppPackageUri')]"
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "type": "config",
+          "name": "appsettings",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/',variables('wtpTenantRegistrationApp'))]",
+            "MSDeploy"
+          ],
+          "properties": {
+            "databaseUserName": "developer",
+            "databaseUserPassword": "P@ssword1",
+            "ServerSuffix": ".database.windows.net",
+            "PrimaryDatabaseServer": "[variables('tenantServer')]",
+            "SecondaryDatabaseServer": "[variables('tenantServer')]",
+            "ShardDatabaseServer": "[variables('catalogServer')]",
+            "BaseTenantDatabaseName": "basetenantdb",
+            "CustomerCatalogServer": "[variables('catalogServer')]",
+            "CustomerCatalogDatabase": "[variables('catalogDatabaseName')]",
+            "ShardManager": "[variables('catalogDatabaseName')]",
+            "TrafficManagerSuffix": "trafficmanager.net",
+            "elasticPoolName": "Pool1",
+            "ImageUrl": "https://wtpdeploystorageaccount.blob.core.windows.net/images/",
+            "User": "[variables('lowerCaseUser')]",
+            "LearnHowFooterUrl": "https://docs.microsoft.com/azure/sql-database/sql-database-saas-tutorial/"
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "2015-11-01",
+      "type": "Microsoft.Network/trafficManagerProfiles",
+      "name": "[variables('wtpTenantRegistrationApp')]",
+      "location": "global",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantRegistrationApp'))]",
+        "[concat('Microsoft.Web/sites/',variables('wtpTenantRegistrationApp'))]"
+      ],
+      "properties": {
+        "profileStatus": "Enabled",
+        "trafficRoutingMethod": "Priority",
+        "dnsConfig": {
+          "relativeName": "[variables('wtpTenantRegistrationTrafficManagerUniqueDnsName')]",
+          "ttl": 30
+        },
+        "monitorConfig": {
+          "protocol": "HTTP",
+          "port": 80,
+          "path": "/"
+        },
+        "endpoints": [
+          {
+            "dependsOn": [
+              "[resourceId('Microsoft.Network/trafficManagerProfiles/',variables('wtpTenantRegistrationApp'))]",
+              "[concat('Microsoft.Web/sites/',variables('wtpTenantRegistrationApp'))]"
+            ],
+            "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
+            "location": "global",
+            "name": "[variables('wtpTenantRegistrationApp')]",
+            "apiVersion": "2015-11-01",
+            "properties": {
+              "targetResourceId": "[resourceId('Microsoft.Web/sites/',variables('wtpTenantRegistrationApp'))]",
+              "endpointStatus": "Enabled"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "Demo_Assistant_URL": {
+      "type": "string",
+      "value": "[concat('http://', reference(resourceId('Microsoft.Network/trafficManagerProfiles', variables('demoAssistant'))).dnsconfig.fqdn)]"
+    }
+  }
+}
