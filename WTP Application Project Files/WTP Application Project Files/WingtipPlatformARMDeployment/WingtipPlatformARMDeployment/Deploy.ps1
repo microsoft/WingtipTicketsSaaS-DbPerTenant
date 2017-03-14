@@ -20,6 +20,7 @@ param(
 ## This function initializes the subscription and lists available subscriptions to select from
 
 ## Variables
+$user = $user.ToLower() -replace '\s',''
 $path = (Get-Item -Path ".\" -Verbose).FullName + "\Templates"
 $resourceGroupName = "Wingtip-"+$user
 $DeployWingTipSaaSTemplateFile = "$path\azuredeploy.json"

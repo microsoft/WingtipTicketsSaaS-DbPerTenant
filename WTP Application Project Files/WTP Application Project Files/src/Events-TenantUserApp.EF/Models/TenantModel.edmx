@@ -1,0 +1,782 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+  <!-- EF Runtime content -->
+  <edmx:Runtime>
+    <!-- SSDL content -->
+    <edmx:StorageModels>
+      <Schema Namespace="TenantModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012.Azure" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="Countries">
+          <Key>
+            <PropertyRef Name="CountryCode" />
+          </Key>
+          <Property Name="CountryCode" Type="char" MaxLength="3" Nullable="false" />
+          <Property Name="CountryName" Type="nvarchar" MaxLength="50" Nullable="false" />
+          <Property Name="Language" Type="char" MaxLength="8" Nullable="false" />
+        </EntityType>
+        <EntityType Name="Customers">
+          <Key>
+            <PropertyRef Name="CustomerId" />
+          </Key>
+          <Property Name="CustomerId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="FirstName" Type="nvarchar" MaxLength="25" Nullable="false" />
+          <Property Name="LastName" Type="nvarchar" MaxLength="25" Nullable="false" />
+          <Property Name="Email" Type="varchar" MaxLength="30" Nullable="false" />
+          <Property Name="Password" Type="nvarchar" MaxLength="30" />
+          <Property Name="PostalCode" Type="char" MaxLength="10" />
+          <Property Name="CountryCode" Type="char" MaxLength="3" Nullable="false" />
+        </EntityType>
+        <EntityType Name="Events">
+          <Key>
+            <PropertyRef Name="EventId" />
+          </Key>
+          <Property Name="EventId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="EventName" Type="nvarchar" MaxLength="50" Nullable="false" />
+          <Property Name="Subtitle" Type="nvarchar" MaxLength="50" />
+          <Property Name="Date" Type="datetime" Nullable="false" />
+        </EntityType>
+        <EntityType Name="EventSections">
+          <Key>
+            <PropertyRef Name="EventId" />
+            <PropertyRef Name="SectionId" />
+          </Key>
+          <Property Name="EventId" Type="int" Nullable="false" />
+          <Property Name="SectionId" Type="int" Nullable="false" />
+          <Property Name="Price" Type="money" Nullable="false" />
+        </EntityType>
+        <EntityType Name="Sections">
+          <Key>
+            <PropertyRef Name="SectionId" />
+          </Key>
+          <Property Name="SectionId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="SectionName" Type="nvarchar" MaxLength="30" Nullable="false" />
+          <Property Name="SeatRows" Type="smallint" Nullable="false" />
+          <Property Name="SeatsPerRow" Type="smallint" Nullable="false" />
+          <Property Name="StandardPrice" Type="money" Nullable="false" />
+        </EntityType>
+        <EntityType Name="sysdiagrams">
+          <Key>
+            <PropertyRef Name="diagram_id" />
+          </Key>
+          <Property Name="name" Type="nvarchar" MaxLength="128" Nullable="false" />
+          <Property Name="principal_id" Type="int" Nullable="false" />
+          <Property Name="diagram_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="version" Type="int" />
+          <Property Name="definition" Type="varbinary(max)" />
+        </EntityType>
+        <EntityType Name="TicketPurchases">
+          <Key>
+            <PropertyRef Name="TicketPurchaseId" />
+          </Key>
+          <Property Name="TicketPurchaseId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="PurchaseDate" Type="datetime" Nullable="false" />
+          <Property Name="PurchaseTotal" Type="money" Nullable="false" />
+          <Property Name="CustomerId" Type="int" Nullable="false" />
+        </EntityType>
+        <EntityType Name="Tickets">
+          <Key>
+            <PropertyRef Name="TicketId" />
+          </Key>
+          <Property Name="TicketId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="RowNumber" Type="int" Nullable="false" />
+          <Property Name="SeatNumber" Type="int" Nullable="false" />
+          <Property Name="EventId" Type="int" Nullable="false" />
+          <Property Name="SectionId" Type="int" Nullable="false" />
+          <Property Name="TicketPurchaseId" Type="int" Nullable="false" />
+        </EntityType>
+        <!--Errors Found During Generation:
+warning 6002: The table/view 'dogwooddojo.dbo.Venues' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
+        <EntityType Name="Venues">
+          <Key>
+            <PropertyRef Name="VenueName" />
+            <PropertyRef Name="VenueType" />
+            <PropertyRef Name="AdminEmail" />
+            <PropertyRef Name="CountryCode" />
+          </Key>
+          <Property Name="VenueName" Type="nvarchar" MaxLength="50" Nullable="false" />
+          <Property Name="VenueType" Type="char" MaxLength="30" Nullable="false" />
+          <Property Name="AdminEmail" Type="nchar" MaxLength="30" Nullable="false" />
+          <Property Name="AdminPassword" Type="nchar" MaxLength="30" />
+          <Property Name="PostalCode" Type="char" MaxLength="10" />
+          <Property Name="CountryCode" Type="char" MaxLength="3" Nullable="false" />
+        </EntityType>
+        <EntityType Name="VenueTypes">
+          <Key>
+            <PropertyRef Name="VenueType" />
+          </Key>
+          <Property Name="VenueType" Type="char" MaxLength="30" Nullable="false" />
+          <Property Name="VenueTypeName" Type="nchar" MaxLength="30" Nullable="false" />
+          <Property Name="EventTypeName" Type="nvarchar" MaxLength="30" Nullable="false" />
+          <Property Name="EventTypeShortName" Type="nvarchar" MaxLength="20" Nullable="false" />
+          <Property Name="EventTypeShortNamePlural" Type="nvarchar" MaxLength="20" Nullable="false" />
+          <Property Name="Language" Type="char" MaxLength="8" Nullable="false" />
+        </EntityType>
+        <Association Name="FK_Customers_Countries">
+          <End Role="Countries" Type="Self.Countries" Multiplicity="1" />
+          <End Role="Customers" Type="Self.Customers" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Countries">
+              <PropertyRef Name="CountryCode" />
+            </Principal>
+            <Dependent Role="Customers">
+              <PropertyRef Name="CountryCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_EventSections_Events">
+          <End Role="Events" Type="Self.Events" Multiplicity="1" />
+          <End Role="EventSections" Type="Self.EventSections" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Events">
+              <PropertyRef Name="EventId" />
+            </Principal>
+            <Dependent Role="EventSections">
+              <PropertyRef Name="EventId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_EventSections_Sections">
+          <End Role="Sections" Type="Self.Sections" Multiplicity="1" />
+          <End Role="EventSections" Type="Self.EventSections" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Sections">
+              <PropertyRef Name="SectionId" />
+            </Principal>
+            <Dependent Role="EventSections">
+              <PropertyRef Name="SectionId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_TicketPurchases_Customers">
+          <End Role="Customers" Type="Self.Customers" Multiplicity="1" />
+          <End Role="TicketPurchases" Type="Self.TicketPurchases" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Customers">
+              <PropertyRef Name="CustomerId" />
+            </Principal>
+            <Dependent Role="TicketPurchases">
+              <PropertyRef Name="CustomerId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Tickets_EventSections">
+          <End Role="EventSections" Type="Self.EventSections" Multiplicity="1" />
+          <End Role="Tickets" Type="Self.Tickets" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="EventSections">
+              <PropertyRef Name="EventId" />
+              <PropertyRef Name="SectionId" />
+            </Principal>
+            <Dependent Role="Tickets">
+              <PropertyRef Name="EventId" />
+              <PropertyRef Name="SectionId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Tickets_TicketPurchases">
+          <End Role="TicketPurchases" Type="Self.TicketPurchases" Multiplicity="1" />
+          <End Role="Tickets" Type="Self.Tickets" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="TicketPurchases">
+              <PropertyRef Name="TicketPurchaseId" />
+            </Principal>
+            <Dependent Role="Tickets">
+              <PropertyRef Name="TicketPurchaseId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Venues_Countries">
+          <End Role="Countries" Type="Self.Countries" Multiplicity="1" />
+          <End Role="Venues" Type="Self.Venues" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Countries">
+              <PropertyRef Name="CountryCode" />
+            </Principal>
+            <Dependent Role="Venues">
+              <PropertyRef Name="CountryCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Venues_VenueTypes">
+          <End Role="VenueTypes" Type="Self.VenueTypes" Multiplicity="1" />
+          <End Role="Venues" Type="Self.Venues" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="VenueTypes">
+              <PropertyRef Name="VenueType" />
+            </Principal>
+            <Dependent Role="Venues">
+              <PropertyRef Name="VenueType" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Function Name="fn_diagramobjects" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="true" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" ReturnType="int" />
+        <Function Name="sp_alterdiagram" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="diagramname" Type="nvarchar" Mode="In" />
+          <Parameter Name="owner_id" Type="int" Mode="In" />
+          <Parameter Name="version" Type="int" Mode="In" />
+          <Parameter Name="definition" Type="varbinary(max)" Mode="In" />
+        </Function>
+        <Function Name="sp_CpuLoadGenerator" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="duration_seconds" Type="int" Mode="In" />
+          <Parameter Name="dtu_to_simulate" Type="int" Mode="In" />
+        </Function>
+        <Function Name="sp_creatediagram" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="diagramname" Type="nvarchar" Mode="In" />
+          <Parameter Name="owner_id" Type="int" Mode="In" />
+          <Parameter Name="version" Type="int" Mode="In" />
+          <Parameter Name="definition" Type="varbinary(max)" Mode="In" />
+        </Function>
+        <Function Name="sp_dropdiagram" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="diagramname" Type="nvarchar" Mode="In" />
+          <Parameter Name="owner_id" Type="int" Mode="In" />
+        </Function>
+        <Function Name="sp_helpdiagramdefinition" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="diagramname" Type="nvarchar" Mode="In" />
+          <Parameter Name="owner_id" Type="int" Mode="In" />
+        </Function>
+        <Function Name="sp_helpdiagrams" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="diagramname" Type="nvarchar" Mode="In" />
+          <Parameter Name="owner_id" Type="int" Mode="In" />
+        </Function>
+        <Function Name="sp_renamediagram" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="diagramname" Type="nvarchar" Mode="In" />
+          <Parameter Name="owner_id" Type="int" Mode="In" />
+          <Parameter Name="new_diagramname" Type="nvarchar" Mode="In" />
+        </Function>
+        <Function Name="sp_ResetEventDates" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo">
+          <Parameter Name="StartHour" Type="int" Mode="In" />
+          <Parameter Name="StartMinute" Type="int" Mode="In" />
+        </Function>
+        <Function Name="sp_upgraddiagrams" Aggregate="false" BuiltIn="false" NiladicFunction="false" IsComposable="false" ParameterTypeSemantics="AllowImplicitConversion" Schema="dbo" />
+        <EntityContainer Name="TenantModelStoreContainer">
+          <EntitySet Name="Countries" EntityType="Self.Countries" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Customers" EntityType="Self.Customers" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Events" EntityType="Self.Events" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="EventSections" EntityType="Self.EventSections" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Sections" EntityType="Self.Sections" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="sysdiagrams" EntityType="Self.sysdiagrams" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="TicketPurchases" EntityType="Self.TicketPurchases" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Tickets" EntityType="Self.Tickets" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="VenueTypes" EntityType="Self.VenueTypes" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Venues" EntityType="Self.Venues" store:Type="Tables" store:Schema="dbo">
+            <DefiningQuery>SELECT 
+    [Venues].[VenueName] AS [VenueName], 
+    [Venues].[VenueType] AS [VenueType], 
+    [Venues].[AdminEmail] AS [AdminEmail], 
+    [Venues].[AdminPassword] AS [AdminPassword], 
+    [Venues].[PostalCode] AS [PostalCode], 
+    [Venues].[CountryCode] AS [CountryCode]
+    FROM [dbo].[Venues] AS [Venues]</DefiningQuery>
+          </EntitySet>
+          <AssociationSet Name="FK_Customers_Countries" Association="Self.FK_Customers_Countries">
+            <End Role="Countries" EntitySet="Countries" />
+            <End Role="Customers" EntitySet="Customers" />
+          </AssociationSet>
+          <AssociationSet Name="FK_EventSections_Events" Association="Self.FK_EventSections_Events">
+            <End Role="Events" EntitySet="Events" />
+            <End Role="EventSections" EntitySet="EventSections" />
+          </AssociationSet>
+          <AssociationSet Name="FK_EventSections_Sections" Association="Self.FK_EventSections_Sections">
+            <End Role="Sections" EntitySet="Sections" />
+            <End Role="EventSections" EntitySet="EventSections" />
+          </AssociationSet>
+          <AssociationSet Name="FK_TicketPurchases_Customers" Association="Self.FK_TicketPurchases_Customers">
+            <End Role="Customers" EntitySet="Customers" />
+            <End Role="TicketPurchases" EntitySet="TicketPurchases" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Tickets_EventSections" Association="Self.FK_Tickets_EventSections">
+            <End Role="EventSections" EntitySet="EventSections" />
+            <End Role="Tickets" EntitySet="Tickets" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Tickets_TicketPurchases" Association="Self.FK_Tickets_TicketPurchases">
+            <End Role="TicketPurchases" EntitySet="TicketPurchases" />
+            <End Role="Tickets" EntitySet="Tickets" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Venues_Countries" Association="Self.FK_Venues_Countries">
+            <End Role="Countries" EntitySet="Countries" />
+            <End Role="Venues" EntitySet="Venues" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Venues_VenueTypes" Association="Self.FK_Venues_VenueTypes">
+            <End Role="VenueTypes" EntitySet="VenueTypes" />
+            <End Role="Venues" EntitySet="Venues" />
+          </AssociationSet>
+        </EntityContainer>
+      </Schema>
+    </edmx:StorageModels>
+    <!-- CSDL content -->
+    <edmx:ConceptualModels>
+      <Schema Namespace="TenantModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+        <EntityType Name="Countries">
+          <Key>
+            <PropertyRef Name="CountryCode" />
+          </Key>
+          <Property Name="CountryCode" Type="String" MaxLength="3" FixedLength="true" Unicode="false" Nullable="false" />
+          <Property Name="CountryName" Type="String" MaxLength="50" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="Language" Type="String" MaxLength="8" FixedLength="true" Unicode="false" Nullable="false" />
+          <NavigationProperty Name="Customers" Relationship="Self.FK_Customers_Countries" FromRole="Countries" ToRole="Customers" />
+          <NavigationProperty Name="Venues" Relationship="Self.FK_Venues_Countries" FromRole="Countries" ToRole="Venues" />
+        </EntityType>
+        <EntityType Name="Customers">
+          <Key>
+            <PropertyRef Name="CustomerId" />
+          </Key>
+          <Property Name="CustomerId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="FirstName" Type="String" MaxLength="25" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="LastName" Type="String" MaxLength="25" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="Email" Type="String" MaxLength="30" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="Password" Type="String" MaxLength="30" FixedLength="false" Unicode="true" />
+          <Property Name="PostalCode" Type="String" MaxLength="10" FixedLength="true" Unicode="false" />
+          <Property Name="CountryCode" Type="String" MaxLength="3" FixedLength="true" Unicode="false" Nullable="false" />
+          <NavigationProperty Name="Countries" Relationship="Self.FK_Customers_Countries" FromRole="Customers" ToRole="Countries" />
+          <NavigationProperty Name="TicketPurchases" Relationship="Self.FK_TicketPurchases_Customers" FromRole="Customers" ToRole="TicketPurchases" />
+        </EntityType>
+        <EntityType Name="Events">
+          <Key>
+            <PropertyRef Name="EventId" />
+          </Key>
+          <Property Name="EventId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="EventName" Type="String" MaxLength="50" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="Subtitle" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="Date" Type="DateTime" Nullable="false" Precision="3" />
+          <NavigationProperty Name="EventSections" Relationship="Self.FK_EventSections_Events" FromRole="Events" ToRole="EventSections" />
+        </EntityType>
+        <EntityType Name="EventSections">
+          <Key>
+            <PropertyRef Name="EventId" />
+            <PropertyRef Name="SectionId" />
+          </Key>
+          <Property Name="EventId" Type="Int32" Nullable="false" />
+          <Property Name="SectionId" Type="Int32" Nullable="false" />
+          <Property Name="Price" Type="Decimal" Precision="19" Scale="4" Nullable="false" />
+          <NavigationProperty Name="Events" Relationship="Self.FK_EventSections_Events" FromRole="EventSections" ToRole="Events" />
+          <NavigationProperty Name="Sections" Relationship="Self.FK_EventSections_Sections" FromRole="EventSections" ToRole="Sections" />
+          <NavigationProperty Name="Tickets" Relationship="Self.FK_Tickets_EventSections" FromRole="EventSections" ToRole="Tickets" />
+        </EntityType>
+        <EntityType Name="Sections">
+          <Key>
+            <PropertyRef Name="SectionId" />
+          </Key>
+          <Property Name="SectionId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="SectionName" Type="String" MaxLength="30" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="SeatRows" Type="Int16" Nullable="false" />
+          <Property Name="SeatsPerRow" Type="Int16" Nullable="false" />
+          <Property Name="StandardPrice" Type="Decimal" Precision="19" Scale="4" Nullable="false" />
+          <NavigationProperty Name="EventSections" Relationship="Self.FK_EventSections_Sections" FromRole="Sections" ToRole="EventSections" />
+        </EntityType>
+        <EntityType Name="sysdiagrams">
+          <Key>
+            <PropertyRef Name="diagram_id" />
+          </Key>
+          <Property Name="name" Type="String" MaxLength="128" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="principal_id" Type="Int32" Nullable="false" />
+          <Property Name="diagram_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="version" Type="Int32" />
+          <Property Name="definition" Type="Binary" MaxLength="Max" FixedLength="false" />
+        </EntityType>
+        <EntityType Name="TicketPurchases">
+          <Key>
+            <PropertyRef Name="TicketPurchaseId" />
+          </Key>
+          <Property Name="TicketPurchaseId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="PurchaseDate" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="PurchaseTotal" Type="Decimal" Precision="19" Scale="4" Nullable="false" />
+          <Property Name="CustomerId" Type="Int32" Nullable="false" />
+          <NavigationProperty Name="Customers" Relationship="Self.FK_TicketPurchases_Customers" FromRole="TicketPurchases" ToRole="Customers" />
+          <NavigationProperty Name="Tickets" Relationship="Self.FK_Tickets_TicketPurchases" FromRole="TicketPurchases" ToRole="Tickets" />
+        </EntityType>
+        <EntityType Name="Tickets">
+          <Key>
+            <PropertyRef Name="TicketId" />
+          </Key>
+          <Property Name="TicketId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="RowNumber" Type="Int32" Nullable="false" />
+          <Property Name="SeatNumber" Type="Int32" Nullable="false" />
+          <Property Name="EventId" Type="Int32" Nullable="false" />
+          <Property Name="SectionId" Type="Int32" Nullable="false" />
+          <Property Name="TicketPurchaseId" Type="Int32" Nullable="false" />
+          <NavigationProperty Name="EventSections" Relationship="Self.FK_Tickets_EventSections" FromRole="Tickets" ToRole="EventSections" />
+          <NavigationProperty Name="TicketPurchases" Relationship="Self.FK_Tickets_TicketPurchases" FromRole="Tickets" ToRole="TicketPurchases" />
+        </EntityType>
+        <EntityType Name="VenueTypes">
+          <Key>
+            <PropertyRef Name="VenueType" />
+          </Key>
+          <Property Name="VenueType" Type="String" MaxLength="30" FixedLength="true" Unicode="false" Nullable="false" />
+          <Property Name="VenueTypeName" Type="String" MaxLength="30" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="EventTypeName" Type="String" MaxLength="30" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="EventTypeShortName" Type="String" MaxLength="20" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="EventTypeShortNamePlural" Type="String" MaxLength="20" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="Language" Type="String" MaxLength="8" FixedLength="true" Unicode="false" Nullable="false" />
+          <NavigationProperty Name="Venues" Relationship="Self.FK_Venues_VenueTypes" FromRole="VenueTypes" ToRole="Venues" />
+        </EntityType>
+        <EntityType Name="Venues">
+          <Key>
+            <PropertyRef Name="VenueName" />
+            <PropertyRef Name="VenueType" />
+            <PropertyRef Name="AdminEmail" />
+            <PropertyRef Name="CountryCode" />
+          </Key>
+          <Property Name="VenueName" Type="String" MaxLength="50" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="VenueType" Type="String" MaxLength="30" FixedLength="true" Unicode="false" Nullable="false" />
+          <Property Name="AdminEmail" Type="String" MaxLength="30" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="AdminPassword" Type="String" MaxLength="30" FixedLength="true" Unicode="true" />
+          <Property Name="PostalCode" Type="String" MaxLength="10" FixedLength="true" Unicode="false" />
+          <Property Name="CountryCode" Type="String" MaxLength="3" FixedLength="true" Unicode="false" Nullable="false" />
+          <NavigationProperty Name="Countries" Relationship="Self.FK_Venues_Countries" FromRole="Venues" ToRole="Countries" />
+          <NavigationProperty Name="VenueTypes" Relationship="Self.FK_Venues_VenueTypes" FromRole="Venues" ToRole="VenueTypes" />
+        </EntityType>
+        <Association Name="FK_Customers_Countries">
+          <End Role="Countries" Type="Self.Countries" Multiplicity="1" />
+          <End Role="Customers" Type="Self.Customers" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Countries">
+              <PropertyRef Name="CountryCode" />
+            </Principal>
+            <Dependent Role="Customers">
+              <PropertyRef Name="CountryCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Venues_Countries">
+          <End Role="Countries" Type="Self.Countries" Multiplicity="1" />
+          <End Role="Venues" Type="Self.Venues" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Countries">
+              <PropertyRef Name="CountryCode" />
+            </Principal>
+            <Dependent Role="Venues">
+              <PropertyRef Name="CountryCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_TicketPurchases_Customers">
+          <End Role="Customers" Type="Self.Customers" Multiplicity="1" />
+          <End Role="TicketPurchases" Type="Self.TicketPurchases" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Customers">
+              <PropertyRef Name="CustomerId" />
+            </Principal>
+            <Dependent Role="TicketPurchases">
+              <PropertyRef Name="CustomerId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_EventSections_Events">
+          <End Role="Events" Type="Self.Events" Multiplicity="1" />
+          <End Role="EventSections" Type="Self.EventSections" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Events">
+              <PropertyRef Name="EventId" />
+            </Principal>
+            <Dependent Role="EventSections">
+              <PropertyRef Name="EventId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_EventSections_Sections">
+          <End Role="Sections" Type="Self.Sections" Multiplicity="1" />
+          <End Role="EventSections" Type="Self.EventSections" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Sections">
+              <PropertyRef Name="SectionId" />
+            </Principal>
+            <Dependent Role="EventSections">
+              <PropertyRef Name="SectionId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Tickets_EventSections">
+          <End Role="EventSections" Type="Self.EventSections" Multiplicity="1" />
+          <End Role="Tickets" Type="Self.Tickets" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="EventSections">
+              <PropertyRef Name="EventId" />
+              <PropertyRef Name="SectionId" />
+            </Principal>
+            <Dependent Role="Tickets">
+              <PropertyRef Name="EventId" />
+              <PropertyRef Name="SectionId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Tickets_TicketPurchases">
+          <End Role="TicketPurchases" Type="Self.TicketPurchases" Multiplicity="1" />
+          <End Role="Tickets" Type="Self.Tickets" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="TicketPurchases">
+              <PropertyRef Name="TicketPurchaseId" />
+            </Principal>
+            <Dependent Role="Tickets">
+              <PropertyRef Name="TicketPurchaseId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Venues_VenueTypes">
+          <End Role="VenueTypes" Type="Self.VenueTypes" Multiplicity="1" />
+          <End Role="Venues" Type="Self.Venues" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="VenueTypes">
+              <PropertyRef Name="VenueType" />
+            </Principal>
+            <Dependent Role="Venues">
+              <PropertyRef Name="VenueType" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityContainer Name="TenantEntities" annotation:LazyLoadingEnabled="true">
+          <EntitySet Name="Countries" EntityType="Self.Countries" />
+          <EntitySet Name="Customers" EntityType="Self.Customers" />
+          <EntitySet Name="Events" EntityType="Self.Events" />
+          <EntitySet Name="EventSections" EntityType="Self.EventSections" />
+          <EntitySet Name="Sections" EntityType="Self.Sections" />
+          <EntitySet Name="sysdiagrams" EntityType="Self.sysdiagrams" />
+          <EntitySet Name="TicketPurchases" EntityType="Self.TicketPurchases" />
+          <EntitySet Name="Tickets" EntityType="Self.Tickets" />
+          <EntitySet Name="VenueTypes" EntityType="Self.VenueTypes" />
+          <EntitySet Name="Venues" EntityType="Self.Venues" />
+          <AssociationSet Name="FK_Customers_Countries" Association="Self.FK_Customers_Countries">
+            <End Role="Countries" EntitySet="Countries" />
+            <End Role="Customers" EntitySet="Customers" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Venues_Countries" Association="Self.FK_Venues_Countries">
+            <End Role="Countries" EntitySet="Countries" />
+            <End Role="Venues" EntitySet="Venues" />
+          </AssociationSet>
+          <AssociationSet Name="FK_TicketPurchases_Customers" Association="Self.FK_TicketPurchases_Customers">
+            <End Role="Customers" EntitySet="Customers" />
+            <End Role="TicketPurchases" EntitySet="TicketPurchases" />
+          </AssociationSet>
+          <AssociationSet Name="FK_EventSections_Events" Association="Self.FK_EventSections_Events">
+            <End Role="Events" EntitySet="Events" />
+            <End Role="EventSections" EntitySet="EventSections" />
+          </AssociationSet>
+          <AssociationSet Name="FK_EventSections_Sections" Association="Self.FK_EventSections_Sections">
+            <End Role="Sections" EntitySet="Sections" />
+            <End Role="EventSections" EntitySet="EventSections" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Tickets_EventSections" Association="Self.FK_Tickets_EventSections">
+            <End Role="EventSections" EntitySet="EventSections" />
+            <End Role="Tickets" EntitySet="Tickets" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Tickets_TicketPurchases" Association="Self.FK_Tickets_TicketPurchases">
+            <End Role="TicketPurchases" EntitySet="TicketPurchases" />
+            <End Role="Tickets" EntitySet="Tickets" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Venues_VenueTypes" Association="Self.FK_Venues_VenueTypes">
+            <End Role="VenueTypes" EntitySet="VenueTypes" />
+            <End Role="Venues" EntitySet="Venues" />
+          </AssociationSet>
+          <FunctionImport Name="sp_alterdiagram">
+            <Parameter Name="diagramname" Mode="In" Type="String" />
+            <Parameter Name="owner_id" Mode="In" Type="Int32" />
+            <Parameter Name="version" Mode="In" Type="Int32" />
+            <Parameter Name="definition" Mode="In" Type="Binary" />
+          </FunctionImport>
+          <FunctionImport Name="sp_CpuLoadGenerator">
+            <Parameter Name="duration_seconds" Mode="In" Type="Int32" />
+            <Parameter Name="dtu_to_simulate" Mode="In" Type="Int32" />
+          </FunctionImport>
+          <FunctionImport Name="sp_creatediagram">
+            <Parameter Name="diagramname" Mode="In" Type="String" />
+            <Parameter Name="owner_id" Mode="In" Type="Int32" />
+            <Parameter Name="version" Mode="In" Type="Int32" />
+            <Parameter Name="definition" Mode="In" Type="Binary" />
+          </FunctionImport>
+          <FunctionImport Name="sp_dropdiagram">
+            <Parameter Name="diagramname" Mode="In" Type="String" />
+            <Parameter Name="owner_id" Mode="In" Type="Int32" />
+          </FunctionImport>
+          <FunctionImport Name="sp_helpdiagramdefinition" ReturnType="Collection(TenantModel.sp_helpdiagramdefinition_Result)">
+            <Parameter Name="diagramname" Mode="In" Type="String" />
+            <Parameter Name="owner_id" Mode="In" Type="Int32" />
+          </FunctionImport>
+          <FunctionImport Name="sp_helpdiagrams" ReturnType="Collection(TenantModel.sp_helpdiagrams_Result)">
+            <Parameter Name="diagramname" Mode="In" Type="String" />
+            <Parameter Name="owner_id" Mode="In" Type="Int32" />
+          </FunctionImport>
+          <FunctionImport Name="sp_renamediagram">
+            <Parameter Name="diagramname" Mode="In" Type="String" />
+            <Parameter Name="owner_id" Mode="In" Type="Int32" />
+            <Parameter Name="new_diagramname" Mode="In" Type="String" />
+          </FunctionImport>
+          <FunctionImport Name="sp_ResetEventDates">
+            <Parameter Name="StartHour" Mode="In" Type="Int32" />
+            <Parameter Name="StartMinute" Mode="In" Type="Int32" />
+          </FunctionImport>
+          <FunctionImport Name="sp_upgraddiagrams" />
+        </EntityContainer>
+        <ComplexType Name="sp_helpdiagramdefinition_Result">
+          <Property Type="Int32" Name="version" Nullable="true" />
+          <Property Type="Binary" Name="definition" Nullable="true" />
+        </ComplexType>
+        <ComplexType Name="sp_helpdiagrams_Result">
+          <Property Type="String" Name="Database" Nullable="true" MaxLength="128" />
+          <Property Type="String" Name="Name" Nullable="false" MaxLength="128" />
+          <Property Type="Int32" Name="ID" Nullable="false" />
+          <Property Type="String" Name="Owner" Nullable="true" MaxLength="128" />
+          <Property Type="Int32" Name="OwnerID" Nullable="false" />
+        </ComplexType>
+      </Schema>
+    </edmx:ConceptualModels>
+    <!-- C-S mapping content -->
+    <edmx:Mappings>
+      <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
+        <EntityContainerMapping StorageEntityContainer="TenantModelStoreContainer" CdmEntityContainer="TenantEntities">
+          <EntitySetMapping Name="Countries">
+            <EntityTypeMapping TypeName="TenantModel.Countries">
+              <MappingFragment StoreEntitySet="Countries">
+                <ScalarProperty Name="CountryCode" ColumnName="CountryCode" />
+                <ScalarProperty Name="CountryName" ColumnName="CountryName" />
+                <ScalarProperty Name="Language" ColumnName="Language" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Customers">
+            <EntityTypeMapping TypeName="TenantModel.Customers">
+              <MappingFragment StoreEntitySet="Customers">
+                <ScalarProperty Name="CustomerId" ColumnName="CustomerId" />
+                <ScalarProperty Name="FirstName" ColumnName="FirstName" />
+                <ScalarProperty Name="LastName" ColumnName="LastName" />
+                <ScalarProperty Name="Email" ColumnName="Email" />
+                <ScalarProperty Name="Password" ColumnName="Password" />
+                <ScalarProperty Name="PostalCode" ColumnName="PostalCode" />
+                <ScalarProperty Name="CountryCode" ColumnName="CountryCode" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Events">
+            <EntityTypeMapping TypeName="TenantModel.Events">
+              <MappingFragment StoreEntitySet="Events">
+                <ScalarProperty Name="EventId" ColumnName="EventId" />
+                <ScalarProperty Name="EventName" ColumnName="EventName" />
+                <ScalarProperty Name="Subtitle" ColumnName="Subtitle" />
+                <ScalarProperty Name="Date" ColumnName="Date" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="EventSections">
+            <EntityTypeMapping TypeName="TenantModel.EventSections">
+              <MappingFragment StoreEntitySet="EventSections">
+                <ScalarProperty Name="EventId" ColumnName="EventId" />
+                <ScalarProperty Name="SectionId" ColumnName="SectionId" />
+                <ScalarProperty Name="Price" ColumnName="Price" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Sections">
+            <EntityTypeMapping TypeName="TenantModel.Sections">
+              <MappingFragment StoreEntitySet="Sections">
+                <ScalarProperty Name="SectionId" ColumnName="SectionId" />
+                <ScalarProperty Name="SectionName" ColumnName="SectionName" />
+                <ScalarProperty Name="SeatRows" ColumnName="SeatRows" />
+                <ScalarProperty Name="SeatsPerRow" ColumnName="SeatsPerRow" />
+                <ScalarProperty Name="StandardPrice" ColumnName="StandardPrice" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="sysdiagrams">
+            <EntityTypeMapping TypeName="TenantModel.sysdiagrams">
+              <MappingFragment StoreEntitySet="sysdiagrams">
+                <ScalarProperty Name="name" ColumnName="name" />
+                <ScalarProperty Name="principal_id" ColumnName="principal_id" />
+                <ScalarProperty Name="diagram_id" ColumnName="diagram_id" />
+                <ScalarProperty Name="version" ColumnName="version" />
+                <ScalarProperty Name="definition" ColumnName="definition" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="TicketPurchases">
+            <EntityTypeMapping TypeName="TenantModel.TicketPurchases">
+              <MappingFragment StoreEntitySet="TicketPurchases">
+                <ScalarProperty Name="TicketPurchaseId" ColumnName="TicketPurchaseId" />
+                <ScalarProperty Name="PurchaseDate" ColumnName="PurchaseDate" />
+                <ScalarProperty Name="PurchaseTotal" ColumnName="PurchaseTotal" />
+                <ScalarProperty Name="CustomerId" ColumnName="CustomerId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Tickets">
+            <EntityTypeMapping TypeName="TenantModel.Tickets">
+              <MappingFragment StoreEntitySet="Tickets">
+                <ScalarProperty Name="TicketId" ColumnName="TicketId" />
+                <ScalarProperty Name="RowNumber" ColumnName="RowNumber" />
+                <ScalarProperty Name="SeatNumber" ColumnName="SeatNumber" />
+                <ScalarProperty Name="EventId" ColumnName="EventId" />
+                <ScalarProperty Name="SectionId" ColumnName="SectionId" />
+                <ScalarProperty Name="TicketPurchaseId" ColumnName="TicketPurchaseId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="VenueTypes">
+            <EntityTypeMapping TypeName="TenantModel.VenueTypes">
+              <MappingFragment StoreEntitySet="VenueTypes">
+                <ScalarProperty Name="VenueType" ColumnName="VenueType" />
+                <ScalarProperty Name="VenueTypeName" ColumnName="VenueTypeName" />
+                <ScalarProperty Name="EventTypeName" ColumnName="EventTypeName" />
+                <ScalarProperty Name="EventTypeShortName" ColumnName="EventTypeShortName" />
+                <ScalarProperty Name="EventTypeShortNamePlural" ColumnName="EventTypeShortNamePlural" />
+                <ScalarProperty Name="Language" ColumnName="Language" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Venues">
+            <EntityTypeMapping TypeName="TenantModel.Venues">
+              <MappingFragment StoreEntitySet="Venues">
+                <ScalarProperty Name="VenueName" ColumnName="VenueName" />
+                <ScalarProperty Name="VenueType" ColumnName="VenueType" />
+                <ScalarProperty Name="AdminEmail" ColumnName="AdminEmail" />
+                <ScalarProperty Name="AdminPassword" ColumnName="AdminPassword" />
+                <ScalarProperty Name="PostalCode" ColumnName="PostalCode" />
+                <ScalarProperty Name="CountryCode" ColumnName="CountryCode" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <FunctionImportMapping FunctionImportName="sp_alterdiagram" FunctionName="TenantModel.Store.sp_alterdiagram" />
+          <FunctionImportMapping FunctionImportName="sp_CpuLoadGenerator" FunctionName="TenantModel.Store.sp_CpuLoadGenerator" />
+          <FunctionImportMapping FunctionImportName="sp_creatediagram" FunctionName="TenantModel.Store.sp_creatediagram" />
+          <FunctionImportMapping FunctionImportName="sp_dropdiagram" FunctionName="TenantModel.Store.sp_dropdiagram" />
+          <FunctionImportMapping FunctionImportName="sp_helpdiagramdefinition" FunctionName="TenantModel.Store.sp_helpdiagramdefinition">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="TenantModel.sp_helpdiagramdefinition_Result">
+                <ScalarProperty Name="version" ColumnName="version" />
+                <ScalarProperty Name="definition" ColumnName="definition" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="sp_helpdiagrams" FunctionName="TenantModel.Store.sp_helpdiagrams">
+            <ResultMapping>
+              <ComplexTypeMapping TypeName="TenantModel.sp_helpdiagrams_Result">
+                <ScalarProperty Name="Database" ColumnName="Database" />
+                <ScalarProperty Name="Name" ColumnName="Name" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+                <ScalarProperty Name="Owner" ColumnName="Owner" />
+                <ScalarProperty Name="OwnerID" ColumnName="OwnerID" />
+              </ComplexTypeMapping>
+            </ResultMapping>
+          </FunctionImportMapping>
+          <FunctionImportMapping FunctionImportName="sp_renamediagram" FunctionName="TenantModel.Store.sp_renamediagram" />
+          <FunctionImportMapping FunctionImportName="sp_ResetEventDates" FunctionName="TenantModel.Store.sp_ResetEventDates" />
+          <FunctionImportMapping FunctionImportName="sp_upgraddiagrams" FunctionName="TenantModel.Store.sp_upgraddiagrams" />
+        </EntityContainerMapping>
+      </Mapping>
+    </edmx:Mappings>
+  </edmx:Runtime>
+  <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <Connection>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="MetadataArtifactProcessing" Value="EmbedInOutputAssembly" />
+      </DesignerInfoPropertySet>
+    </Connection>
+    <Options>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="ValidateOnBuild" Value="true" />
+        <DesignerProperty Name="EnablePluralization" Value="false" />
+        <DesignerProperty Name="IncludeForeignKeysInModel" Value="true" />
+        <DesignerProperty Name="UseLegacyProvider" Value="false" />
+        <DesignerProperty Name="CodeGenerationStrategy" Value="None" />
+      </DesignerInfoPropertySet>
+    </Options>
+    <!-- Diagram content (shape and connector positions) -->
+    <Diagrams></Diagrams>
+  </Designer>
+</edmx:Edmx>

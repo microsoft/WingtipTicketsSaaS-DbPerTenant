@@ -12,7 +12,7 @@
   "variables": {
     "lowerCaseUser": "[toLower(parameters('user'))]",
     "location": "[resourceGroup().location]",
-    "tenantServerName": "customers1",
+    "tenantServerName": "tenants1",
     "elasticPoolEdition": "Standard",
     "elasticPoolName": "Pool1",
     "poolDtu": "50",

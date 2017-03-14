@@ -1,0 +1,104 @@
+﻿@using System.Globalization
+@using System.Security.Policy
+@using Microsoft.AspNetCore.Http.Features
+@using Microsoft.AspNetCore.Localization
+@using Microsoft.AspNetCore.Mvc.Localization
+@using Events_Tenant.Common.Models
+
+@inject IViewLocalizer Localizer
+
+
+@model List<TenantModel>
+
+
+@{
+    ViewData["Title"] = "Events Hub";
+}
+
+<!-- ------------------------------------------------------------------------------------------------------------------- -->
+<!-- Content -->
+<!-- ------------------------------------------------------------------------------------------------------------------- -->
+
+<div class="container">
+
+    <div class="row spacer-25">
+        WELCOME
+        <p>
+            <b>Welcome to the Wingtip Tickets Platform!</b> Explore what's on at the venues below and enjoy secure ticket purchasing in the cloud. powered by Microsoft Azure Cloud, suing Saas technology built on SQL Database.
+        </p>
+    </div>
+
+    <div class="row">
+        <div class="input-group">
+            @*<input id="search" name="search" type="search" class="form-control form-search" placeholder="search" value="@Request["search"]">*@
+        </div>
+    </div>
+
+    <div class="row">
+
+        <!-- ------------------------------------------------------------------------------------------------------------------- -->
+        <!-- Tenant List -->
+        <!-- ------------------------------------------------------------------------------------------------------------------- -->
+
+
+        <table style="width: 100%;">
+            <tr>
+                <td><b>Venues</b></td>
+            </tr>
+
+            @{
+                if (Model != null)
+                {
+                    var tenantIndex = 0;
+
+                    foreach (var tenant in Model)
+                    {
+                        <tr>
+                            <td><a href="@Url.Action("Index", new { tenantName = tenant.TenantName })">@tenant.TenantName </a></td>
+                        </tr>
+
+                        tenantIndex++;
+                    }
+                }
+            }
+
+        </table>
+
+
+    </div>
+</div>
+
+
+<footer>
+    <div class="btm-footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-xs-12">
+
+                    <div class="col-xs-6">
+                        <div class="row">
+                            <img class="logo-image pull-left" src="~/Content/Images/ticketmaestro-logo.jpg" />
+                            <h1 class="logo-heading"><span>Wingtip Tickets Platform</span></h1>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 pull-right footer-menu">
+                        <div class="spacer-10">
+
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-12 text-right">
+                                <p>
+                                    LEARN HOW TO BUILD A SAAS APP ON SQL DATABASE <br />
+                                    Running on Azure SQL Database. &copy; @DateTime.Now.Year Microsoft server:
+                                     @*@TenantUserApp.AppConfig.CustomerCatalogServer database: @TenantUserApp.AppConfig.TenantServer.ToLower()<br />*@
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
