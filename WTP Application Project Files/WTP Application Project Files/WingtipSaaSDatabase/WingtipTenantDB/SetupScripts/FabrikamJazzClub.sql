@@ -15,10 +15,10 @@ DELETE FROM [dbo].[Venues]
 GO
 
 -- Venue
-INSERT INTO [dbo].[Venues]
+INSERT INTO [dbo].[Venue]
    ([VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode])
      VALUES
-           ('Fabrikam Jazz Club','JazzClub','admin@fabrikamjazzclub.com',NULL,'98052','USA')
+           ('Fabrikam Jazz Club','jazz','admin@fabrikamjazzclub.com',NULL,'98052','USA')
 GO
 
 -- Sections
