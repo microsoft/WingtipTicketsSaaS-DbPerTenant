@@ -11,7 +11,7 @@ DELETE FROM [dbo].[Customers]
 DELETE FROM [dbo].[EventSections]
 DELETE FROM [dbo].[Events]
 DELETE FROM [dbo].[Sections]
-DELETE FROM [dbo].[Venues]
+DELETE FROM [dbo].[Venue]
 GO
 
 -- Venue
