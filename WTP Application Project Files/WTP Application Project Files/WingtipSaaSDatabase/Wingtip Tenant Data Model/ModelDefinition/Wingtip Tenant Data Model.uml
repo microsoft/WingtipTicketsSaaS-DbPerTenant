@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<modelStoreModel xmlns:dm0="http://schemas.microsoft.com/VisualStudio/2008/DslTools/Core" xmlns:dm1="http://schemas.microsoft.com/dsltools/Kernel" xmlns:dm2="http://schemas.microsoft.com/dsltools/Component" xmlns:dm3="http://schemas.microsoft.com/dsltools/Activity" xmlns:dm4="http://schemas.microsoft.com/dsltools/UseCase" xmlns:dm5="http://schemas.microsoft.com/dsltools/Interaction" xmlns:dm6="http://schemas.microsoft.com/dsltools/UmlModelLibrary" xmlns:dm7="http://schemas.microsoft.com/dsltools/UmlDiagrams" xmlns:dm8="http://schemas.microsoft.com/dsltools/LogicalClassDesigner"
+<modelStoreModel xmlns:dm0="http://schemas.microsoft.com/VisualStudio/2008/DslTools/Core" xmlns:dm1="http://schemas.microsoft.com/dsltools/Kernel" xmlns:dm2="http://schemas.microsoft.com/dsltools/Component" xmlns:dm3="http://schemas.microsoft.com/dsltools/Activity" xmlns:dm4="http://schemas.microsoft.com/dsltools/Interaction" xmlns:dm5="http://schemas.microsoft.com/dsltools/UseCase" xmlns:dm6="http://schemas.microsoft.com/dsltools/UmlModelLibrary" xmlns:dm7="http://schemas.microsoft.com/dsltools/UmlDiagrams" xmlns:dm8="http://schemas.microsoft.com/dsltools/LogicalClassDesigner"
   dslVersion="1.0.0.0"
   Id="61dc7e66-5faa-482b-9723-50884875f1c2"
   name="Wingtip Tenant Data Model" xmlns="http://schemas.microsoft.com/dsltools/ModelStore">
@@ -1657,6 +1657,15 @@
         isAbstract="false"
         isLeaf="false"
         isActiveClass="false">
+        <suppliersInternal>
+          <dependency
+            Id="9e2fce75-8fbb-4622-ba01-ccf50aeb80a4">
+            <classMoniker
+              Id="c97d86af-9f7d-43b9-8114-82fbfda3763c"
+              LastKnownName="SM::Mapping"
+              LastKnownLocation="Wingtip Tenant Data Model.uml" />
+          </dependency>
+        </suppliersInternal>
         <targetEnds>
           <association
             Id="0421878f-9140-4db1-903a-d0b73ee852d9"
@@ -1788,6 +1797,15 @@
         isAbstract="false"
         isLeaf="false"
         isActiveClass="false">
+        <suppliersInternal>
+          <dependency
+            Id="9119abb4-aa0d-4c20-b8e5-e456bf0e616a">
+            <classMoniker
+              Id="ca151b62-9ede-4660-a839-83f8c4d027c9"
+              LastKnownName="SM::Shard"
+              LastKnownLocation="Wingtip Tenant Data Model.uml" />
+          </dependency>
+        </suppliersInternal>
         <ownedAttributesInternal>
           <property
             Id="c41a2375-fe9f-45f6-a417-6c1e5090bc53"
@@ -1865,6 +1883,15 @@
         isAbstract="false"
         isLeaf="false"
         isActiveClass="false">
+        <suppliersInternal>
+          <dependency
+            Id="df8a4cce-ff9d-40bd-9c33-070c30f90eaa">
+            <classMoniker
+              Id="ca151b62-9ede-4660-a839-83f8c4d027c9"
+              LastKnownName="SM::Shard"
+              LastKnownLocation="Wingtip Tenant Data Model.uml" />
+          </dependency>
+        </suppliersInternal>
         <targetEnds>
           <association
             Id="aa669393-464a-4dc7-a54f-c840477274b1"
@@ -2438,6 +2465,243 @@
           <property
             Id="d9e03a8f-6f50-4e5d-bafe-0a83a8d9cd3c"
             name="ServerNameStem"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+        </ownedAttributesInternal>
+      </class>
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <class
+        Id="74117c60-a528-454e-9d5c-67a538330272"
+        name="SM::ShardMap"
+        isAbstract="false"
+        isLeaf="false"
+        isActiveClass="false">
+        <targetEnds>
+          <association
+            Id="92febc70-1db2-46e9-b2c2-bb8191f71d7b"
+            isDerived="false"
+            sourceEndRoleName="SM::ShardMap"
+            targetEndRoleName="SM::Mapping"
+            isLeaf="false"
+            isAbstract="false">
+            <classMoniker
+              Id="c97d86af-9f7d-43b9-8114-82fbfda3763c"
+              LastKnownName="SM::Mapping"
+              LastKnownLocation="Wingtip Tenant Data Model.uml" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd
+                  Id="e672b518-b10c-4322-baff-6c2722bdc347"
+                  name="SM::ShardMap"
+                  isLeaf="false"
+                  isStatic="false"
+                  isReadOnly="false"
+                  isDerived="false"
+                  isDerivedUnion="false"
+                  aggregation="Composite"
+                  isComposite="false"
+                  isNavigableOwned="false" />
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd
+                  Id="cfd48cea-2111-4c06-a306-00e9295606b4"
+                  name="SM::Mapping"
+                  isLeaf="false"
+                  isStatic="false"
+                  isReadOnly="false"
+                  isDerived="false"
+                  isDerivedUnion="false"
+                  aggregation="None"
+                  isComposite="true">
+                  <lowerValueInternal>
+                    <literalString
+                      Id="813b76d7-8169-4eaa-a80b-c2963a76d5a6"
+                      name="Lower"
+                      value="*" />
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString
+                      Id="d3191355-e40d-4611-bf52-78c8d41e29cd"
+                      name="Upper"
+                      value="*" />
+                  </upperValueInternal>
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+          </association>
+          <association
+            Id="04cb9b86-289b-45a3-8139-d5d0ae2a6e16"
+            isDerived="false"
+            sourceEndRoleName="SM::ShardMap"
+            targetEndRoleName="SM::Shard"
+            isLeaf="false"
+            isAbstract="false">
+            <classMoniker
+              Id="ca151b62-9ede-4660-a839-83f8c4d027c9"
+              LastKnownName="SM::Shard"
+              LastKnownLocation="Wingtip Tenant Data Model.uml" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd
+                  Id="5daac267-19ca-4562-aaaa-90ca80a9fd76"
+                  name="SM::ShardMap"
+                  isLeaf="false"
+                  isStatic="false"
+                  isReadOnly="false"
+                  isDerived="false"
+                  isDerivedUnion="false"
+                  aggregation="Composite"
+                  isComposite="false"
+                  isNavigableOwned="false" />
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd
+                  Id="7159c294-b471-4f17-9b4f-d7786b5267d8"
+                  name="SM::Shard"
+                  isLeaf="false"
+                  isStatic="false"
+                  isReadOnly="false"
+                  isDerived="false"
+                  isDerivedUnion="false"
+                  aggregation="None"
+                  isComposite="true">
+                  <lowerValueInternal>
+                    <literalString
+                      Id="3a394f31-0f97-4d92-917b-5f2912cba69c"
+                      name="Lower"
+                      value="*" />
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString
+                      Id="0a39b33f-934e-4f9f-bede-86c308c6bada"
+                      name="Upper"
+                      value="*" />
+                  </upperValueInternal>
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+          </association>
+        </targetEnds>
+        <ownedAttributesInternal>
+          <property
+            Id="6b4321f6-aba0-4457-90e9-93c049b6fd37"
+            name="ShardMapName"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+        </ownedAttributesInternal>
+      </class>
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <class
+        Id="c97d86af-9f7d-43b9-8114-82fbfda3763c"
+        name="SM::Mapping"
+        isAbstract="false"
+        isLeaf="false"
+        isActiveClass="false">
+        <targetEnds>
+          <association
+            Id="5a17ad6e-b33c-42b8-bbe8-37773af0645e"
+            isDerived="false"
+            sourceEndRoleName="SM::Mapping"
+            targetEndRoleName="SM::Shard"
+            isLeaf="false"
+            isAbstract="false">
+            <classMoniker
+              Id="ca151b62-9ede-4660-a839-83f8c4d027c9"
+              LastKnownName="SM::Shard"
+              LastKnownLocation="Wingtip Tenant Data Model.uml" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd
+                  Id="0932e519-cdf7-48e3-a8d8-cb88105e0b62"
+                  name="SM::Mapping"
+                  isLeaf="false"
+                  isStatic="false"
+                  isReadOnly="false"
+                  isDerived="false"
+                  isDerivedUnion="false"
+                  aggregation="None"
+                  isComposite="false"
+                  isNavigableOwned="false">
+                  <lowerValueInternal>
+                    <literalString
+                      Id="eee4280a-6a6f-4673-bb97-a82f959d7353"
+                      name="Lower"
+                      value="0" />
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString
+                      Id="c9b5186f-6b8a-4058-95b5-ec6c366f7bfc"
+                      name="Upper"
+                      value="1" />
+                  </upperValueInternal>
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd
+                  Id="c3f4e153-fe80-408d-be51-0a4b1e20b7e3"
+                  name="SM::Shard"
+                  isLeaf="false"
+                  isStatic="false"
+                  isReadOnly="false"
+                  isDerived="false"
+                  isDerivedUnion="false"
+                  aggregation="None"
+                  isComposite="false" />
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+          </association>
+        </targetEnds>
+        <ownedAttributesInternal>
+          <property
+            Id="cf2006ae-12fe-4bbb-a518-d90e66471c82"
+            name="TenantId"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+        </ownedAttributesInternal>
+      </class>
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <class
+        Id="ca151b62-9ede-4660-a839-83f8c4d027c9"
+        name="SM::Shard"
+        isAbstract="false"
+        isLeaf="false"
+        isActiveClass="false">
+        <ownedAttributesInternal>
+          <property
+            Id="716191b5-48cc-4d7a-9d88-b6c794ce5083"
+            name="Server"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="973c480d-64c4-47a8-98c4-149af3eb267a"
+            name="Database"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"

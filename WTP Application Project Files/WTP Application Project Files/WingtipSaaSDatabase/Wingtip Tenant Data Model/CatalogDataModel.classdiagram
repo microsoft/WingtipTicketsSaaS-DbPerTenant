@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<logicalClassDesignerModel xmlns:dm0="http://schemas.microsoft.com/VisualStudio/2008/DslTools/Core" xmlns:dm1="http://schemas.microsoft.com/dsltools/Kernel" xmlns:dm2="http://schemas.microsoft.com/dsltools/Component" xmlns:dm3="http://schemas.microsoft.com/dsltools/Activity" xmlns:dm4="http://schemas.microsoft.com/dsltools/UseCase" xmlns:dm5="http://schemas.microsoft.com/dsltools/Interaction" xmlns:dm6="http://schemas.microsoft.com/dsltools/UmlModelLibrary" xmlns:dm7="http://schemas.microsoft.com/dsltools/UmlDiagrams" xmlns:dm8="http://schemas.microsoft.com/dsltools/ModelStore" dslVersion="1.0.0.0" Id="439df776-f290-44a8-a7fc-e0da01104ee6" name="CatalogDataModel" linkedPackageId="e45d1876-22e6-4bfa-b578-ae26ba44fff1" xmlns="http://schemas.microsoft.com/dsltools/LogicalClassDesigner">
+<logicalClassDesignerModel xmlns:dm0="http://schemas.microsoft.com/VisualStudio/2008/DslTools/Core" xmlns:dm1="http://schemas.microsoft.com/dsltools/Kernel" xmlns:dm2="http://schemas.microsoft.com/dsltools/Component" xmlns:dm3="http://schemas.microsoft.com/dsltools/Activity" xmlns:dm4="http://schemas.microsoft.com/dsltools/Interaction" xmlns:dm5="http://schemas.microsoft.com/dsltools/UseCase" xmlns:dm6="http://schemas.microsoft.com/dsltools/UmlModelLibrary" xmlns:dm7="http://schemas.microsoft.com/dsltools/UmlDiagrams" xmlns:dm8="http://schemas.microsoft.com/dsltools/ModelStore" dslVersion="1.0.0.0" Id="439df776-f290-44a8-a7fc-e0da01104ee6" name="CatalogDataModel" linkedPackageId="e45d1876-22e6-4bfa-b578-ae26ba44fff1" xmlns="http://schemas.microsoft.com/dsltools/LogicalClassDesigner">
   <ownedCommentsInternal>
     <comment Id="3bab6ad0-437c-4778-94bb-df76d3faea92">
       <elementDefinition Id="4582adea-8e25-4ea5-8ddb-327ba5f82f94" />
@@ -10,6 +10,12 @@
     <logicalClassDesignerModelHasTypes>
       <class Id="e5f63709-7154-4443-907b-398c8e597f15" name="Tenant" isAbstract="false" isLeaf="false" isActiveClass="false">
         <elementDefinition Id="ad7a7f54-fe9e-4eed-a798-86e8c23f4c6f" />
+        <suppliersInternal>
+          <dependency Id="5d044fc7-f401-46bf-b43f-270a072a7f8d">
+            <classMoniker Id="726a15cd-ee07-4727-b1c7-a59a7d1c3a02" LastKnownName="SM::Mapping" />
+            <elementDefinition Id="9e2fce75-8fbb-4622-ba01-ccf50aeb80a4" />
+          </dependency>
+        </suppliersInternal>
         <targetEnds>
           <association Id="9bddf5b3-80da-4b5d-acd1-f449f73eb2fb" isDerived="false" sourceEndRoleName="Tenant" targetEndRoleName="Database" isLeaf="false" isAbstract="false">
             <classMoniker Id="0203855b-b7c1-4988-b5cc-067a6fc4f28c" LastKnownName="Database" />
@@ -63,6 +69,12 @@
     <logicalClassDesignerModelHasTypes>
       <class Id="0203855b-b7c1-4988-b5cc-067a6fc4f28c" name="Database" isAbstract="false" isLeaf="false" isActiveClass="false">
         <elementDefinition Id="684282b9-5533-4c93-ade8-6d8bb7ce9c28" />
+        <suppliersInternal>
+          <dependency Id="4de70a4e-c399-46fc-8193-46c20febdaf7">
+            <classMoniker Id="14511d4c-102c-44a4-8721-e09b6730803a" LastKnownName="SM::Shard" />
+            <elementDefinition Id="9119abb4-aa0d-4c20-b8e5-e456bf0e616a" />
+          </dependency>
+        </suppliersInternal>
         <ownedAttributesInternal>
           <property Id="44105c7e-4ccb-4219-9a07-b8287690c9ab" name="DatabaseName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="c41a2375-fe9f-45f6-a417-6c1e5090bc53" />
@@ -88,6 +100,12 @@
     <logicalClassDesignerModelHasTypes>
       <class Id="2f0f5c9d-cbea-47bc-9b06-df1455b9ed95" name="Server" isAbstract="false" isLeaf="false" isActiveClass="false">
         <elementDefinition Id="78fa4930-df61-4e1c-877a-2b760e324d46" />
+        <suppliersInternal>
+          <dependency Id="a5c71f98-968a-4ad5-83af-22b37aa55b4b">
+            <classMoniker Id="14511d4c-102c-44a4-8721-e09b6730803a" LastKnownName="SM::Shard" />
+            <elementDefinition Id="df8a4cce-ff9d-40bd-9c33-070c30f90eaa" />
+          </dependency>
+        </suppliersInternal>
         <targetEnds>
           <association Id="c98b470d-f5bf-4f80-a0a9-af8e49dbd28b" isDerived="false" sourceEndRoleName="Server" targetEndRoleName="ElasticPool" isLeaf="false" isAbstract="false">
             <classMoniker Id="71c1fb02-823c-45e5-bf07-33f222ed4bb0" LastKnownName="ElasticPool" />
@@ -307,6 +325,121 @@
           </property>
           <property Id="42f6b86f-854e-4270-bfce-dd9dd2e3b7e5" name="ServerNameStem" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="d9e03a8f-6f50-4e5d-bafe-0a83a8d9cd3c" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="41321f4e-6ad9-4535-8796-0b0bf5a9d64a" name="SM::ShardMap" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="74117c60-a528-454e-9d5c-67a538330272" />
+        <targetEnds>
+          <association Id="64a9c8bd-f544-48a0-a168-4f948126f29d" isDerived="false" sourceEndRoleName="SM::ShardMap" targetEndRoleName="SM::Mapping" isLeaf="false" isAbstract="false">
+            <classMoniker Id="726a15cd-ee07-4727-b1c7-a59a7d1c3a02" LastKnownName="SM::Mapping" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="51a9fbf0-32e2-4320-b71d-a8ca4cf01414" name="SM::ShardMap" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="Composite" isComposite="false" isNavigableOwned="false">
+                  <elementDefinition Id="e672b518-b10c-4322-baff-6c2722bdc347" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="4368f7b8-4831-4855-84db-11cd5ce33214" name="SM::Mapping" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="true">
+                  <lowerValueInternal>
+                    <literalString Id="7620e749-ffd1-4784-bbb1-76070e1125d2" name="Lower" value="*">
+                      <elementDefinition Id="813b76d7-8169-4eaa-a80b-c2963a76d5a6" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="7078e5ea-b40c-4822-b39f-c8cf5c5c42a6" name="Upper" value="*">
+                      <elementDefinition Id="d3191355-e40d-4611-bf52-78c8d41e29cd" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="cfd48cea-2111-4c06-a306-00e9295606b4" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="92febc70-1db2-46e9-b2c2-bb8191f71d7b" />
+          </association>
+          <association Id="d1bad076-e6eb-4e83-9cb8-4fde98230b03" isDerived="false" sourceEndRoleName="SM::ShardMap" targetEndRoleName="SM::Shard" isLeaf="false" isAbstract="false">
+            <classMoniker Id="14511d4c-102c-44a4-8721-e09b6730803a" LastKnownName="SM::Shard" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="fc166ad2-142c-4684-b239-2f6af265a23a" name="SM::ShardMap" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="Composite" isComposite="false" isNavigableOwned="false">
+                  <elementDefinition Id="5daac267-19ca-4562-aaaa-90ca80a9fd76" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="0e8b0d29-9757-4d79-a116-fface012aeaa" name="SM::Shard" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="true">
+                  <lowerValueInternal>
+                    <literalString Id="a1a19b95-169d-44ee-af84-1ab9c317159e" name="Lower" value="*">
+                      <elementDefinition Id="3a394f31-0f97-4d92-917b-5f2912cba69c" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="f2af4b22-00c3-45af-bd0b-cda06c51b3e3" name="Upper" value="*">
+                      <elementDefinition Id="0a39b33f-934e-4f9f-bede-86c308c6bada" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="7159c294-b471-4f17-9b4f-d7786b5267d8" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="04cb9b86-289b-45a3-8139-d5d0ae2a6e16" />
+          </association>
+        </targetEnds>
+        <ownedAttributesInternal>
+          <property Id="68504be5-4eb1-4025-aff4-b9c2385ccabc" name="ShardMapName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="6b4321f6-aba0-4457-90e9-93c049b6fd37" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="726a15cd-ee07-4727-b1c7-a59a7d1c3a02" name="SM::Mapping" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="c97d86af-9f7d-43b9-8114-82fbfda3763c" />
+        <targetEnds>
+          <association Id="c3c4bb02-1442-4011-ae25-6f7e1417252a" isDerived="false" sourceEndRoleName="SM::Mapping" targetEndRoleName="SM::Shard" isLeaf="false" isAbstract="false">
+            <classMoniker Id="14511d4c-102c-44a4-8721-e09b6730803a" LastKnownName="SM::Shard" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="b2aebd36-68a9-4d27-a085-0c961f1154f7" name="SM::Mapping" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false" isNavigableOwned="false">
+                  <lowerValueInternal>
+                    <literalString Id="bb462466-e305-4d02-aefd-f991eac280b7" name="Lower" value="0">
+                      <elementDefinition Id="eee4280a-6a6f-4673-bb97-a82f959d7353" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="d44b0fe4-4cc5-47f5-b4c3-48c26c0090a2" name="Upper" value="1">
+                      <elementDefinition Id="c9b5186f-6b8a-4058-95b5-ec6c366f7bfc" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="0932e519-cdf7-48e3-a8d8-cb88105e0b62" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="8d314a7b-c289-41b7-b2a7-d029c2799f69" name="SM::Shard" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+                  <elementDefinition Id="c3f4e153-fe80-408d-be51-0a4b1e20b7e3" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="5a17ad6e-b33c-42b8-bbe8-37773af0645e" />
+          </association>
+        </targetEnds>
+        <ownedAttributesInternal>
+          <property Id="e019e3b0-e094-4ce7-b0a4-051da0440d3d" name="TenantId" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="cf2006ae-12fe-4bbb-a518-d90e66471c82" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="14511d4c-102c-44a4-8721-e09b6730803a" name="SM::Shard" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="ca151b62-9ede-4660-a839-83f8c4d027c9" />
+        <ownedAttributesInternal>
+          <property Id="f48cec79-5b1a-49af-aed1-b7fb2199dd1a" name="Server" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="716191b5-48cc-4d7a-9d88-b6c794ce5083" />
+          </property>
+          <property Id="dca31d2f-9abc-440e-9dc6-b12660a2c162" name="Database" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="973c480d-64c4-47a8-98c4-149af3eb267a" />
           </property>
         </ownedAttributesInternal>
       </class>
