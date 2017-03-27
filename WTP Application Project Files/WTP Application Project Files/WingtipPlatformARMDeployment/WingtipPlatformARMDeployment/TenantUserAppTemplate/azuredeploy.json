@@ -307,20 +307,19 @@
             "MSDeploy"
           ],
           "properties": {
-            "databaseUserName": "developer",
-            "databaseUserPassword": "P@ssword1",
-            "ServerSuffix": ".database.windows.net",
-            "PrimaryDatabaseServer": "[variables('tenantServer')]",
-            "SecondaryDatabaseServer": "[variables('tenantServer')]",
-            "ShardDatabaseServer": "[variables('catalogServer')]",
-            "CustomerCatalogServer": "[variables('catalogServer')]",
-            "CustomerCatalogDatabase": "[variables('catalogDatabaseName')]",
-            "ShardManager": "[variables('catalogDatabaseName')]",
-            "TrafficManagerSuffix": "trafficmanager.net",
-            "elasticPoolName": "Pool1",
-            "ImageUrl": "https://wtpdeploystorageaccount.blob.core.windows.net/images/",
-            "User": "[variables('lowerCaseUser')]",
-            "LearnHowFooterUrl": "https://docs.microsoft.com/azure/sql-database/sql-database-saas-tutorial/"
+            "AppSettings:BlobPath": "https://wtpdeploystorageaccount.blob.core.windows.net/imagesvnext/",
+            "AppSettings:ConnectionTimeOut": "30",
+            "AppSettings:CustomerCatalogDatabase": "[variables('catalogDatabaseName')]",
+            "AppSettings:CustomerCatalogServer": "[variables('catalogServer')]",
+            "AppSettings:DatabasePassword": "P@ssword1",
+            "AppSettings:DatabaseServerPort": "1433",
+            "AppSettings:DatabaseUser": "developer",
+            "AppSettings:ResetEventDates": "false",
+            "AppSettings:ServicePlan": "Standard",
+            "AppSettings:SqlProtocol": "tcp",
+            "AppSettings:TenantServer": "[variables('tenantServer')]",
+            "AppSettings:LearnHowFooterUrl": "https://docs.microsoft.com/azure/sql-database/sql-database-saas-tutorial/",
+            "AppSettings:User": "[variables('lowerCaseUser')]"
           }
         }
       ]
