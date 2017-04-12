@@ -23,9 +23,10 @@
     "tenantContosoConcertHall": "contosoconcerthall",
     "tenantFabrikamJazzClub": "fabrikamjazzclub",
     "tenantDogwoodDojo": "dogwooddojo",
+    "baseTenantDB": "baseTenantDB",
     "requestedServiceObjectiveName": "S0",
     "catalogServerName": "catalog",
-    "catalogDatabaseName": "customercatalog",
+    "catalogDatabaseName": "tenantcatalog",
     "customerCatalogCollation": "SQL_Latin1_General_CP1_CI_AS",
     "customerCatalogEdition": "Standard",
     "webAppSku": "Standard",
@@ -34,6 +35,7 @@
     "tenantFabrikamJazzClubStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/',variables('tenantFabrikamJazzClub'),'.bacpac')]",
     "tenantDogwoodDojoStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/',variables('tenantDogwoodDojo'),'.bacpac')]",
     "catalogDatabaseStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/','wingtipcatalogdb.bacpac')]",
+    "baseTenantDatabaseStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacs/','wingtiptenantdb.bacpac')]",
     "catalogServer": "[concat(variables('catalogServerName'),'-', variables('lowerCaseUser'))]",
     "wtpTenantUserTrafficManagerUniqueDnsName": "[concat('events.wtp.',variables('lowerCaseUser'))]",
     "wtpTenantUser": "[concat('eventswtp-',variables('lowerCaseUser'))]",
@@ -259,6 +261,39 @@
       ]
     },
     {
+      "dependsOn": [
+        "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
+      ],
+      "name": "[concat(variables('catalogServer'),'/',variables('baseTenantDB'))]",
+      "location": "[variables('location')]",
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "collation": "[variables('customerCatalogCollation')]",
+        "edition": "[variables('CustomerCatalogEdition')]",
+        "maxSizeBytes": "1073741824",
+        "requestedServiceObjectiveName": "[variables('requestedServiceObjectiveName')]"
+      },
+      "resources": [
+        {
+          "name": "Import",
+          "type": "extensions",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('baseTenantDB'))]"
+          ],
+          "properties": {
+            "storageKeyType": "SharedAccessKey",
+            "storageKey": "?",
+            "storageUri": "[variables('baseTenantDatabaseStorageUri')]",
+            "administratorLogin": "[concat(variables('administratorLogin'),'@',variables('catalogServer'))]",
+            "administratorLoginPassword": "[variables('administratorLoginPassword')]",
+            "operationMode": "Import"
+          }
+        }
+      ]
+    },
+    {
       "name": "[variables('wtpTenantUser')]",
       "apiVersion": "2014-06-01",
       "location": "[variables('location')]",
@@ -309,8 +344,8 @@
           "properties": {
             "AppSettings:BlobPath": "https://wtpdeploystorageaccount.blob.core.windows.net/imagesvnext/",
             "AppSettings:ConnectionTimeOut": "30",
-            "AppSettings:CustomerCatalogDatabase": "[variables('catalogDatabaseName')]",
-            "AppSettings:CustomerCatalogServer": "[variables('catalogServer')]",
+            "AppSettings:CatalogDatabase": "[variables('catalogDatabaseName')]",
+            "AppSettings:CatalogServer": "[variables('catalogServer')]",
             "AppSettings:DatabasePassword": "P@ssword1",
             "AppSettings:DatabaseServerPort": "1433",
             "AppSettings:DatabaseUser": "developer",
