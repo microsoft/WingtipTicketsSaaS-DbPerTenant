@@ -1,31 +1,26 @@
 ﻿using System.Linq;
 using Events_Tenant.Common.Core.Interfaces;
-using Events_Tenant.Common.Helpers;
 using Events_Tenant.Common.Models;
-using Events_Tenant.Common.Utilities;
-using Events_TenantUserApp.EF.Models;
 
 namespace Events_Tenant.Common.Core.Repositories
 {
-    public class VenuesRepository : IVenuesRepository
+    public class VenuesRepository : BaseRepository, IVenuesRepository
     {
-        public VenueModel GetVenueDetails(byte[] tenantId, DatabaseConfig databaseConfig, TenantServerConfig tenantServerConfig)
+        public VenueModel GetVenueDetails(string connectionString, int tenantId)
         {
-            var connectionString = Helper.GetSqlConnectionString(databaseConfig);
-
-            using (var context = new TenantEntities(Sharding.ShardMap, tenantId, connectionString, Helper.GetTenantConnectionString(databaseConfig, tenantServerConfig)))
+            using (var context = CreateContext(connectionString, tenantId))
             {
-                var venueModel = context.Venues.FirstOrDefault();
+                var venueModel = context.Venue.FirstOrDefault();
 
                 var venue = new VenueModel
                 {
-                    VenueName = venueModel.VenueName,
-                    AdminEmail = venueModel.AdminEmail,
+                    VenueName = venueModel.VenueName.Trim(),
+                    AdminEmail = venueModel.AdminEmail.Trim(),
                     AdminPassword = venueModel.AdminPassword,
-                    CountryCode = venueModel.CountryCode,
-                    PostalCode = venueModel.PostalCode
+                    CountryCode = venueModel.CountryCode.Trim(),
+                    PostalCode = venueModel.PostalCode.Trim(),
+                    VenueType = venueModel.VenueType.Trim()
                 };
-
                 return venue;
             }
         }

@@ -7,7 +7,6 @@
         public short SeatRows { get; set; }
         public short SeatsPerRow { get; set; }
         public decimal StandardPrice { get; set; }
-
     }
 }
 

@@ -1,15 +1,21 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using Events_Tenant.Common.Core.Interfaces;
 using Events_Tenant.Common.Core.Repositories;
 using Events_Tenant.Common.Helpers;
+using Events_Tenant.Common.Models;
 using Events_Tenant.Common.Utilities;
+using Events_TenantUserApp.EF.CatalogDB;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace Events_TenantUserApp
 {
@@ -18,18 +24,18 @@ namespace Events_TenantUserApp
     /// </summary>
     public class Startup
     {
-        #region Private variables
-
-        private Sharding _sharding;
-
+        #region Private fields
+        private IHelper _helper;
+        private ITenantsRepository _tenantsRepository; 
         #endregion
 
         #region Public Properties
         public static DatabaseConfig DatabaseConfig { get; set; }
-        public static CustomerCatalogConfig CustomerCatalogConfig { get; set; }
+        public static CatalogConfig CatalogConfig { get; set; }
         public static TenantServerConfig TenantServerConfig { get; set; }
         public static TenantConfig TenantConfig { get; set; }
         public IConfigurationRoot Configuration { get; }
+        public static List<CustomerModel> SessionUsers;
 
         #endregion
 
@@ -51,17 +57,6 @@ namespace Events_TenantUserApp
             //read config settigs from appsettings.json
             ReadAppConfig();
 
-            InitialiseShardMapManager();
-
-            if (TenantServerConfig.ResetEventDates)
-            {
-                Helper.ResetTenantEventDates(TenantServerConfig, DatabaseConfig, CustomerCatalogConfig);
-            }
-
-
-            //RequestInitialization RequestInitialization = new RequestInitialization();
-            //RequestInitialization.InitializeTenantConfig();
-            //   InitializeTenantConfig();
         }
 
         #endregion
@@ -74,20 +69,49 @@ namespace Events_TenantUserApp
         /// <param name="services">The services.</param>
         public void ConfigureServices(IServiceCollection services)
         {
-            // Add framework services.
-            services.AddMvc()
-            .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
-            .AddDataAnnotationsLocalization();
-
-
-            services.AddTransient<IHttpContextAccessor, HttpContextAccessor>();
+            //Localisation settings
             services.AddLocalization(options => options.ResourcesPath = "Resources");
 
+            // Add framework services.
+            services.AddMvc()
+                .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
+                .AddDataAnnotationsLocalization();
+
+            // Adds a default in-memory implementation of IDistributedCache.
+            services.AddDistributedMemoryCache();
+            services.AddSession();
+
+
             //Add Application services
-            services.AddTransient<IEventsRepository, EventsRepository>();
+
+            services.AddDbContext<CatalogDbContext>(options => options.UseSqlServer(GetCatalogConnectionString(CatalogConfig, DatabaseConfig))); //register catalog DB
+
             services.AddTransient<ITenantsRepository, TenantsRepository>();
+            services.AddTransient<ITicketRepository, TicketRepository>();
+            services.AddTransient<ICountryRepository, CountryRepository>();
+
+            //create instance of helper class
+            services.AddTransient<IHelper, Helper>();
+            var provider = services.BuildServiceProvider();
+            _helper = provider.GetService<IHelper>();
+
+
+            services.AddTransient<IEventsRepository, EventsRepository>();
             services.AddTransient<IVenuesRepository, VenuesRepository>();
             services.AddTransient<IVenueTypesRepository, VenueTypesRepository>();
+            services.AddTransient<ICustomerRepository, CustomerRepository>();
+            services.AddTransient<IEventSectionRepository, EventSectionRepository>();
+            services.AddTransient<ISectionRepository, SectionRepository>();
+            services.AddTransient<ITicketPurchaseRepository, TicketPurchaseRepository>();
+
+
+            _tenantsRepository = provider.GetService<ITenantsRepository>();
+
+            //shard management
+            InitialiseShardMapManager();
+            _helper.RegisterTenantShard(TenantServerConfig, DatabaseConfig, CatalogConfig, TenantServerConfig.ResetEventDates);
+
+            SessionUsers = new List<CustomerModel>();
         }
 
         /// <summary>
@@ -113,6 +137,33 @@ namespace Events_TenantUserApp
 
             app.UseStaticFiles();
 
+            #region Localisation settings
+
+            //get the list of supported cultures from the appsettings.json
+            var allSupportedCultures = Configuration.GetSection("SupportedCultures").Get<List<string>>(); 
+
+            List<CultureInfo> supportedCultures = allSupportedCultures.Select(t => new CultureInfo(t)).ToList();
+
+            app.UseRequestLocalization(new RequestLocalizationOptions
+            {
+                DefaultRequestCulture = new RequestCulture(Configuration["DefaultRequestCulture"]), //get the default culture from appsettings.json
+                SupportedCultures = supportedCultures, // UI strings that we have localized.
+                SupportedUICultures = supportedCultures,
+                RequestCultureProviders = new List<IRequestCultureProvider>()
+            });
+
+            #endregion
+
+            app.UseSession();
+
+            //adding the cookie middleware
+            app.UseCookieAuthentication(new CookieAuthenticationOptions()
+            {
+                AuthenticationScheme = "MyCookieMiddlewareInstance",
+                AutomaticAuthenticate = true,
+                AutomaticChallenge = true
+            });
+
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
@@ -126,6 +177,18 @@ namespace Events_TenantUserApp
         #region Private methods
 
         /// <summary>
+        ///  Gets the catalog connection string using the app settings
+        /// </summary>
+        /// <param name="catalogConfig">The catalog configuration.</param>
+        /// <param name="databaseConfig">The database configuration.</param>
+        /// <returns></returns>
+        private string GetCatalogConnectionString(CatalogConfig catalogConfig, DatabaseConfig databaseConfig)
+        {
+            return
+                $"Server=tcp:{catalogConfig.CatalogServer},1433;Database={catalogConfig.CatalogDatabase};User ID={databaseConfig.DatabaseUser};Password={databaseConfig.DatabasePassword};Trusted_Connection=False;Encrypt=True;";
+        }
+
+        /// <summary>
         /// Reads the application settings from appsettings.json
         /// </summary>
         private void ReadAppConfig()
@@ -136,14 +199,15 @@ namespace Events_TenantUserApp
                 DatabaseUser = Configuration["DatabaseUser"],
                 DatabaseServerPort = Convert.ToInt32(Configuration["DatabaseServerPort"]),
                 SqlProtocol = Configuration["SqlProtocol"],
-                ConnectionTimeOut = Convert.ToInt32(Configuration["ConnectionTimeOut"])
+                ConnectionTimeOut = Convert.ToInt32(Configuration["ConnectionTimeOut"]),
+                LearnHowFooterUrl = Configuration["LearnHowFooterUrl"]
             };
 
-            CustomerCatalogConfig = new CustomerCatalogConfig
+            CatalogConfig = new CatalogConfig
             {
                 ServicePlan = Configuration["ServicePlan"],
-                CustomerCatalogDatabase = Configuration["CustomerCatalogDatabase"],
-                CustomerCatalogServer = Configuration["CustomerCatalogServer"] + ".database.windows.net"
+                CatalogDatabase = Configuration["CatalogDatabase"],
+                CatalogServer = Configuration["CatalogServer"] + ".database.windows.net"
             };
 
             TenantServerConfig = new TenantServerConfig
@@ -151,39 +215,24 @@ namespace Events_TenantUserApp
                 TenantServer = Configuration["TenantServer"] + ".database.windows.net",
                 ResetEventDates = Convert.ToBoolean(Configuration["ResetEventDates"])
             };
+
+            TenantConfig = new TenantConfig
+            {
+                BlobPath = Configuration["BlobPath"],
+                TenantCulture = Configuration["DefaultRequestCulture"]
+            };
         }
 
 
         /// <summary>
-        /// Initialises the customer catalog and resets the events dates for all tenants
+        /// Initialises the shard map manager and shard map 
         /// <para>Also does all tasks related to sharding</para>
         /// </summary>
         private void InitialiseShardMapManager()
         {
-            var connectionString = Helper.GetSqlConnectionString(DatabaseConfig);
-
-            _sharding = new Sharding(connectionString, CustomerCatalogConfig, DatabaseConfig);
+            var sharding = new Sharding(CatalogConfig, DatabaseConfig, _tenantsRepository, _helper);
         }
-
-
-        //private void InitializeTenantConfig()
-        //{
-        //    //get venuename from url
-
-        //    string venueName = HttpContextAccessor.HttpContext.Request.PathBase;
-
-        //    if (!string.IsNullOrEmpty(venueName) && venueName.Length > 1)
-        //    {
-        //        // Retrieve the tenant configuration details from the tenant's database
-        //        var venue = venueName.Substring(1, venueName.Length - 2);
-        //        //PopulateTenantConfig(venue);
-
-
-        //        //// tenant configuration is placed in the context so it is available throughout the request
-        //        //HttpContext.Current.Items.Add("TenantInfo", _tenantConfig);
-        //    }
-        //}
-
+    
         #endregion 
 
     }

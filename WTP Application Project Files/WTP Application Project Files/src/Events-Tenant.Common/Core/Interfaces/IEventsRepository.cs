@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 using Events_Tenant.Common.Models;
-using Events_Tenant.Common.Utilities;
 
 namespace Events_Tenant.Common.Core.Interfaces
 {
     public interface IEventsRepository
     {
-        IEnumerable<EventModel> GetEventsForTenant(byte[] tenantId, DatabaseConfig databaseConfig, TenantServerConfig tenantServerConfig);
+        List<EventModel> GetEventsForTenant(string connectionString, int tenantId);
+        EventModel GetEvent(int eventId, string connectionString, int tenantId);
     }
 }

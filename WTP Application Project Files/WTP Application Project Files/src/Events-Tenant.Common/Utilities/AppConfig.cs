@@ -1,4 +1,7 @@
-﻿namespace Events_Tenant.Common.Utilities
+﻿using System.Collections.Generic;
+using Events_Tenant.Common.Models;
+
+namespace Events_Tenant.Common.Utilities
 {
     /// <summary>
     /// Common database settings
@@ -10,15 +13,16 @@
         public int DatabaseServerPort { get; set; }
         public string SqlProtocol { get; set; }
         public int ConnectionTimeOut { get; set; }
+        public string LearnHowFooterUrl { get; set; }
     }
 
     /// <summary>
-    /// The customer catalog settings
+    /// The catalog settings
     /// </summary>
-    public class CustomerCatalogConfig
+    public class CatalogConfig
     {
-        public string CustomerCatalogServer { get; set; }
-        public string CustomerCatalogDatabase { get; set; }
+        public string CatalogServer { get; set; }
+        public string CatalogDatabase { get; set; }
         public string ServicePlan { get; set; }
     }
 
@@ -28,6 +32,14 @@
     public class TenantServerConfig
     {
         public string TenantServer { get; set; }
+
+        /// <summary>
+        /// Boolean value to specify if the events dates need to be reset
+        /// This can be set to false when in Development mode
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> if [reset event dates]; otherwise, <c>false</c>.
+        /// </value>
         public bool ResetEventDates { get; set; }
     }
 
@@ -36,10 +48,16 @@
     /// </summary>
     public class TenantConfig
     {
-        public string TenantId { get; set; }
+        public int TenantId { get; set; }
         public string VenueName { get; set; }
-        public string EventTypeImage { get; set; }
         public string EventTypeNamePlural { get; set; }
+        public string BlobImagePath { get; set; }
+        public string BlobPath { get; set; }
+        public string TenantName { get; set; }
+        public string Currency { get; set; }
+        public string TenantCulture { get; set; }
+        public List<CountryModel> TenantCountries { get; set; }
+        public string TenantIdInString { get; set; }
     }
 
 }

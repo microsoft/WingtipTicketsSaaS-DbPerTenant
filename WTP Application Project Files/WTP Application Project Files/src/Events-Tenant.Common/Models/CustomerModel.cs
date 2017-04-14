@@ -6,14 +6,15 @@ namespace Events_Tenant.Common.Models
     {
         public int CustomerId { get; set; }
 
+        [Required]
         public string FirstName { get; set; }
 
+        [Required]
         public string LastName { get; set; }
 
-        [EmailAddress(ErrorMessage = "Invalid Email Address")]
+        [Required]
         public string Email { get; set; }
 
-        [Display(Name = "Password")]
         [DataType(DataType.Password)]
         public string Password { get; set; }
 

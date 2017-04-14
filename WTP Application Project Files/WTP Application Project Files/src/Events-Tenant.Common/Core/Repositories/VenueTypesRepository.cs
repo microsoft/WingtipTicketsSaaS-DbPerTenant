@@ -1,34 +1,32 @@
 ﻿using System.Linq;
 using Events_Tenant.Common.Core.Interfaces;
-using Events_Tenant.Common.Helpers;
 using Events_Tenant.Common.Models;
-using Events_Tenant.Common.Utilities;
-using Events_TenantUserApp.EF.Models;
 
 namespace Events_Tenant.Common.Core.Repositories
 {
-    public class VenueTypesRepository : IVenueTypesRepository
+    public class VenueTypesRepository : BaseRepository, IVenueTypesRepository
     {
-        public VenueTypeModel GetVenueType(string venueType, byte[] tenantId, DatabaseConfig databaseConfig, TenantServerConfig tenantServerConfig)
+        public VenueTypeModel GetVenueType(string venueType, string connectionString, int tenantId)
         {
-            var connectionString = Helper.GetSqlConnectionString(databaseConfig);
-
-            using (var context = new TenantEntities(Sharding.ShardMap, tenantId, connectionString, Helper.GetTenantConnectionString(databaseConfig, tenantServerConfig)))
+            using (var context = CreateContext(connectionString, tenantId))
             {
-                var venueTypeDetails = context.VenueTypes.First(i => i.VenueType == venueType);
+                var venueTypesDetails = context.VenueTypes.Where(i => i.VenueType == venueType);
 
-                var venueTypeModel = new VenueTypeModel
+                if (venueTypesDetails.Any())
                 {
-                    VenueType = venueTypeDetails.VenueType,
-                    EventTypeName = venueTypeDetails.EventTypeName,
-                    EventTypeShortName = venueTypeDetails.EventTypeShortName,
-                    EventTypeShortNamePlural = venueTypeDetails.EventTypeShortNamePlural,
-                    Language = venueTypeDetails.Language,
-                    VenueTypeName = venueTypeDetails.VenueTypeName
-                };
-
-                return venueTypeModel;
+                    var venueTypeDetails = venueTypesDetails.FirstOrDefault();
+                    return new VenueTypeModel
+                    {
+                        VenueType = venueTypeDetails.VenueType.Trim(),
+                        EventTypeName = venueTypeDetails.EventTypeName.Trim(),
+                        EventTypeShortName = venueTypeDetails.EventTypeShortName.Trim(),
+                        EventTypeShortNamePlural = venueTypeDetails.EventTypeShortNamePlural.Trim(),
+                        Language = venueTypeDetails.Language.Trim(),
+                        VenueTypeName = venueTypeDetails.VenueTypeName.Trim()
+                    };
+                }
             }
+            return null;
         }
     }
 }

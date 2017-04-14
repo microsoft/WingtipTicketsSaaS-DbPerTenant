@@ -1,51 +1,64 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Events_Tenant.Common.Core.Interfaces;
-using Events_Tenant.Common.Helpers;
 using Events_Tenant.Common.Models;
-using Events_Tenant.Common.Utilities;
-using Events_TenantUserApp.EF.Models;
+using Events_TenantUserApp.EF.CatalogDB;
 
 namespace Events_Tenant.Common.Core.Repositories
 {
     public class TenantsRepository : ITenantsRepository
     {
-        public IEnumerable<TenantModel> GetAllTenants(CustomerCatalogConfig customerCatalogConfig, DatabaseConfig databaseConfig)
-        {
-            string connectionString = Helper.GetCustomerCatalogConnectionString(customerCatalogConfig, databaseConfig);
+        private readonly CatalogDbContext _catalogDbContext;
 
-            using (var context = new CustomerCatalogEntities(connectionString))
+        public TenantsRepository(CatalogDbContext catalogDbContext)
+        {
+            _catalogDbContext = catalogDbContext;
+        }
+
+        public List<TenantModel> GetAllTenants()
+        {
+            var allTenantsList = _catalogDbContext.Tenants;
+            
+            return allTenantsList.Select(tenant => new TenantModel
             {
-                var allTenantsList = context.Tenants.AsEnumerable();
-                
-                return allTenantsList.Select(tenant => new TenantModel
-                {
-                    ServicePlan = tenant.ServicePlan,
-                    TenantId = tenant.TenantId,
-                    TenantName = tenant.TenantName
-                }).ToList();
-            }
+                ServicePlan = tenant.ServicePlan,
+                TenantId = BitConverter.ToInt32(tenant.TenantId, 0),
+                TenantName = tenant.TenantName
+            }).ToList();
         }
 
 
-        public TenantModel GetTenant(string tenantName, CustomerCatalogConfig customerCatalogConfig, DatabaseConfig databaseConfig)
+        public TenantModel GetTenant(string tenantName)
         {
-            string connectionString = Helper.GetCustomerCatalogConnectionString(customerCatalogConfig, databaseConfig);
+            var tenants = _catalogDbContext.Tenants.Where(i => i.TenantName == tenantName);
 
-            using (var context = new CustomerCatalogEntities(connectionString))
+            if (tenants.Any())
             {
-                var tenant = context.Tenants.First(i => i.TenantName == tenantName);
+                var tenant = tenants.FirstOrDefault();
 
-                var tenantModel = new TenantModel
+                string s2 = BitConverter.ToString(tenant.TenantId);
+                s2 = s2.Replace("-", "");
+
+                return new TenantModel
                 {
                     ServicePlan = tenant.ServicePlan,
                     TenantName = tenant.TenantName,
-                    TenantId = tenant.TenantId
+                    TenantId = BitConverter.ToInt32(tenant.TenantId, 0),
+                    TenantIdInString = s2
                 };
-
-                return tenantModel;
             }
 
+            return null;
         }
+
+        public bool Add(Tenants tenant)
+        {
+            _catalogDbContext.Tenants.Add(tenant);
+            _catalogDbContext.SaveChanges();
+
+            return true;
+        }
+
     }
 }

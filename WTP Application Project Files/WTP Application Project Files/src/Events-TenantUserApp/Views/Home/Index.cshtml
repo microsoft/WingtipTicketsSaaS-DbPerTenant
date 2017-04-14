@@ -1,19 +1,21 @@
-﻿@using System.Globalization
+﻿﻿@using System.Globalization
 @using System.Security.Policy
 @using Microsoft.AspNetCore.Http.Features
-@using Microsoft.AspNetCore.Localization
 @using Microsoft.AspNetCore.Mvc.Localization
 @using Events_Tenant.Common.Models
-
+@using Events_TenantUserApp
 @inject IViewLocalizer Localizer
 
 
-@model List<TenantModel>
-
+@{
+    Layout = "_HomeLayout";
+}
 
 @{
-    ViewData["Title"] = "Events Hub";
+    ViewData["Title"] = @Localizer["Events Hub"].Value;
 }
+
+
 
 <!-- ------------------------------------------------------------------------------------------------------------------- -->
 <!-- Content -->
@@ -21,84 +23,60 @@
 
 <div class="container">
 
-    <div class="row spacer-25">
-        WELCOME
-        <p>
-            <b>Welcome to the Wingtip Tickets Platform!</b> Explore what's on at the venues below and enjoy secure ticket purchasing in the cloud. powered by Microsoft Azure Cloud, using Saas technology built on SQL Database.
-        </p>
-    </div>
+    <div class="col-xs-12">
 
-    <div class="row">
-        <div class="input-group">
-            @*<input id="search" name="search" type="search" class="form-control form-search" placeholder="search" value="@Request["search"]">*@
+
+        <h2 style="margin-left: 20px; margin-bottom: 10px">@Localizer["WELCOME"]</h2>
+        <div class="col-xs-10">
+            <hr class="body-hr"/>
+
+            <p style="margin-left: 15px;">
+                @Localizer["<b>Welcome to the Wingtip Tickets Platform!</b> Explore what's on at the venues below and enjoy secure ticket purchasing in the cloud. Powered by Microsoft Azure, using SaaS technology built on SQL Database."]
+            </p>
         </div>
     </div>
 
-    <div class="row">
+    <div>
 
         <!-- ------------------------------------------------------------------------------------------------------------------- -->
         <!-- Tenant List -->
         <!-- ------------------------------------------------------------------------------------------------------------------- -->
 
+        <div class="col-xs-10" style="margin-left: 26px; width: 100%;">
+            <table id="table_id" class="table table-bordered responsive-utilities" width="84.5%" style="margin-left: 0%">
+                <thead>
+                <tr>
+                    <th style="display: none;">Column 2</th>
 
-        <table style="width: 100%;">
-            <tr>
-                <td><b>Venues</b></td>
-            </tr>
+                    <th style="font-weight: bold;">
+                        @Localizer["Venues"]
+                    </th>
 
-            @{
-                if (Model != null)
-                {
-                    var tenantIndex = 0;
+                </tr>
+                </thead>
 
-                    foreach (var tenant in Model)
+                <tbody>
+                @{
+                    if (Model != null)
                     {
-                        <tr>
-                            <td><a href="@Url.Action("Index", new { tenantName = tenant.TenantName })">@tenant.TenantName </a></td>
-                        </tr>
-
-                        tenantIndex++;
+                        foreach (var tenant in Model)
+                        {
+                            <tr>
+                                <th style="display: none;">
+                                    <a href="@Url.Action("Index", new {tenantName = tenant.TenantName})">@tenant.VenueName </a>
+                                </th>
+                                <th>
+                                    <a href="@Url.Action("Index", new {tenantName = tenant.TenantName})">@tenant.VenueName </a>
+                                </th>
+                            </tr>
+                        }
                     }
                 }
-            }
 
-        </table>
-
-
-    </div>
-</div>
-
-
-<footer>
-    <div class="btm-footer">
-        <div class="container">
-            <div class="row">
-                <div class="col-xs-12">
-
-                    <div class="col-xs-6">
-                        <div class="row">
-                            <img class="logo-image pull-left" src="~/Content/Images/ticketmaestro-logo.jpg" />
-                            <h1 class="logo-heading"><span>Wingtip Tickets Platform</span></h1>
-                        </div>
-                    </div>
-
-                    <div class="col-xs-6 pull-right footer-menu">
-                        <div class="spacer-10">
-
-                        </div>
-                        <div class="row">
-                            <div class="col-xs-12 text-right">
-                                <p>
-                                    LEARN HOW TO BUILD A SAAS APP ON SQL DATABASE <br />
-                                    Running on Azure SQL Database. &copy; @DateTime.Now.Year Microsoft server:
-                                     @*@TenantUserApp.AppConfig.CustomerCatalogServer database: @TenantUserApp.AppConfig.TenantServer.ToLower()<br />*@
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
+                </tbody>
+            </table>
         </div>
+
     </div>
-</footer>
+
+</div>
