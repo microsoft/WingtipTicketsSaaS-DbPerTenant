@@ -39,7 +39,7 @@
     "catalogServer": "[concat(variables('catalogServerName'),'-', variables('lowerCaseUser'))]",
     "wtpTenantUserTrafficManagerUniqueDnsName": "[concat('events.wtp.',variables('lowerCaseUser'))]",
     "wtpTenantUser": "[concat('eventswtp-',variables('lowerCaseUser'))]",
-    "wtpTenantUserAppPackageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-packages2/tenantUserAppPackage.zip"
+    "wtpTenantUserAppPackageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-packages/tenantUserAppPackage.zip"
   },
   "resources": [
     {
@@ -342,19 +342,21 @@
             "MSDeploy"
           ],
           "properties": {
-            "AppSettings:BlobPath": "https://wtpdeploystorageaccount.blob.core.windows.net/imagesvnext/",
-            "AppSettings:ConnectionTimeOut": "30",
-            "AppSettings:CatalogDatabase": "[variables('catalogDatabaseName')]",
-            "AppSettings:CatalogServer": "[variables('catalogServer')]",
-            "AppSettings:DatabasePassword": "P@ssword1",
-            "AppSettings:DatabaseServerPort": "1433",
-            "AppSettings:DatabaseUser": "developer",
-            "AppSettings:ResetEventDates": "false",
-            "AppSettings:ServicePlan": "Standard",
-            "AppSettings:SqlProtocol": "tcp",
-            "AppSettings:TenantServer": "[variables('tenantServer')]",
-            "AppSettings:LearnHowFooterUrl": "https://docs.microsoft.com/azure/sql-database/sql-database-saas-tutorial/",
-            "AppSettings:User": "[variables('lowerCaseUser')]"
+            "BlobPath": "https://wtpdeploystorageaccount.blob.core.windows.net/imagesvnext/",
+            "ConnectionTimeOut": "30",
+            "CatalogDatabase": "[variables('catalogDatabaseName')]",
+            "CatalogServer": "[variables('catalogServer')]",
+            "DatabasePassword": "P@ssword1",
+            "DatabaseServerPort": "1433",
+            "DatabaseUser": "developer",
+            "ResetEventDates": "false",
+            "ServicePlan": "Standard",
+            "SqlProtocol": "tcp",
+            "TenantServer": "[variables('tenantServer')]",
+            "LearnHowFooterUrl": "https://docs.microsoft.com/azure/sql-database/sql-database-saas-tutorial/",
+            "User": "[variables('lowerCaseUser')]",
+            "ASPNETCORE_ENVIRONMENT": "Production",
+            "WEBSITE_NODE_DEFAULT_VERSION": "4.2.3"
           }
         }
       ]
