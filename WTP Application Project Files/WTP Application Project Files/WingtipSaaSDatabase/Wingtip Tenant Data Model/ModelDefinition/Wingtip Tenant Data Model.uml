@@ -1710,6 +1710,71 @@
               </associationHasOwnedEnds>
             </relationshipOwnedElementsInternal>
           </association>
+          <association
+            Id="b0ffaf6d-649d-42d8-9616-d9992a879698"
+            isDerived="false"
+            sourceEndRoleName="Tenant"
+            targetEndRoleName="ServicePlan"
+            isLeaf="false"
+            isAbstract="false">
+            <classMoniker
+              Id="6b2f5309-0539-45c8-947f-85f618ca363d"
+              LastKnownName="ServicePlan"
+              LastKnownLocation="Wingtip Tenant Data Model.uml" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd
+                  Id="d75d7308-ab51-468d-bcde-984e1d5bd587"
+                  name="Tenant"
+                  isLeaf="false"
+                  isStatic="false"
+                  isReadOnly="false"
+                  isDerived="false"
+                  isDerivedUnion="false"
+                  aggregation="None"
+                  isComposite="false"
+                  isNavigableOwned="false">
+                  <lowerValueInternal>
+                    <literalString
+                      Id="829604b3-0cbb-46fd-8d52-667d2f830142"
+                      name="Lower"
+                      value="*" />
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString
+                      Id="b7565eb8-9f68-4815-8434-c3b1f508a133"
+                      name="Upper"
+                      value="*" />
+                  </upperValueInternal>
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd
+                  Id="ecb29de6-1115-4513-96d9-1a7e9d3db714"
+                  name="ServicePlan"
+                  isLeaf="false"
+                  isStatic="false"
+                  isReadOnly="false"
+                  isDerived="false"
+                  isDerivedUnion="false"
+                  aggregation="None"
+                  isComposite="false">
+                  <lowerValueInternal>
+                    <literalString
+                      Id="ab4603b8-5bc0-4897-b0f9-ad25819956ce"
+                      name="Lower"
+                      value="0" />
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString
+                      Id="4e66e379-075b-49fd-8b2b-75faa85659c4"
+                      name="Upper"
+                      value="1" />
+                  </upperValueInternal>
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+          </association>
         </targetEnds>
         <ownedAttributesInternal>
           <property
@@ -1735,28 +1800,6 @@
             aggregation="None"
             isComposite="false" />
           <property
-            Id="75b1f7e8-8745-43af-9c74-7e83a75b85f7"
-            name="LastValidated"
-            isLeaf="false"
-            isStatic="false"
-            isReadOnly="false"
-            isUnique="false"
-            isDerived="false"
-            isDerivedUnion="false"
-            aggregation="None"
-            isComposite="false" />
-          <property
-            Id="56ea059c-4c06-48dd-8141-cea687dd372e"
-            name="LastValidatedOutcome"
-            isLeaf="false"
-            isStatic="false"
-            isReadOnly="false"
-            isUnique="false"
-            isDerived="false"
-            isDerivedUnion="false"
-            aggregation="None"
-            isComposite="false" />
-          <property
             Id="2822955f-26fa-4866-97f1-1ed509a08e24"
             name="LastUpdated"
             isLeaf="false"
@@ -1769,7 +1812,7 @@
             isComposite="false" />
           <property
             Id="d0e0dcbc-104d-4f24-a385-a4bfa7348942"
-            name="TenantId"
+            name="TenantRawId"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -1790,41 +1833,8 @@
         isActiveClass="false">
         <ownedAttributesInternal>
           <property
-            Id="c41a2375-fe9f-45f6-a417-6c1e5090bc53"
-            name="DatabaseName"
-            isLeaf="false"
-            isStatic="false"
-            isReadOnly="false"
-            isUnique="false"
-            isDerived="false"
-            isDerivedUnion="false"
-            aggregation="None"
-            isComposite="false" />
-          <property
             Id="e9e1b941-954a-45d8-8405-187794b90015"
             name="ServiceObjective"
-            isLeaf="false"
-            isStatic="false"
-            isReadOnly="false"
-            isUnique="false"
-            isDerived="false"
-            isDerivedUnion="false"
-            aggregation="None"
-            isComposite="false" />
-          <property
-            Id="464f50fa-ab30-4fc5-815a-7c3cb722066b"
-            name="LastValidated"
-            isLeaf="false"
-            isStatic="false"
-            isReadOnly="false"
-            isUnique="false"
-            isDerived="false"
-            isDerivedUnion="false"
-            aggregation="None"
-            isComposite="false" />
-          <property
-            Id="06588162-0295-491a-bc9e-6535fbaae87d"
-            name="LastValidatedOutcome"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -1847,6 +1857,39 @@
           <property
             Id="9b27fdb2-de9b-44e7-a9da-6662cb4fb2b2"
             name="LastUpdated"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="06a05fa0-7f51-41d6-bbe2-123f46df5b02"
+            name="ElasticPoolName"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="b667aca4-1da5-457f-8220-1da154d967d9"
+            name="ServerName"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="de06f8df-205c-417b-8913-9722bc26a40e"
+            name="DatabaseName"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2007,29 +2050,7 @@
             isComposite="false" />
           <property
             Id="632b4c25-4289-4987-a658-6e7c33d72667"
-            name="MaxPools"
-            isLeaf="false"
-            isStatic="false"
-            isReadOnly="false"
-            isUnique="false"
-            isDerived="false"
-            isDerivedUnion="false"
-            aggregation="None"
-            isComposite="false" />
-          <property
-            Id="4a53295b-9a7e-4929-9c0f-27c2a26d757c"
-            name="LastValidated"
-            isLeaf="false"
-            isStatic="false"
-            isReadOnly="false"
-            isUnique="false"
-            isDerived="false"
-            isDerivedUnion="false"
-            aggregation="None"
-            isComposite="false" />
-          <property
-            Id="8d8d9733-cf48-4149-9569-cef7fa624fc2"
-            name="LastValidatedOutcome"
+            name="PoolsMax"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2162,7 +2183,7 @@
             isComposite="false" />
           <property
             Id="2e4efa4f-1567-47c6-8fc4-e10bbe0a48cf"
-            name="MaxDatabases"
+            name="DatabasesMaxCount"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2173,7 +2194,7 @@
             isComposite="false" />
           <property
             Id="92d20b2c-964c-46d8-90ac-c3714bb66d29"
-            name="DatabasesBuffer"
+            name="DatabasesBufferCount"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2184,29 +2205,7 @@
             isComposite="false" />
           <property
             Id="fd306c11-3fe2-4ada-81f5-6afbdb47a84b"
-            name="Configuration"
-            isLeaf="false"
-            isStatic="false"
-            isReadOnly="false"
-            isUnique="false"
-            isDerived="false"
-            isDerivedUnion="false"
-            aggregation="None"
-            isComposite="false" />
-          <property
-            Id="fbe0daff-140a-4d29-80fd-7c3c75cc8a2f"
-            name="LastValidated"
-            isLeaf="false"
-            isStatic="false"
-            isReadOnly="false"
-            isUnique="false"
-            isDerived="false"
-            isDerivedUnion="false"
-            aggregation="None"
-            isComposite="false" />
-          <property
-            Id="a6691036-deba-412c-9cff-6fae556d35b6"
-            name="LastValidatedOutcome"
+            name="Dtu"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2237,20 +2236,64 @@
             isDerivedUnion="false"
             aggregation="None"
             isComposite="false" />
+          <property
+            Id="b5a21df3-fd79-41e3-8811-331279dcbd28"
+            name="Edition"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="da9be6fa-53ce-44fa-b6bb-8964dbb5a394"
+            name="DatabaseDtuMax"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="288ec2a3-2772-4aca-b552-285f470420c2"
+            name="DatabaseDtuMin"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="d0a399e5-e5f8-4cfc-9fff-2748156e3b00"
+            name="ServerName"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
         </ownedAttributesInternal>
       </class>
     </packageHasNamedElement>
     <packageHasNamedElement>
       <class
         Id="cae1e85b-fcc7-459f-967b-3a19bb89d914"
-        name="ProvisioningModel"
+        name="ProvisioningRegion"
         isAbstract="false"
         isLeaf="false"
         isActiveClass="false">
         <ownedAttributesInternal>
           <property
             Id="e8c55c72-01b1-406d-8941-162194561166"
-            name="PrimaryServerRegion"
+            name="Geography"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2261,7 +2304,51 @@
             isComposite="false" />
           <property
             Id="65f870b5-90e5-4cd5-90eb-314b65c7d593"
-            name="RecoveryServerRegion"
+            name="IsPrimary"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="2755a996-eda4-4dce-8477-7e484e1fc1f2"
+            name="RegionName"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="55d24bec-2aa6-4fcc-8c5c-41bbc839c991"
+            name="IsRecovery"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="ab2676c1-5190-4480-85dc-57cd51792a89"
+            name="RecoveryForRegion"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="d9b040ab-a8a6-464f-9596-f7275692653b"
+            name="State"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2331,10 +2418,64 @@
     <packageHasNamedElement>
       <class
         Id="ae81e42a-30b2-45c7-9756-03633dbad740"
-        name="Configuration"
+        name="ProvisioningModel"
         isAbstract="false"
         isLeaf="false"
         isActiveClass="false">
+        <targetEnds>
+          <association
+            Id="30e6a308-99c4-458d-96dd-13dc85865e40"
+            isDerived="false"
+            sourceEndRoleName="ProvisioningModel"
+            targetEndRoleName="ProvisioningRegion"
+            isLeaf="false"
+            isAbstract="false">
+            <classMoniker
+              Id="cae1e85b-fcc7-459f-967b-3a19bb89d914"
+              LastKnownName="ProvisioningRegion"
+              LastKnownLocation="Wingtip Tenant Data Model.uml" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd
+                  Id="49f28732-61d9-4689-a86c-e12c3bc640a8"
+                  name="ProvisioningModel"
+                  isLeaf="false"
+                  isStatic="false"
+                  isReadOnly="false"
+                  isDerived="false"
+                  isDerivedUnion="false"
+                  aggregation="Composite"
+                  isComposite="false"
+                  isNavigableOwned="false" />
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd
+                  Id="e4a6ed4e-93f6-46b2-a540-623203da302a"
+                  name="ProvisioningRegion"
+                  isLeaf="false"
+                  isStatic="false"
+                  isReadOnly="false"
+                  isDerived="false"
+                  isDerivedUnion="false"
+                  aggregation="None"
+                  isComposite="true">
+                  <lowerValueInternal>
+                    <literalString
+                      Id="198deb07-4a56-4eb6-8aac-b711434b13c7"
+                      name="Lower"
+                      value="*" />
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString
+                      Id="90cf755a-899e-4664-998c-4664f8e6e36d"
+                      name="Upper"
+                      value="*" />
+                  </upperValueInternal>
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+          </association>
+        </targetEnds>
         <ownedAttributesInternal>
           <property
             Id="7ae97bb9-8578-4e5d-99f0-9a62b15d5be7"
@@ -2371,7 +2512,7 @@
             isComposite="false" />
           <property
             Id="021214e0-e71b-41ef-b621-ca30b9cbb43b"
-            name="PoolDatabaseMaxDtu"
+            name="PoolDatabaseDtuMax"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2382,7 +2523,7 @@
             isComposite="false" />
           <property
             Id="efb683d0-11e3-4c19-a84e-4956d14be40a"
-            name="PoolDatabaseMinDtu"
+            name="PoolDatabaseDtuMin"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
@@ -2438,6 +2579,171 @@
           <property
             Id="d9e03a8f-6f50-4e5d-bafe-0a83a8d9cd3c"
             name="ServerNameStem"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="15d60c50-4572-48ab-bf72-72a8b5a098bd"
+            name="ServerPoolsMax"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+        </ownedAttributesInternal>
+      </class>
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <class
+        Id="6b2f5309-0539-45c8-947f-85f618ca363d"
+        name="ServicePlan"
+        isAbstract="false"
+        isLeaf="false"
+        isActiveClass="false">
+        <ownedAttributesInternal>
+          <property
+            Id="58bc3e77-cf55-4b38-96de-5dac4c5280c1"
+            name="ServicePlanName"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="7756cf55-7657-4392-bba4-abcb5d583c3e"
+            name="BaseRateMonthly"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="471a2acf-7068-48ca-89dc-3794d6da3fa9"
+            name="Description"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="6f9e1091-9447-47c6-8979-d3bd97728675"
+            name="ShortDescriptionn"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+        </ownedAttributesInternal>
+      </class>
+    </packageHasNamedElement>
+    <packageHasNamedElement>
+      <class
+        Id="796e3570-9501-4fa5-aef5-a78c1671c952"
+        name="TenantRequest"
+        isAbstract="false"
+        isLeaf="false"
+        isActiveClass="false">
+        <ownedAttributesInternal>
+          <property
+            Id="bf3f4827-df2e-47a4-9b28-cc1a4130978a"
+            name="TenantName"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="af7a68fb-1823-459c-bb8e-25dd1a6c30b6"
+            name="ServicePlan"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="0f99d565-9cd4-4638-a7c7-780b60f3c3b1"
+            name="RequestTime"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="c1f77a01-521c-4b7c-b7da-1cfc7ff4d84b"
+            name="Outcome"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="f866f36b-57a0-4a95-98b7-f36c407204ae"
+            name="OutcomeTime"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="dc6638ec-beaf-436b-a044-5cab23c82424"
+            name="Region"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="448d715f-5e7d-4b77-9804-42022faf8987"
+            name="TenantId"
+            isLeaf="false"
+            isStatic="false"
+            isReadOnly="false"
+            isUnique="false"
+            isDerived="false"
+            isDerivedUnion="false"
+            aggregation="None"
+            isComposite="false" />
+          <property
+            Id="c20aebb1-2aaf-4015-9979-ec72e3f9fc38"
+            name="TenantRawId"
             isLeaf="false"
             isStatic="false"
             isReadOnly="false"
