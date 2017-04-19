@@ -16,9 +16,9 @@ GO
 
 -- Venue
 INSERT INTO [dbo].[Venues]
-   ([VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode])
+   ([VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode], [Lock])
      VALUES
-           ('Dogwood Dojo','JudoClub','admin@dogwooddojo.com',NULL,'98052','USA')
+           ('Dogwood Dojo','judo','admin@dogwooddojo.com',NULL,'98052','USA','X')
 GO
 
 -- Sections

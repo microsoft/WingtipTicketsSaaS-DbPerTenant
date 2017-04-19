@@ -15,9 +15,9 @@ DELETE FROM [dbo].[Venues]
 
 -- Venue
 INSERT INTO [dbo].[Venues]
-   ([VenueName],[AdminEmail],[AdminPassword],[PostalCode],[VenueType],[CountryCode])
+   ([VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode],[Lock])
      VALUES
-           ('Contoso Concert Hall','admin@contosoconcerthall.com',NULL,'98052','ClassicalConcertHall','USA')
+           ('Contoso Concert Hall','classicalmusic','admin@contosoconcerthall.com',NULL,'98052','USA','X')
 GO
 
 -- Sections
