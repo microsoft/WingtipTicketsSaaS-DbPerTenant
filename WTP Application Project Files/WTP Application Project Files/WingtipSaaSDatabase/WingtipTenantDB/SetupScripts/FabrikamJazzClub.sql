@@ -16,9 +16,9 @@ GO
 
 -- Venue
 INSERT INTO [dbo].[Venue]
-   ([VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode])
+   ([VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode],[Lock])
      VALUES
-           ('Fabrikam Jazz Club','jazz','admin@fabrikamjazzclub.com',NULL,'98052','USA')
+           ('Fabrikam Jazz Club','jazz','admin@fabrikamjazzclub.com',NULL,'98052','USA','X')
 GO
 
 -- Sections
