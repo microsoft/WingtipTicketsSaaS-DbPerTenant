@@ -167,25 +167,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="TenantsDB\Countries.cs" />
-    <Compile Include="TenantsDB\Customers.cs" />
-    <Compile Include="TenantsDB\TenantDbContext.cs" />
-    <Compile Include="TenantsDB\Events.cs" />
-    <Compile Include="TenantsDB\EventSections.cs" />
-    <Compile Include="CatalogDB\OperationsLogGlobal.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="CatalogDB\ShardedDatabaseSchemaInfosGlobal.cs" />
-    <Compile Include="CatalogDB\ShardMapManagerGlobal.cs" />
-    <Compile Include="CatalogDB\ShardMappingsGlobal.cs" />
-    <Compile Include="CatalogDB\ShardMapsGlobal.cs" />
-    <Compile Include="CatalogDB\ShardsGlobal.cs" />
     <Compile Include="CatalogDB\Tenants.cs" />
     <Compile Include="CatalogDB\CatalogDbContext.cs" />
+    <Compile Include="TenantsDB\Countries.cs" />
+    <Compile Include="TenantsDB\Customers.cs" />
+    <Compile Include="TenantsDB\Events.cs" />
+    <Compile Include="TenantsDB\EventSections.cs" />
     <Compile Include="TenantsDB\Sections.cs" />
-    <Compile Include="TenantsDB\ShardMapManagerLocal.cs" />
-    <Compile Include="TenantsDB\ShardMappingsLocal.cs" />
-    <Compile Include="TenantsDB\ShardMapsLocal.cs" />
-    <Compile Include="TenantsDB\ShardsLocal.cs" />
+    <Compile Include="TenantsDB\TenantDbContext.cs" />
     <Compile Include="TenantsDB\TicketPurchases.cs" />
     <Compile Include="TenantsDB\Tickets.cs" />
     <Compile Include="TenantsDB\Venue.cs" />

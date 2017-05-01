@@ -4,6 +4,7 @@ using Events_Tenant.Common.Core.Interfaces;
 using Events_Tenant.Common.Helpers;
 using Events_TenantUserApp.EF.CatalogDB;
 using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
+using Microsoft.Extensions.Logging;
 
 namespace Events_Tenant.Common.Utilities
 {
@@ -38,27 +39,34 @@ namespace Events_Tenant.Common.Utilities
         /// <param name="helper">The helper.</param>
         public Sharding(CatalogConfig catalogConfig, DatabaseConfig databaseConfig, ITenantsRepository tenantsRepository, IHelper helper)
         {
-            _tenantsRepository = tenantsRepository;
-            _helper = helper;
-
-            var smmconnstr = _helper.GetSqlConnectionString(databaseConfig);
-
-            // Connection string with administrative credentials for the root database
-            SqlConnectionStringBuilder connStrBldr = new SqlConnectionStringBuilder(smmconnstr)
+            try
             {
-                DataSource = databaseConfig.SqlProtocol + ":" + catalogConfig.CatalogServer + "," + databaseConfig.DatabaseServerPort,
-                InitialCatalog = catalogConfig.CatalogDatabase,
-                ConnectTimeout = databaseConfig.ConnectionTimeOut
-            };
+                _tenantsRepository = tenantsRepository;
+                _helper = helper;
 
-            // Deploy shard map manager
-            // if shard map manager exists, refresh content, else create it, then add content
-            ShardMapManager smm;
-            ShardMapManager = !ShardMapManagerFactory.TryGetSqlShardMapManager(connStrBldr.ConnectionString, ShardMapManagerLoadPolicy.Lazy, out smm) ? ShardMapManagerFactory.CreateSqlShardMapManager(connStrBldr.ConnectionString) : smm;
+                var smmconnstr = _helper.GetSqlConnectionString(databaseConfig, catalogConfig);
 
-            // check if shard map exists and if not, create it 
-            ListShardMap<int> sm;
-            ShardMap = !ShardMapManager.TryGetListShardMap(catalogConfig.CatalogDatabase, out sm) ? ShardMapManager.CreateListShardMap<int>(catalogConfig.CatalogDatabase) : sm;
+                // Deploy shard map manager
+                // if shard map manager exists, refresh content, else create it, then add content
+                ShardMapManager smm;
+                ShardMapManager =
+                    !ShardMapManagerFactory.TryGetSqlShardMapManager(smmconnstr,
+                        ShardMapManagerLoadPolicy.Lazy, out smm)
+                        ? ShardMapManagerFactory.CreateSqlShardMapManager(smmconnstr)
+                        : smm;
+
+                // check if shard map exists and if not, create it 
+                ListShardMap<int> sm;
+                ShardMap = !ShardMapManager.TryGetListShardMap(catalogConfig.CatalogDatabase, out sm)
+                    ? ShardMapManager.CreateListShardMap<int>(catalogConfig.CatalogDatabase)
+                    : sm;
+            }
+            catch (Exception ex)
+            {
+                // _logger.LogError(0, ex, "Error in sharding initialisation.");
+                throw new ApplicationException("Error in sharding initialisation.");
+            }
+
         }
 
         #endregion
@@ -74,36 +82,49 @@ namespace Events_Tenant.Common.Utilities
         /// <param name="tenantServerConfig">The tenant server configuration.</param>
         /// <param name="databaseConfig">The database configuration.</param>
         /// <param name="catalogConfig">The catalog configuration.</param>
-        public static void RegisterNewShard(string tenantName, int tenantId, TenantServerConfig tenantServerConfig, DatabaseConfig databaseConfig, CatalogConfig catalogConfig)
+        public static bool RegisterNewShard(string tenantName, int tenantId, TenantServerConfig tenantServerConfig, DatabaseConfig databaseConfig, CatalogConfig catalogConfig)
         {
-            Shard shard;
-            ShardLocation shardLocation = new ShardLocation(tenantServerConfig.TenantServer, tenantName, SqlProtocol.Tcp, databaseConfig.DatabaseServerPort);
-            byte[] tenantIdInBytes = BitConverter.GetBytes(tenantId);
-
-            if (!ShardMap.TryGetShard(shardLocation, out shard))
+            try
             {
-                //create shard if it does not exist
-                shard = ShardMap.CreateShard(shardLocation);
+                Shard shard;
+                ShardLocation shardLocation = new ShardLocation(tenantServerConfig.TenantServer, tenantName, databaseConfig.SqlProtocol, databaseConfig.DatabaseServerPort);
 
-                //add tenant to Tenants table
-                var tenant = new Tenants
+                if (!ShardMap.TryGetShard(shardLocation, out shard))
                 {
-                    ServicePlan = catalogConfig.ServicePlan,
-                    TenantId = tenantIdInBytes, //convert from int to byte[] as tenantId has been set as byte[] in Tenants entity
-                    TenantName = tenantName
-                };
+                    //create shard if it does not exist
+                    shard = ShardMap.CreateShard(shardLocation);
+                }
 
-                _tenantsRepository.Add(tenant);
+
+                // Register the mapping of the tenant to the shard in the shard map.
+                // After this step, DDR on the shard map can be used
+                PointMapping<int> mapping;
+                if (!ShardMap.TryGetMappingForKey(tenantId, out mapping))
+                {
+                    var pointMapping = ShardMap.CreatePointMapping(tenantId, shard);
+
+                    //convert from int to byte[] as tenantId has been set as byte[] in Tenants entity
+                    var key = _helper.ConvertIntKeyToBytesArray(pointMapping.Value);
+
+                    //add tenant to Tenants table
+                    var tenant = new Tenants
+                    {
+                        ServicePlan = catalogConfig.ServicePlan,
+                        TenantId = key,
+                        TenantName = tenantName
+                    };
+
+                    _tenantsRepository.Add(tenant);
+                }
+                return true;
             }
-
-
-            // Register the mapping of the tenant to the shard in the shard map.
-            // After this step, DDR on the shard map can be used
-            PointMapping<int> mapping;
-            if (!ShardMap.TryGetMappingForKey(tenantId, out mapping))
+            catch (Exception ex)
             {
-                ShardMap.CreatePointMapping(tenantId, shard);
+                // _logger.LogError(0, ex, "Error in registering new shard.");
+                //throw new ApplicationException("Error in registering new shard.");
+                return false;
             }
+
         }
 
 

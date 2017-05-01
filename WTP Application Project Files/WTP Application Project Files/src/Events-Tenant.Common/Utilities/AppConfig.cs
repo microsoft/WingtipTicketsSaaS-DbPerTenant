@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Events_Tenant.Common.Models;
+using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
 
 namespace Events_Tenant.Common.Utilities
 {
@@ -11,9 +12,10 @@ namespace Events_Tenant.Common.Utilities
         public string DatabaseUser { get; set; }
         public string DatabasePassword { get; set; }
         public int DatabaseServerPort { get; set; }
-        public string SqlProtocol { get; set; }
+        //public string SqlProtocol { get; set; }
         public int ConnectionTimeOut { get; set; }
         public string LearnHowFooterUrl { get; set; }
+        public SqlProtocol SqlProtocol { get; set; }
     }
 
     /// <summary>
@@ -58,6 +60,7 @@ namespace Events_Tenant.Common.Utilities
         public string TenantCulture { get; set; }
         public List<CountryModel> TenantCountries { get; set; }
         public string TenantIdInString { get; set; }
+        public string User { get; set; }
     }
 
 }

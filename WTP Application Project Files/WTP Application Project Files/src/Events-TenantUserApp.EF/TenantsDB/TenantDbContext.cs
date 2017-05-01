@@ -13,10 +13,6 @@ namespace Events_TenantUserApp.EF.TenantsDB
         public virtual DbSet<EventSections> EventSections { get; set; }
         public virtual DbSet<Events> Events { get; set; }
         public virtual DbSet<Sections> Sections { get; set; }
-        public virtual DbSet<ShardMapManagerLocal> ShardMapManagerLocal { get; set; }
-        public virtual DbSet<ShardMappingsLocal> ShardMappingsLocal { get; set; }
-        public virtual DbSet<ShardMapsLocal> ShardMapsLocal { get; set; }
-        public virtual DbSet<ShardsLocal> ShardsLocal { get; set; }
         public virtual DbSet<TicketPurchases> TicketPurchases { get; set; }
         public virtual DbSet<Tickets> Tickets { get; set; }
         public virtual DbSet<Venue> Venue { get; set; }
@@ -155,98 +151,6 @@ namespace Events_TenantUserApp.EF.TenantsDB
                 entity.Property(e => e.StandardPrice)
                     .HasColumnType("money")
                     .HasDefaultValueSql("10");
-            });
-
-            modelBuilder.Entity<ShardMapManagerLocal>(entity =>
-            {
-                entity.HasKey(e => e.StoreVersionMajor)
-                    .HasName("pkShardMapManagerLocal_StoreVersionMajor");
-
-                entity.ToTable("ShardMapManagerLocal", "__ShardManagement");
-
-                entity.Property(e => e.StoreVersionMajor).ValueGeneratedNever();
-            });
-
-            modelBuilder.Entity<ShardMappingsLocal>(entity =>
-            {
-                entity.HasKey(e => e.MappingId)
-                    .HasName("pkShardMappingsLocal_MappingId");
-
-                entity.ToTable("ShardMappingsLocal", "__ShardManagement");
-
-                entity.HasIndex(e => new { e.ShardMapId, e.MinValue })
-                    .HasName("ucShardMappingsLocal_ShardMapId_MinValue")
-                    .IsUnique();
-
-                entity.Property(e => e.MappingId).ValueGeneratedNever();
-
-                entity.Property(e => e.LastOperationId).HasDefaultValueSql("'00000000-0000-0000-0000-000000000000'");
-
-                entity.Property(e => e.LockOwnerId).HasDefaultValueSql("'00000000-0000-0000-0000-000000000000'");
-
-                entity.Property(e => e.MaxValue).HasMaxLength(128);
-
-                entity.Property(e => e.MinValue)
-                    .IsRequired()
-                    .HasMaxLength(128);
-
-                entity.HasOne(d => d.Shard)
-                    .WithMany(p => p.ShardMappingsLocal)
-                    .HasForeignKey(d => d.ShardId)
-                    .OnDelete(DeleteBehavior.Restrict)
-                    .HasConstraintName("fkShardMappingsLocal_ShardId");
-
-                entity.HasOne(d => d.ShardMap)
-                    .WithMany(p => p.ShardMappingsLocal)
-                    .HasForeignKey(d => d.ShardMapId)
-                    .OnDelete(DeleteBehavior.Restrict)
-                    .HasConstraintName("fkShardMappingsLocal_ShardMapId");
-            });
-
-            modelBuilder.Entity<ShardMapsLocal>(entity =>
-            {
-                entity.HasKey(e => e.ShardMapId)
-                    .HasName("pkShardMapsLocal_ShardMapId");
-
-                entity.ToTable("ShardMapsLocal", "__ShardManagement");
-
-                entity.Property(e => e.ShardMapId).ValueGeneratedNever();
-
-                entity.Property(e => e.LastOperationId).HasDefaultValueSql("'00000000-0000-0000-0000-000000000000'");
-
-                entity.Property(e => e.Name)
-                    .IsRequired()
-                    .HasMaxLength(50);
-            });
-
-            modelBuilder.Entity<ShardsLocal>(entity =>
-            {
-                entity.HasKey(e => e.ShardId)
-                    .HasName("pkShardsLocal_ShardId");
-
-                entity.ToTable("ShardsLocal", "__ShardManagement");
-
-                entity.HasIndex(e => new { e.ShardMapId, e.Protocol, e.ServerName, e.DatabaseName, e.Port })
-                    .HasName("ucShardsLocal_ShardMapId_Location")
-                    .IsUnique();
-
-                entity.Property(e => e.ShardId).ValueGeneratedNever();
-
-                entity.Property(e => e.DatabaseName)
-                    .IsRequired()
-                    .HasMaxLength(128);
-
-                entity.Property(e => e.LastOperationId).HasDefaultValueSql("'00000000-0000-0000-0000-000000000000'");
-
-                entity.Property(e => e.ServerName)
-                    .IsRequired()
-                    .HasMaxLength(128);
-
-                entity.HasOne(d => d.ShardMap)
-                    .WithMany(p => p.ShardsLocal)
-                    .HasForeignKey(d => d.ShardMapId)
-                    .OnDelete(DeleteBehavior.Restrict)
-                    .HasConstraintName("fkShardsLocal_ShardMapId");
             });
 
             modelBuilder.Entity<TicketPurchases>(entity =>

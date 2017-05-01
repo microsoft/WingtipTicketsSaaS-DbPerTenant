@@ -19,13 +19,18 @@
     ViewData["Title"] = @Localizer["Purchase Ticket"].Value;
 }
 
-
-@*<div class="container">*@
-
 @{
     var user = Context.Session.GetObjectFromJson<CustomerModel>("SessionUser");
-}
 
+    if (Startup.SessionUsers.Count > 0)
+    {
+        var users = Startup.SessionUsers.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
+        if (users.Any())
+        {
+            user = users.First();
+        }
+    }
+}
 
 <!-- ------------------------------------------------------------------------------------------------------------------- -->
 <!-- Heading Bar -->
@@ -95,7 +100,7 @@
             <label>@Localizer["Quantity:"]</label>
         </div>
         <div class="col-xs-3">
-            <input type="number" id="quantity" name="quantity" class="form-control" placeholder="0">
+            <input type="number" min="0" id="quantity" name="quantity" class="form-control" placeholder="0">
         </div>
     </div>
 
@@ -119,15 +124,15 @@
 <div class="col-md-3">
 </div>
 <div>
-    @if (user != null)
-    {
-        <button id="puchaseTicket" type="button" class="btn btn-themed-secondary pull-right" data-toggle="modal" data-target=".modal-tickets" data-backdrop="static" style="margin-right: 10px;">
+   @if (user != null && user.TenantName == Startup.TenantConfig.TenantName)
+   {
+        <button id="purchaseTicket" type="button" class="btn btn-themed pull-right" data-toggle="modal" data-target=".modal-tickets" data-backdrop="static" style="margin-right: 10px;">
             @Localizer["Purchase tickets"]
         </button>
     }
     else
     {
-        <button id="loginUser" type="button" class="btn btn-themed-secondary pull-right" data-toggle="modal" data-target=".bs-example-modal-lg" data-backdrop="static" data-keyboard="false" style="margin-right: 10px;">
+        <button id="loginUser" type="button" class="btn btn-themed pull-right" data-toggle="modal" data-target=".bs-example-modal-lg" data-backdrop="static" data-keyboard="false" style="margin-right: 10px;">
             @Localizer["Sign in to purchase tickets"]
         </button>
     }
@@ -154,9 +159,7 @@
                         <h1 class="logo-heading">@Startup.TenantConfig.VenueName</h1>
                     </div>
                     <div class="sub-heading2">
-                        @*<h2 class="sub-heading2">*@
                         @Localizer["Purchase tickets"]
-                        @*</h2>*@
                     </div>
                 </div>
             </div>
@@ -174,7 +177,7 @@
                         </ul>
                         <br />
                         <ul>
-                            <li id="liTicketQuantity">@Localizer["Tickets:"] <span id="spanTicketQty"></span> @Localizer["General Admission"]</li>
+                            <li id="liTicketQuantity">@Localizer["Tickets:"] <span id="spanTicketQty"></span></li>
                             <li id="liPrice">Total Cost: @Startup.TenantConfig.Currency<span id="spanTotal2"></span></li>
                         </ul>
 
@@ -190,7 +193,7 @@
                         @using (Html.BeginForm("PurchaseTickets", "FindSeats", FormMethod.Post, new { @class = "form-horizontal" }))
                         {
                             <input type="hidden" name="eventId" value="@Model.EventDetails.EventId" />
-                            if (user != null)
+                            if (user != null && user.TenantName == Startup.TenantConfig.TenantName)
                             {
                                 <input type="hidden" name="customerId" value="@user.CustomerId" />
                             }
@@ -254,10 +257,36 @@
 <script type="text/javascript" src="~/lib/jquery/dist/jquery.js"></script>
 <script type="text/javascript">
     $(document).ready(function() {
+
+        $("#spanTotal1").html("0.00");
+
+        $("#purchaseTicket").attr('disabled','disabled');
+
+        $("#quantity").keyup(function() {
+            if(($(this).val() != '') && ($(this).val() != '0')) {
+                $("#purchaseTicket").removeAttr('disabled');
+            }
+            else {
+                $("#purchaseTicket").attr('disabled', 'disabled');
+            }
+        });
+
+        $("#quantity").click(function() {
+            if(($(this).val() != '') && ($(this).val() != '0')) {
+                $("#purchaseTicket").removeAttr('disabled');
+            }
+            else {
+                $("#purchaseTicket").attr('disabled', 'disabled');
+            }
+        });
+
         $("#section").change(function() {
-            var element = $("#section");
             var selectedSection = $("#section").val();
             var prices = $("#section option:selected").html();
+
+            var arr = prices.split('@Startup.TenantConfig.Currency');
+            var sectionName = arr[0].trim();
+
             var price = Number(prices.replace(/[^0-9\.]+/g,""));
             var quantity = $("#quantity").val();
 
@@ -266,7 +295,7 @@
 
             $("#spanTotal1").html(totalPrice);
             $("#spanTotal2").html(totalPrice);
-            $("#spanTicketQty").html(quantity);
+            $("#spanTicketQty").html(quantity + " " + sectionName);
             $("#sectionId").val(selectedSection);
             $("#ticketPrice").val(total);
             $("#ticketCount").val(quantity);
@@ -287,9 +316,13 @@
 
 
         $("#quantity").change(function() {
-            var element = $("#section");
+
             var selectedSection = $("#section").val();
             var prices = $("#section option:selected").html();
+           
+            var arr = prices.split('@Startup.TenantConfig.Currency');
+            var sectionName = arr[0].trim();
+
             var price = Number(prices.replace(/[^0-9\.]+/g, ""));
             var quantity = parseInt($("#quantity").val(), 10);
             var availableSeats = parseInt($("#seatsAvailable")[0].innerText, 10);
@@ -302,12 +335,23 @@
 
                 $("#spanTotal1").html(totalPrice);
                 $("#spanTotal2").html(totalPrice);
-                $("#spanTicketQty").html(quantity);
+                $("#spanTicketQty").html(quantity + " " + sectionName);
                 $("#sectionId").val(selectedSection);
                 $("#ticketPrice").val(total);
                 $("#ticketCount").val(quantity);
             }
         });
+
+
+        var number = document.getElementById('quantity');
+        // Listen for input event on numInput.
+        number.onkeydown = function(e) {
+            if(!((e.keyCode > 95 && e.keyCode < 106)
+              || (e.keyCode > 47 && e.keyCode < 58) 
+              || e.keyCode == 8)) {
+                return false;
+            }
+        }
 
     });
 </script>

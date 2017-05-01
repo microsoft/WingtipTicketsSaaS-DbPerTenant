@@ -5,12 +5,15 @@ using System.Threading;
 using Events_Tenant.Common.Core.Interfaces;
 using Events_Tenant.Common.Helpers;
 using Events_Tenant.Common.Models;
+using Events_Tenant.Common.Utilities;
 using Events_TenantUserApp.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
 
 namespace Events_TenantUserApp.Controllers
 {
+    [Route("{tenant}/FindSeats")]
     public class FindSeatsController: BaseController
     {
         private readonly IEventsRepository _eventsRepository;
@@ -22,7 +25,7 @@ namespace Events_TenantUserApp.Controllers
         private readonly string _connectionString;
 
 
-        public FindSeatsController(IEventSectionRepository eventSectionRepository, ISectionRepository sectionRepository, IEventsRepository eventsRepository, ITicketRepository ticketRepository, ITicketPurchaseRepository ticketPurchaseRepository, IHelper helper, IStringLocalizer<FindSeatsController> localizer, IStringLocalizer<BaseController> baseLocalizer) : base(baseLocalizer)
+        public FindSeatsController(IEventSectionRepository eventSectionRepository, ISectionRepository sectionRepository, IEventsRepository eventsRepository, ITicketRepository ticketRepository, ITicketPurchaseRepository ticketPurchaseRepository, IHelper helper, IStringLocalizer<FindSeatsController> localizer, IStringLocalizer<BaseController> baseLocalizer, IMemoryCache memoryCache) : base(baseLocalizer, memoryCache, helper)
         {
             _eventSectionRepository = eventSectionRepository;
             _sectionRepository = sectionRepository;
@@ -33,15 +36,20 @@ namespace Events_TenantUserApp.Controllers
 
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture(Startup.TenantConfig.TenantCulture);
             Thread.CurrentThread.CurrentUICulture = new CultureInfo(Startup.TenantConfig.TenantCulture);
-
-            _connectionString = helper.GetSqlConnectionString(Startup.DatabaseConfig);
+            _connectionString = helper.GetBasicSqlConnectionString(Startup.DatabaseConfig);
 
         }
 
-        public ActionResult FindSeats(int eventId)
+        [Route("FindSeats")]
+        public ActionResult FindSeats(string tenant, int eventId)
         {
             if (eventId != 0)
             {
+                if (tenant != Startup.TenantConfig.TenantName)
+                {
+                    SetTenantConfig(tenant);
+                }
+
                 var eventDetails = _eventsRepository.GetEvent(eventId, _connectionString, Startup.TenantConfig.TenantId);
 
                 if (eventDetails != null)
@@ -68,8 +76,14 @@ namespace Events_TenantUserApp.Controllers
             return RedirectToAction("Index", "Events", new { tenant = Startup.TenantConfig.TenantName });
         }
 
-        public ActionResult GetAvailableSeats(int sectionId, int eventId)
+        [Route("GetAvailableSeats")]
+        public ActionResult GetAvailableSeats(string tenant, int sectionId, int eventId)
         {
+            if (tenant != Startup.TenantConfig.TenantName)
+            {
+                SetTenantConfig(tenant);
+            }
+
             var sectionDetails = _sectionRepository.GetSection(sectionId, _connectionString, Startup.TenantConfig.TenantId);
             var totalNumberOfSeats = sectionDetails.SeatRows * sectionDetails.SeatsPerRow;
             var ticketsSold = _ticketRepository.GetTicketsSold(sectionId, eventId, _connectionString, Startup.TenantConfig.TenantId);
@@ -80,7 +94,8 @@ namespace Events_TenantUserApp.Controllers
 
 
         [HttpPost]
-        public ActionResult PurchaseTickets(string eventId, string customerId, string ticketPrice, string ticketCount, string sectionId)
+        [Route("PurchaseTickets")]
+        public ActionResult PurchaseTickets(string tenant, string eventId, string customerId, string ticketPrice, string ticketCount, string sectionId)
         {
             bool purchaseResult = false;
             int numberOfTickets = Convert.ToInt32(ticketCount);
@@ -88,7 +103,7 @@ namespace Events_TenantUserApp.Controllers
             if (string.IsNullOrEmpty(eventId) || string.IsNullOrEmpty(customerId) || string.IsNullOrEmpty(ticketPrice) || string.IsNullOrEmpty(ticketCount))
             {
                 var message = _localizer["Enter quantity"];
-                DisplayMessage(message);
+                DisplayMessage(message, "Confirmation");
                 return RedirectToAction("Index", "Events", new { tenant = Startup.TenantConfig.TenantName });
             }
 
@@ -97,6 +112,11 @@ namespace Events_TenantUserApp.Controllers
                 CustomerId = Convert.ToInt32(customerId),
                 PurchaseTotal = Convert.ToDecimal(ticketPrice)
             };
+
+            if (tenant != Startup.TenantConfig.TenantName)
+            {
+                SetTenantConfig(tenant);
+            }
 
             var latestPurchaseTicketId = _iTicketPurchaseRepository.GetNumberOfTicketPurchases(_connectionString, Startup.TenantConfig.TenantId);
             ticketPurchaseModel.TicketPurchaseId = latestPurchaseTicketId + 1;
@@ -122,9 +142,14 @@ namespace Events_TenantUserApp.Controllers
             var successMessage = _localizer[$"You have successfully purchased {ticketCount} tickets."];
             var failureMessage = _localizer["Failed to purchase tickets."];
 
-            DisplayMessage(purchaseResult
-                ? successMessage
-                : failureMessage);
+            if (purchaseResult)
+            {
+                DisplayMessage(successMessage, "Confirmation");
+            }
+            else
+            {
+                DisplayMessage(failureMessage, "Error");
+            }
 
             return RedirectToAction("Index", "Events", new { tenant = Startup.TenantConfig.TenantName });
         }

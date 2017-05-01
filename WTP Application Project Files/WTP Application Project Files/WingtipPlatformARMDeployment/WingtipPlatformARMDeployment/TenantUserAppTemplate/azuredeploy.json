@@ -299,6 +299,10 @@
       ]
     },
     {
+      "dependsOn": [
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
+        "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
+      ],
       "name": "[variables('wtpTenantUser')]",
       "apiVersion": "2014-06-01",
       "location": "[variables('location')]",
@@ -332,6 +336,7 @@
           "location": "[variables('location')]",
           "apiVersion": "2015-08-01",
           "dependsOn": [
+            "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantUser'))]",
             "[concat('Microsoft.Web/sites/',variables('wtpTenantUser'))]"
           ],
           "properties": {

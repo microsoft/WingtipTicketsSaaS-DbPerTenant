@@ -20,7 +20,7 @@ namespace Events_Tenant.Common.Tests.RepositoriesTests
             Assert.AreEqual("pop", result.VenueType);
             Assert.AreEqual("event short name", result.EventTypeShortNamePlural);
             Assert.AreEqual("classic", result.EventTypeName);
-            Assert.AreEqual("type q", result.VenueTypeName);
+            Assert.AreEqual("type 1", result.VenueTypeName);
             Assert.AreEqual("short name", result.EventTypeShortName);
         }
     }

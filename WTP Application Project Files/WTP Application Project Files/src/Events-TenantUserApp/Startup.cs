@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -77,33 +78,32 @@ namespace Events_TenantUserApp
                 .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
                 .AddDataAnnotationsLocalization();
 
+            services.AddMemoryCache();
+
             // Adds a default in-memory implementation of IDistributedCache.
             services.AddDistributedMemoryCache();
             services.AddSession();
 
+            //register catalog DB
+            services.AddDbContext<CatalogDbContext>(options => options.UseSqlServer(GetCatalogConnectionString(CatalogConfig, DatabaseConfig)));
 
             //Add Application services
-
-            services.AddDbContext<CatalogDbContext>(options => options.UseSqlServer(GetCatalogConnectionString(CatalogConfig, DatabaseConfig))); //register catalog DB
-
             services.AddTransient<ITenantsRepository, TenantsRepository>();
             services.AddTransient<ITicketRepository, TicketRepository>();
             services.AddTransient<ICountryRepository, CountryRepository>();
+            services.AddTransient<IVenuesRepository, VenuesRepository>();
+            services.AddTransient<IVenueTypesRepository, VenueTypesRepository>();
 
             //create instance of helper class
             services.AddTransient<IHelper, Helper>();
             var provider = services.BuildServiceProvider();
             _helper = provider.GetService<IHelper>();
 
-
             services.AddTransient<IEventsRepository, EventsRepository>();
-            services.AddTransient<IVenuesRepository, VenuesRepository>();
-            services.AddTransient<IVenueTypesRepository, VenueTypesRepository>();
             services.AddTransient<ICustomerRepository, CustomerRepository>();
             services.AddTransient<IEventSectionRepository, EventSectionRepository>();
             services.AddTransient<ISectionRepository, SectionRepository>();
             services.AddTransient<ITicketPurchaseRepository, TicketPurchaseRepository>();
-
 
             _tenantsRepository = provider.GetService<ITenantsRepository>();
 
@@ -140,13 +140,14 @@ namespace Events_TenantUserApp
             #region Localisation settings
 
             //get the list of supported cultures from the appsettings.json
-            var allSupportedCultures = Configuration.GetSection("SupportedCultures").Get<List<string>>(); 
+            var allSupportedCultures = Configuration.GetSection("SupportedCultures").Get<List<string>>();
 
             List<CultureInfo> supportedCultures = allSupportedCultures.Select(t => new CultureInfo(t)).ToList();
 
             app.UseRequestLocalization(new RequestLocalizationOptions
             {
-                DefaultRequestCulture = new RequestCulture(Configuration["DefaultRequestCulture"]), //get the default culture from appsettings.json
+                DefaultRequestCulture = new RequestCulture(Configuration["DefaultRequestCulture"]),
+                //get the default culture from appsettings.json
                 SupportedCultures = supportedCultures, // UI strings that we have localized.
                 SupportedUICultures = supportedCultures,
                 RequestCultureProviders = new List<IRequestCultureProvider>()
@@ -169,6 +170,29 @@ namespace Events_TenantUserApp
                 routes.MapRoute(
                     name: "default",
                     template: "{controller=Home}/{action=Index}/{id?}");
+
+                routes.MapRoute(
+                    name: "default_route",
+                    template: "{tenant}/{controller=Home}/{action=Index}/{id?}");
+
+                routes.MapRoute(
+                    name: "EventRoute",
+                    template: "{tenant}",
+                    defaults: new {controller = "Events", action = "Index"});
+
+                routes.MapRoute(
+                    name: "TenantAccount",
+                    template: "{tenant}/{controller=Account}/{action=Index}/{id?}");
+
+                routes.MapRoute(
+                    name: "blog",
+                    template: "Blog/{*article}",
+                    defaults: new {controller = "Blog", action = "ReadArticle"});
+
+                routes.MapRoute(
+                    name: "FindSeats",
+                    template: "{tenant}/{controller=FindSeats}/{action=Index}/{id?}");
+
             });
         }
 
@@ -198,7 +222,7 @@ namespace Events_TenantUserApp
                 DatabasePassword = Configuration["DatabasePassword"],
                 DatabaseUser = Configuration["DatabaseUser"],
                 DatabaseServerPort = Convert.ToInt32(Configuration["DatabaseServerPort"]),
-                SqlProtocol = Configuration["SqlProtocol"],
+                SqlProtocol = SqlProtocol.Tcp,
                 ConnectionTimeOut = Convert.ToInt32(Configuration["ConnectionTimeOut"]),
                 LearnHowFooterUrl = Configuration["LearnHowFooterUrl"]
             };
@@ -232,8 +256,8 @@ namespace Events_TenantUserApp
         {
             var sharding = new Sharding(CatalogConfig, DatabaseConfig, _tenantsRepository, _helper);
         }
-    
-        #endregion 
+
+        #endregion
 
     }
 }

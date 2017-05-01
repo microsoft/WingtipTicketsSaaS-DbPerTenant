@@ -31,7 +31,8 @@
 table {
     border-collapse: collapse;
     border-spacing: 0;
-    font-size: inherit;
+    font-size: 16pt;
+    font-family: "Segoe UI", Frutiger, "Frutiger Linotype", "Dejavu Sans", "Helvetica Neue", Arial, sans-serif;
     background-color: #ececec;
 }
 
@@ -56,8 +57,6 @@ tr {
     border-color: inherit;
     background-color: #ececec;
 }
-
-
 
 .p-copyright {
     margin: 0 0 0 87px;
@@ -134,22 +133,26 @@ body
     color: #fff;
 }
 
+.table-body {
+    font-size: 16pt;
+    font-family: "Segoe UI", Frutiger, "Frutiger Linotype", "Dejavu Sans", "Helvetica Neue", Arial, sans-serif;
+}
+
 .body-hr {
     background-color: #999 !important;
     color: #999 !important;
     height: 2px !important;
-    width: 126.7%;
+    width: 115%;
     margin: 0px 0px 16px -20px;
 }
 
 h2, .h2 {
-    font-size: 30px;
+    font-size: 32px;
 }
 
 .bodycontainer{
     background-color: #e6e6e6;
     width: inherit;
-    height: 92%;
 }
 
 header 
@@ -165,6 +168,11 @@ header a
     font-size: 16pt;
     /*padding-left: 20px;
     padding-right: 20px;*/ 
+}
+
+.welcome-text {
+    font-size: 15pt;
+    font-family: "Segoe UI", Frutiger, "Frutiger Linotype", "Dejavu Sans", "Helvetica Neue", Arial, sans-serif;
 }
 
 tr {
@@ -584,8 +592,8 @@ h1, .h1, h2, .h2, h3, .h3 {
 }
 
 .btn-themed:hover {
-    background-color: #EEEEEE;
-    color: #FFFFFF;
+    /*background-color: #EEEEEE;
+    color: #FFFFFF;*/
 }
 
 .btn-themed-secondary {
@@ -1294,4 +1302,18 @@ select::-ms-expand {
 ol {
   margin-top: 0;
   margin-bottom: 25px;
+}
+input::-webkit-input-placeholder { /* WebKit, Blink, Edge */
+    color:  #9a9a9a;
+}
+input:-moz-placeholder { /* Mozilla Firefox 4 to 18 */
+   color:    #9a9a9a;
+   opacity:  1;
+}
+input::-moz-placeholder { /* Mozilla Firefox 19+ */
+   color:    #9a9a9a;
+   opacity:  1;
+}
+input:-ms-input-placeholder { /* Internet Explorer 10-11 */
+   color:    #9a9a9a;
 }

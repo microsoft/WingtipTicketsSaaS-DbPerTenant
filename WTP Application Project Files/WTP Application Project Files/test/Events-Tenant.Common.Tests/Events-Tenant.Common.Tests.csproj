@@ -94,6 +94,7 @@
     </Reference>
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Data" />
     <Reference Include="System.Interactive.Async, Version=3.0.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
       <HintPath>..\..\packages\System.Interactive.Async.3.0.0\lib\net45\System.Interactive.Async.dll</HintPath>
       <Private>True</Private>
@@ -149,6 +150,7 @@
     <Compile Include="RepositoriesTests\TicketRepositoryTests.cs" />
     <Compile Include="RepositoriesTests\VenuesRepositoryTests.cs" />
     <Compile Include="RepositoriesTests\VenueTypesRepositoryTests.cs" />
+    <Compile Include="ShardingTests\ShardingTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

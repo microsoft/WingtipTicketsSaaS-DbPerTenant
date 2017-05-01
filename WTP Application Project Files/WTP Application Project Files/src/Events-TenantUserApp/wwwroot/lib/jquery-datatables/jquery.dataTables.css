@@ -48,21 +48,23 @@ table.dataTable thead .sorting_desc_disabled {
 }
 table.dataTable thead .sorting {
   background-image: url("../../images/sort_both.png");
-    background-color: #ececec;
+  background-color: #ececec;
 }
 table.dataTable thead .sorting_asc {
   background-image: url("../../images/sort_both.png");
-   background-color: #ececec;
+  background-color: #ececec;
 }
 table.dataTable thead .sorting_desc {
   background-image: url("../../images/sort_both.png");
-   background-color: #ececec;
+  background-color: #ececec;
 }
 table.dataTable thead .sorting_asc_disabled {
   background-image: url("../../images/sort_both.png");
+  background-color: #ececec;
 }
 table.dataTable thead .sorting_desc_disabled {
   background-image: url("../../images/sort_both.png");
+  background-color: #ececec;
 }
 table.dataTable tbody tr {
   background-color: #ececec;
@@ -80,7 +82,7 @@ table.dataTable.row-border tbody th, table.dataTable.row-border tbody td, table.
 table.dataTable.row-border tbody tr:first-child th,
 table.dataTable.row-border tbody tr:first-child td, table.dataTable.display tbody tr:first-child th,
 table.dataTable.display tbody tr:first-child td {
-  border-top: none;
+  border-top: 1px solid #ddd;
 }
 table.dataTable.cell-border tbody th, table.dataTable.cell-border tbody td {
   border-top: 1px solid #ddd;
@@ -92,7 +94,7 @@ table.dataTable.cell-border tbody tr td:first-child {
 }
 table.dataTable.cell-border tbody tr:first-child th,
 table.dataTable.cell-border tbody tr:first-child td {
-  border-top: none;
+  border-top: 1px solid #ddd;
 }
 table.dataTable.stripe tbody tr.odd, table.dataTable.display tbody tr.odd {
   background-color: #f9f9f9;
@@ -294,9 +296,8 @@ table.dataTable, table.dataTable th, dataTables_filter,table.dataTable td {
   /* box-sizing: content-box; */
 }
 .dataTables_wrapper .dataTables_filter input {
-        /*width:466%;*/
-        margin-bottom: 5px;
-        /*color: #999;*/
+    margin-bottom: 5px;
+    height: 40px;
 }
 
 
@@ -474,7 +475,20 @@ table.dataTable, table.dataTable th, dataTables_filter,table.dataTable td {
 .searchbox {
     padding-left:10px;
     background-color: rgb(241, 241, 241);
-    color: #4d4d4d 
+    color: #4d4d4d; 
+}
+
+::-webkit-input-placeholder { /* Chrome/Opera/Safari */
+  color: #cdcdcd;
+}
+::-moz-placeholder { /* Firefox 19+ */
+  color: #cdcdcd;
+}
+:-ms-input-placeholder { /* IE 10+ */
+  color: #cdcdcd;
+}
+:-moz-placeholder { /* Firefox 18- */
+  color: #cdcdcd;
 }
 
 @media screen and (max-width: 767px) {

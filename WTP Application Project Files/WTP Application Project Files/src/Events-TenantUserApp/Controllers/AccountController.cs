@@ -3,14 +3,17 @@ using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
+using System.Threading.Tasks;
 using Events_Tenant.Common.Core.Interfaces;
 using Events_Tenant.Common.Helpers;
 using Events_Tenant.Common.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
 
 namespace Events_TenantUserApp.Controllers
 {
+    [Route("{tenant}/Account")]
     public class AccountController : BaseController
     {
         #region Fields
@@ -22,11 +25,10 @@ namespace Events_TenantUserApp.Controllers
 
         #endregion
 
-
         #region Constructors
 
-        public AccountController(IStringLocalizer<AccountController> localizer, IStringLocalizer<BaseController> baseLocalizer, ICustomerRepository customerRepository, IHelper helper)
-            : base(baseLocalizer)
+        public AccountController(IStringLocalizer<AccountController> localizer, IStringLocalizer<BaseController> baseLocalizer, ICustomerRepository customerRepository, IHelper helper, IMemoryCache memoryCache)
+            : base(baseLocalizer, memoryCache, helper)
         {
             _localizer = localizer;
             _customerRepository = customerRepository;
@@ -35,77 +37,87 @@ namespace Events_TenantUserApp.Controllers
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture(Startup.TenantConfig.TenantCulture);
             Thread.CurrentThread.CurrentUICulture = new CultureInfo(Startup.TenantConfig.TenantCulture);
 
-            _connectionString = _helper.GetSqlConnectionString(Startup.DatabaseConfig);
+            _connectionString = _helper.GetBasicSqlConnectionString(Startup.DatabaseConfig);
 
         }
 
         #endregion
 
-
         [HttpPost]
-        public ActionResult Login(string email)
+        [Route("Login")]
+        public ActionResult Login(string tenant, string regEmail)
         {
-            if (string.IsNullOrWhiteSpace(email))
+            if (string.IsNullOrWhiteSpace(regEmail))
             {
                 var message = _localizer["Please type your email."];
-                DisplayMessage(message);
+                DisplayMessage(message , "Error");
             }
             else
             {
-                var customer = _customerRepository.GetCustomer(email, _connectionString, Startup.TenantConfig.TenantId);
+                if (tenant != Startup.TenantConfig.TenantName)
+                {
+                    SetTenantConfig(tenant);
+                }
+
+                var customer = _customerRepository.GetCustomer(regEmail, _connectionString, Startup.TenantConfig.TenantId);
                 if (customer != null)
                 {
+                    customer.TenantName = tenant;
                     HttpContext.Session.SetObjectAsJson("SessionUser", customer);
-                    if (Startup.SessionUsers.Any(a => a.Email != null && a.Email.ToUpper() == email.ToUpper()))
+                    if (Startup.SessionUsers.Any(a => a.Email != null && a.Email.ToUpper() == regEmail.ToUpper() && a.TenantName == tenant))
                     {
-                        Startup.SessionUsers.Remove(Startup.SessionUsers.First(a => a.Email.ToUpper() == email.ToUpper()));
+                        Startup.SessionUsers.Remove(Startup.SessionUsers.First(a => a.Email.ToUpper() == regEmail.ToUpper() && a.TenantName == tenant));
                     }
 
                     Startup.SessionUsers.Add(customer);
 
-                    var userClaims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.Email, customer.Email)
-                    };
-
-                    var principal = new ClaimsPrincipal(new ClaimsIdentity(userClaims, "SessionUser"));
-                    HttpContext.Authentication.SignInAsync("MyCookieMiddlewareInstance", principal);
                 }
                 else
                 {
                     var message = _localizer["The user does not exist."];
-                    DisplayMessage(message);
+                    DisplayMessage(message, "Error");
                 }
             }
 
             return Redirect(Request.Headers["Referer"].ToString());
         }
 
-        public ActionResult Logout()
+        [Route("Logout")]
+        public ActionResult Logout(string tenant, string email)
         {
-            if (User.Identity.IsAuthenticated)
+            if (tenant != Startup.TenantConfig.TenantName)
             {
-                Startup.SessionUsers = new List<CustomerModel>();
-                HttpContext.Session.Clear();
-
-                HttpContext.Authentication.SignOutAsync("MyCookieMiddlewareInstance");
+                SetTenantConfig(tenant);
             }
+
+            if (Startup.SessionUsers.Any(a => a.Email.ToUpper() == email.ToUpper() && a.TenantName == tenant))
+            {
+                Startup.SessionUsers.Remove(Startup.SessionUsers.First(a => a.Email.ToUpper() == email.ToUpper() && a.TenantName == tenant));
+            }
+
+            HttpContext.Session.Remove("SessionUser");
 
             return RedirectToAction("Index", "Events", new {tenant = Startup.TenantConfig.TenantName});
         }
 
         [HttpPost]
-        public ActionResult Register(CustomerModel customerModel)
+        [Route("Register")]
+        public ActionResult Register(string tenant, CustomerModel customerModel)
         {
             if (!ModelState.IsValid)
             {
                 return RedirectToAction("Index", "Events", new {tenant = Startup.TenantConfig.TenantName});
             }
 
-            if (Startup.SessionUsers.Any(a => a.Email == customerModel.Email))
+            if (Startup.SessionUsers.Any(a => a.Email == customerModel.Email && a.TenantName == tenant))
             {
                 var message = _localizer["User already exists in session."];
-                DisplayMessage(message);
+                DisplayMessage(message, "Error");
+            }
+
+            if (tenant != Startup.TenantConfig.TenantName)
+            {
+                SetTenantConfig(tenant);
             }
 
             //check if customer already exists
@@ -115,21 +127,15 @@ namespace Events_TenantUserApp.Controllers
             {
                 var customerId = _customerRepository.Add(customerModel, _connectionString, Startup.TenantConfig.TenantId);
                 customerModel.CustomerId = customerId;
+                customerModel.TenantName = tenant;
                 HttpContext.Session.SetObjectAsJson("SessionUser", customerModel);
                 Startup.SessionUsers.Add(customerModel);
 
-                var userClaims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Email, customerModel.Email)
-                };
-
-                var principal = new ClaimsPrincipal(new ClaimsIdentity(userClaims, "SessionUser"));
-                HttpContext.Authentication.SignInAsync("MyCookieMiddlewareInstance", principal);
             }
             else
             {
                 var message = _localizer["User already exists."];
-                DisplayMessage(message);
+                DisplayMessage(message, "Error");
             }
             return Redirect(Request.Headers["Referer"].ToString());
         }

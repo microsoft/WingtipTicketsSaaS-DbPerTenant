@@ -22,8 +22,8 @@ header
 
 th a {
      color: #4d4d4d;
-    font-family: "segoeuil";
-    font-size: 12pt;
+   font-family: "Segoe UI", Frutiger, "Frutiger Linotype", "Dejavu Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 16pt;
     font-weight: normal;
 }
 /*tr {
@@ -176,8 +176,8 @@ h2 {
 }
 
 .btn-themed:hover {
-    background-color: #E77A39;
-    color: #ffffff;
+    /*background-color: #E77A39;
+    color: #ffffff;*/
 }
 
 .btn-themed-secondary {

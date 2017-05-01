@@ -16,5 +16,6 @@ namespace Events_Tenant.Common.Models
         public string CountryCode { get; set; }
 
         public string VenueType { get; set; }
+        public string DatabaseName { get; set; }
     }
 }

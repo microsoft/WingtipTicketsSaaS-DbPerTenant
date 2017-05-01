@@ -1,67 +1,59 @@
-﻿using System.Globalization;
+﻿using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Events_Tenant.Common.Core.Interfaces;
 using Events_Tenant.Common.Helpers;
+using Events_Tenant.Common.Utilities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Localization;
 
 namespace Events_TenantUserApp.Controllers
 {
-    public class EventsController : Controller
+    public class EventsController : BaseController
     {
         #region Fields
-        private readonly ITenantsRepository _tenantsRepository;
-        private readonly IVenuesRepository _venuesRepository;
         private readonly IEventsRepository _eventsRepository;
-        private readonly IVenueTypesRepository _venueTypesRepository;
-        private readonly ICountryRepository _countryRepository;
         private readonly IHelper _helper;
+        private static readonly object _lock = new object();
+
         #endregion
 
         #region Constructors
 
-        public EventsController(ITenantsRepository tenantsRepository, IVenuesRepository venuesRepository, IEventsRepository eventsRepository, IVenueTypesRepository venueTypesRepository, ICountryRepository countryRepository, IHelper helper)
+        public EventsController(IEventsRepository eventsRepository, IMemoryCache memoryCache, IStringLocalizer<BaseController> baseLocalizer, IHelper helper) : base(baseLocalizer, memoryCache, helper)
         {
-            _tenantsRepository = tenantsRepository;
-            _venuesRepository = venuesRepository;
             _eventsRepository = eventsRepository;
-            _venueTypesRepository = venueTypesRepository;
-            _countryRepository = countryRepository;
             _helper = helper;
         }
+
         #endregion
 
 
         [Route("{tenant}")]
         public ActionResult Index(string tenant)
         {
-            //get the tenantId from tenant catalog
-            var tenantDetails = _tenantsRepository.GetTenant(tenant);
-            var connectionString = _helper.GetSqlConnectionString(Startup.DatabaseConfig);
-
-            if (tenantDetails != null)
+            lock (_lock)
             {
-                //get the venue details and populate in config settings
-                var venueDetails = _venuesRepository.GetVenueDetails(connectionString, tenantDetails.TenantId);
-                var venueTypeDetails = _venueTypesRepository.GetVenueType(venueDetails.VenueType, connectionString, tenantDetails.TenantId);
-                var countries = _countryRepository.GetAllCountries(connectionString, tenantDetails.TenantId);
-
-                if (venueTypeDetails != null)
+                var connectionString = _helper.GetBasicSqlConnectionString(Startup.DatabaseConfig);
+                if (!string.IsNullOrEmpty(tenant))
                 {
-                    Startup.TenantConfig = _helper.PopulateTenantConfigs(tenant, Startup.TenantConfig, Startup.DatabaseConfig, venueDetails, venueTypeDetails, tenantDetails, countries);
+                    if (string.IsNullOrEmpty(Startup.TenantConfig.TenantName) || tenant != Startup.TenantConfig.TenantName)
+                    {
+                        SetTenantConfig(tenant);
+                    }
 
                     var events = _eventsRepository.GetEventsForTenant(connectionString, Startup.TenantConfig.TenantId);
 
-                    //localisation per venue's language
-                    var culture = venueTypeDetails.Language;
-                    if (!string.IsNullOrEmpty(culture))
-                    {
-                        Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture(culture);
-                        Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
-                    }
                     return View(events);
                 }
+
+                return View("Error");
+
             }
-            return View("Error");
         }
     }
 }
+

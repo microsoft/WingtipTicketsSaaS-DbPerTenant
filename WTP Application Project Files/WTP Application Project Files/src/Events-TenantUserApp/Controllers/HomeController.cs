@@ -1,4 +1,5 @@
-﻿using Events_Tenant.Common.Core.Interfaces;
+﻿using System.Collections.Generic;
+using Events_Tenant.Common.Core.Interfaces;
 using Events_Tenant.Common.Helpers;
 using Events_Tenant.Common.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +28,7 @@ namespace Events_TenantUserApp.Controllers
         {
             _tenantsRepository = tenantsRepository;
             _venuesRepository = venuesRepository;
-            _connectionString = helper.GetSqlConnectionString(Startup.DatabaseConfig);
+            _connectionString = helper.GetBasicSqlConnectionString(Startup.DatabaseConfig);
         }
 
         #endregion
@@ -40,6 +41,7 @@ namespace Events_TenantUserApp.Controllers
         /// <returns></returns>
         public IActionResult Index()
         {
+            LogOutUsers();
             var tenantsModel = _tenantsRepository.GetAllTenants();
 
             //get the venue name for each tenant
@@ -47,6 +49,7 @@ namespace Events_TenantUserApp.Controllers
             {
                 VenueModel venue = _venuesRepository.GetVenueDetails(_connectionString, tenant.TenantId);
                 tenant.VenueName = venue.VenueName;
+                tenant.TenantName = venue.DatabaseName;
             }
 
             return View(tenantsModel);
@@ -61,6 +64,7 @@ namespace Events_TenantUserApp.Controllers
         [Route("{tenantName}")]
         public ActionResult Index(string tenantName)
         {
+            LogOutUsers();
             return RedirectToAction("Index", "Events", new {tenant = tenantName});
         }
 
@@ -68,6 +72,20 @@ namespace Events_TenantUserApp.Controllers
         public IActionResult Error()
         {
             return View();
+        }
+
+        /// <summary>
+        /// Logs out users who signed in the Tenant Events App
+        /// </summary>
+        private void LogOutUsers()
+        {
+            if (User.Identity.IsAuthenticated)
+            {
+                Startup.SessionUsers = new List<CustomerModel>();
+                HttpContext.Session.Clear();
+
+                HttpContext.Authentication.SignOutAsync("MyCookieMiddlewareInstance");
+            }
         }
     }
 }

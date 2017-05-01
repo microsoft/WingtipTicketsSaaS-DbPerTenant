@@ -4169,7 +4169,7 @@
 				'id': ! features.f ? tableId+'_filter' : null,
 				'class': classes.sFilter
 			} )
-			.append( $('<label/>' ).append( str ) );
+			.append(str);
 	
 		var searchFn = function() {
 			/* Update all other filter input elements for the new display */
@@ -14546,7 +14546,8 @@
 				var classes = settings.oClasses;
 				var lang = settings.oLanguage.oPaginate;
 				var aria = settings.oLanguage.oAria.paginate || {};
-				var btnDisplay, btnClass, counter=0;
+				var btnDisplay, btnClass, counter = 0;
+				var buttonCount = buttons[0].length;
 	
 				var attach = function( container, buttons ) {
 					var i, ien, node, button;
@@ -14560,7 +14561,8 @@
 						if ( $.isArray( button ) ) {
 							var inner = $( '<'+(button.DT_el || 'div')+'/>' )
 								.appendTo( container );
-							attach( inner, button );
+							attach(inner, button);
+
 						}
 						else {
 							btnDisplay = null;
@@ -14590,7 +14592,6 @@
 									break;
 	
 								case 'last':
-
 									btnDisplay = lang.sLast;
 									btnClass = button + (page < pages-1 ?
 										'' : ' '+classes.sPageButtonDisabled);
@@ -14601,12 +14602,21 @@
 							        btnClass = button + (page < pages - 1 ?
 										'' : ' ' + classes.sPageButtonDisabled);
 							        break;
-	
+
 								default:
-									btnDisplay = button + 1;
-									btnClass = page === button ?
-										classes.sPageButtonActive : '';
-									break;
+								    btnDisplay = button + 1;
+
+								    if (button === page) {
+								        btnClass = classes.sPageButtonDisabled;
+								    }
+								    else if (buttonCount === 2) {
+								        btnClass = button + (page < pages - 1 ?
+								            '' : ' ' + classes.sPageButtonDisabled);
+								    } else {
+								        btnClass = page === button ?
+                                       classes.sPageButtonActive : '';
+								    }
+								    break;
 							}
 	
 							if (btnDisplay !== null) {

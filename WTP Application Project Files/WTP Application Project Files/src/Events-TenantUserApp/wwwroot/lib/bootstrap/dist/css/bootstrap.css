@@ -159,7 +159,7 @@ input[type="search"] {
   -moz-box-sizing: border-box;
    box-sizing: border-box;
    -webkit-appearance: textfield;
-   width:59.3em;
+   width:84.5%;
 }
 
 input[type="search"]::-webkit-search-cancel-button,
@@ -2296,7 +2296,7 @@ th {
 .table > caption + thead > tr:first-child > td,
 .table > colgroup + thead > tr:first-child > td,
 .table > thead:first-child > tr:first-child > td {
-  border-top: 0;
+  /*border-top: 0;*/
 }
 .table > tbody + tbody {
   border-top: 2px solid #ddd;
@@ -3070,7 +3070,9 @@ fieldset[disabled] .btn {
   filter: alpha(opacity=65);
   -webkit-box-shadow: none;
           box-shadow: none;
-  opacity: .65;
+  /*opacity: .65;*/
+  color: #818181;
+  background-color: #bfbfbf;
 }
 a.btn.disabled,
 fieldset[disabled] a.btn {
@@ -5929,7 +5931,7 @@ button.close {
           background-clip: padding-box;
   border: 1px solid #999;
   border: 1px solid rgba(0, 0, 0, .2);
-  border-radius: 6px;
+  border-radius: 0px !important; 
   outline: 0;
   -webkit-box-shadow: 0 3px 9px rgba(0, 0, 0, .5);
           box-shadow: 0 3px 9px rgba(0, 0, 0, .5);

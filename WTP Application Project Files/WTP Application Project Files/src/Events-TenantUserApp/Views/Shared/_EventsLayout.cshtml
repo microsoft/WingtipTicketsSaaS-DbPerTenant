@@ -16,9 +16,20 @@
 
 @{
     var user = Context.Session.GetObjectFromJson<CustomerModel>("SessionUser");
+
+    if (Startup.SessionUsers.Count > 0)
+    {
+        var users = Startup.SessionUsers.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
+        if (users.Any())
+        {
+            user = users.First();
+        }
+    }
+
     var countries = Startup.TenantConfig.TenantCountries;
+    var eventTypeNamePlural = Startup.TenantConfig.EventTypeNamePlural;
     var browseConcertText = @Localizer["Browse Concerts"].Value;
-    var allConcertsText = @Localizer["ALL CONCERTS"].Value;
+    var allConcertsText = @Localizer["ALL "].Value + eventTypeNamePlural;
     var signOffText = @Localizer["[LOG OUT]"].Value;
 }
 
@@ -30,12 +41,11 @@
 <header>
     <div class="container">
         <div class="col-xs-12">
-
             <div class="row">
                 <div class="col-xs-12">
                         <a href="/Home/Index">
                             <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg" />
-                            <h1 class="logo-heading">@Startup.TenantConfig.VenueName</h1>
+                            <h1 id="venueName" class="logo-heading">@Startup.TenantConfig.VenueName</h1>
                         </a>
                 </div>
                 <div class="col-xs-1">
@@ -54,7 +64,7 @@
                                 <li>
                                     @if (ViewData["Title"].ToString() == browseConcertText)
                                     {
-                                        <div class="menu-border-fixed">@Localizer["ALL CONCERTS"]</div>
+                                        <div class="menu-border-fixed">@Localizer["ALL "] @eventTypeNamePlural</div>
                                     }
                                     else
                                     {
@@ -66,11 +76,11 @@
                             </ul>
 
                             <ul class="nav navbar-nav nav-menu navbar-right">
-                                @if (user != null)
+                                @if (user != null && user.TenantName == Startup.TenantConfig.TenantName)
                                 {
                                     <li>
                                         <div class="menu-border-welcome">@Localizer["WELCOME"] @user.FirstName.ToUpper()</div>
-                                        @Html.ActionLink(signOffText, "Logout", "Account", new {}, new {@class = "no-padding"})
+                                        @Html.ActionLink(signOffText, "Logout", "Account", new {email = user.Email}, new {@class = "no-padding"})
                                     </li>
                                 }
                                 else
@@ -109,10 +119,10 @@
             <div class="row">
                 <div class="col-xs-12">
 
-                    <div class="col-xs-7">
+                    <div class="col-xs-6">
                         <div>
                             <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg" />
-                            <h1 class="logo-heading"><span>@Startup.TenantConfig.VenueName</span></h1>
+                            <h1 id="venueName2" class="logo-heading"><span>@Startup.TenantConfig.VenueName</span></h1>
                         </div>
                     </div>
 
@@ -157,7 +167,7 @@
             <div class="modal-header custom-header">
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
                 <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg" />
-                <h1 class="logo-heading">@Startup.TenantConfig.VenueName</h1>
+                <h1 class="logo-heading" id="modalVenueName">@Startup.TenantConfig.VenueName</h1>
                 <div class="col-xs-5" style="padding-top:20px" >
                     <h2 class="sub-heading">
                         @Localizer["My Account"]
@@ -174,13 +184,13 @@
                             <h3 class="form-heading">@Localizer["Returning Users"]</h3>
 
                             <div class="form-group">
-                                <input type="email" class="form-control" id="email" name="email" placeholder=@Localizer["Email"]>
+                                <input type="email" class="form-control" id="regEmail" name="regEmail" placeholder=@Localizer["Email"]>
                             </div>
                             <div class="form-group">
                                 <input type="password" class="form-control" id="password" name="password" placeholder=@Localizer["Password"] disabled="disabled">
                             </div>
 
-                            <button type="submit" class="btn btn-themed-secondary" id="currentCustomerRegistration" name="currentCustomerRegistration" data-backdrop="static" data-keyboard="false">@Localizer["Sign In"]</button>
+                            <button type="submit" class="btn btn-themed" id="currentCustomerRegistration" name="currentCustomerRegistration" data-backdrop="static" data-keyboard="false">@Localizer["Sign In"]</button>
                         }
                     </div>
 
@@ -191,12 +201,12 @@
 
                             <div class="form-group">
                                 @*localisation of placeholders containing space not working on asp.net core*@
-                                @*<input type="text" class="form-control" name="firstName" placeholder=@Localizer["First name"]>*@
-                                <input type="text" class="form-control" name="firstName" placeholder="First name">
+                                @*<input type="text" class="form-control" id="firstName" name="firstName" placeholder=@Localizer["First name"]>*@
+                                <input type="text" class="form-control" id="firstName" name="firstName" placeholder="First name">
                             </div>
                             <div class="form-group">
-                                @*<input type="text" class="form-control" name="lastName" placeholder=@Localizer["Last name"]>*@
-                                <input type="text" class="form-control" name="lastName" placeholder="Last name">
+                                @*<input type="text" class="form-control" id="lastName" name="lastName" placeholder=@Localizer["Last name"]>*@
+                                <input type="text" class="form-control" id="lastName" name="lastName" placeholder="Last name">
                             </div>
                             <div class="form-group">
                                 <input type="email" class="form-control" id="email" name="email" placeholder=@Localizer["Email"]>
@@ -215,11 +225,11 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                @*<input type="text" class="form-control" name="postalCode" placeholder=@Localizer["Zip/postal code"]>*@
-                                <input type="text" class="form-control" name="postalCode" placeholder="Zip/postal code">
+                                @*<input type="text" class="form-control" id ="postalCode" name="postalCode" placeholder=@Localizer["Zip/postal code"]>*@
+                                <input type="text" class="form-control" id ="postalCode" name="postalCode" placeholder="Zip/postal code">
                             </div>
 
-                            <button type="submit" class="btn btn-themed-secondary" id="newCustomerRegistration" name="newCustomerRegistration">@Localizer["Register"]</button>
+                            <button type="submit" class="btn btn-themed" id="newCustomerRegistration" name="newCustomerRegistration">@Localizer["Register"]</button>
                         }
                     </div>
 
@@ -257,7 +267,6 @@
                     <div class="col-xs-12">
                         <p id="AlertMessage"></p>
                         <br/>
-                        <br />
                         <button type="button" class="btn btn-block btn-themed" id="currentCustomerRegistration" name="currentCustomerRegistration" data-dismiss="modal" data-backdrop="static" data-keyboard="false">@Localizer["Close"]</button>
                     </div>
 
@@ -269,6 +278,8 @@
 
 <script type="text/javascript" src="~/lib/jquery/dist/jquery.js"></script>
 <script language="javascript" type="text/javascript">
+    
+    document.title = '@Localizer["Events"]: @Startup.TenantConfig.VenueName @Startup.TenantConfig.User';
 
     function showAlert(heading, message) {
         $('#AlertHeading').html(heading);
@@ -277,9 +288,53 @@
     }
 
     $(document).ready(function () {
+
+        $("#currentCustomerRegistration").attr('disabled', 'disabled');
+        $("#newCustomerRegistration").attr('disabled', 'disabled');
+
+        $('#regEmail').change(function () {
+            $('#password').text('******');
+        });
         $('#email').change(function () {
             $('#password').text('******');
         });
+
+        $("#regEmail").on("change", function () {
+            if ($("#regEmail").val() != "") {
+                $("#currentCustomerRegistration").removeAttr('disabled');
+            } else {
+                $("#currentCustomerRegistration").attr('disabled', 'disabled');
+            }
+        });
+
+        $("#firstName, #lastName, #email, #countryCode, #postalCode").on("change", function () {
+            if ($("#firstName").val() != "" && $("#lastName").val() != "" && $("#email").val() != "" && $("#countryCode").val() != "" && $("#postalCode").val() != "") {
+                $("#newCustomerRegistration").removeAttr('disabled');
+            } else {
+                $("#newCustomerRegistration").attr('disabled', 'disabled');
+            }
+        });
+
+
+        $(function () {
+            var lenFit = 28;
+            var un1 = $('#venueName2');
+            var un2 = $('#modalVenueName');
+
+            // Get the length of venue name.
+            var lenVenueName = un1.html().length;
+            if (lenFit < lenVenueName) {
+
+                // Calculate the new font size.
+                var sizeNow = parseInt(un1.css("font-size"));
+                var sizeNew = (sizeNow * lenFit / lenVenueName);
+
+                // Set the new font size to the venue name.
+                un1.css("font-size", sizeNew);
+                un2.css("font-size", sizeNew);
+            }
+        });
+
     });
 
 </script>

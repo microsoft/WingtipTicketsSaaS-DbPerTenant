@@ -21,5 +21,7 @@ namespace Events_Tenant.Common.Models
         public string PostalCode { get; set; }
 
         public string CountryCode { get; set; }
+
+        public string TenantName { get; set; }
     }
 }

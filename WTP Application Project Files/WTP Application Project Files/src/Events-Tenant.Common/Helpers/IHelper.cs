@@ -6,11 +6,16 @@ namespace Events_Tenant.Common.Helpers
 {
     public interface IHelper
     {
-        string GetSqlConnectionString(DatabaseConfig databaseConfig);
-        int GetTenantKey(string tenantName);
+        string GetBasicSqlConnectionString(DatabaseConfig databaseConfig);
 
-        void RegisterTenantShard(TenantServerConfig tenantServerConfig, DatabaseConfig databaseConfig, CatalogConfig catalogConfig, bool resetEventDate);
+        string GetSqlConnectionString(DatabaseConfig databaseConfig, CatalogConfig catalogConfig);
 
-        TenantConfig PopulateTenantConfigs(string tenant, TenantConfig tenantConfig, DatabaseConfig database, VenueModel venueModel, VenueTypeModel venueTypeModel, TenantModel tenantModel, List<CountryModel> countries);
+        void RegisterTenantShard(TenantServerConfig tenantServerConfig, DatabaseConfig databaseConfig,
+            CatalogConfig catalogConfig, bool resetEventDate);
+
+        TenantConfig PopulateTenantConfigs(string tenant, string fullAddress, DatabaseConfig databaseConfig, TenantConfig tenantConfig);
+
+        byte[] ConvertIntKeyToBytesArray(int key);
+
     }
 }

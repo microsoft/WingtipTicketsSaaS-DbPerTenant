@@ -21,7 +21,16 @@
     @{
         var user = Context.Session.GetObjectFromJson<CustomerModel>("SessionUser");
 
-        if (user != null)
+        if (Startup.SessionUsers.Count > 0)
+        {
+            var users = Startup.SessionUsers.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
+            if (users.Any())
+            {
+                user = users.First();
+            }
+        }
+
+        @if (user != null && user.TenantName == Startup.TenantConfig.TenantName)
         {
             @Html.ActionLink(signOffText, "Logout", "Account", new { }, new { @class = "btn btn-themed-secondary", @style = "width: 100%" })
         }

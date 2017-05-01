@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Globalization;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using Events_Tenant.Common.Core.Interfaces;
@@ -20,14 +21,20 @@ namespace Events_Tenant.Common.Helpers
         #region Private declarations
 
         private readonly ICountryRepository _countryRepository;
+        private readonly ITenantsRepository _tenantsRepository;
+        private readonly IVenuesRepository _venuesRepository;
+        private readonly IVenueTypesRepository _venueTypesRepository;
 
         #endregion
 
 
         #region Constructor
-        public Helper(ICountryRepository countryRepository)
+        public Helper(ICountryRepository countryRepository, ITenantsRepository tenantsRepository, IVenuesRepository venuesRepository, IVenueTypesRepository venueTypesRepository)
         {
             _countryRepository = countryRepository;
+            _tenantsRepository = tenantsRepository;
+            _venuesRepository = venuesRepository;
+            _venueTypesRepository = venueTypesRepository;
         }
 
         #endregion
@@ -35,11 +42,11 @@ namespace Events_Tenant.Common.Helpers
         #region Get Connection strings
 
         /// <summary>
-        /// Gets the sql connection string.
+        /// Gets the basic sql connection string.
         /// </summary>
         /// <param name="databaseConfig">The database configuration.</param>
         /// <returns></returns>
-        public string GetSqlConnectionString(DatabaseConfig databaseConfig)
+        public string GetBasicSqlConnectionString(DatabaseConfig databaseConfig)
         {
             var connStrBldr = new SqlConnectionStringBuilder
             {
@@ -52,32 +59,32 @@ namespace Events_Tenant.Common.Helpers
             return connStrBldr.ConnectionString;
         }
 
+        /// <summary>
+        /// Gets the SQL connection string.
+        /// </summary>
+        /// <param name="databaseConfig">The database configuration.</param>
+        /// <param name="catalogConfig">The catalog configuration.</param>
+        /// <returns></returns>
+        public string GetSqlConnectionString(DatabaseConfig databaseConfig, CatalogConfig catalogConfig)
+        {
+            var smmconnstr = GetBasicSqlConnectionString(databaseConfig);
+
+            // Connection string with administrative credentials for the root database
+            SqlConnectionStringBuilder connStrBldr = new SqlConnectionStringBuilder(smmconnstr)
+            {
+                DataSource =
+                    databaseConfig.SqlProtocol + ":" + catalogConfig.CatalogServer + "," +
+                    databaseConfig.DatabaseServerPort,
+                InitialCatalog = catalogConfig.CatalogDatabase,
+                ConnectTimeout = databaseConfig.ConnectionTimeOut
+            };
+
+            return connStrBldr.ConnectionString;
+        }
 
         #endregion
 
         #region Public methods
-
-        /// <summary>
-        /// Generates the tenant Id using MD5 Hashing.
-        /// </summary>
-        /// <param name="tenantName">Name of the tenant.</param>
-        /// <returns></returns>
-        public int GetTenantKey(string tenantName)
-        {
-            var normalizedTenantName = tenantName.Replace(" ", string.Empty).ToLower();
-
-            //Produce utf8 encoding of tenant name 
-            var tenantNameBytes = Encoding.UTF8.GetBytes(normalizedTenantName);
-
-            //Produce the md5 hash which reduces the size
-            MD5 md5 = MD5.Create();
-            var tenantHashBytes = md5.ComputeHash(tenantNameBytes);
-
-            //Convert to integer for use as the key in the catalog 
-            int tenantKey = BitConverter.ToInt32(tenantHashBytes, 0);
-
-            return tenantKey;
-        }
 
         /// <summary>
         /// Register tenant shard
@@ -90,31 +97,32 @@ namespace Events_Tenant.Common.Helpers
         {
             //get all database in devtenantserver
             var tenants = GetAllTenantNames(tenantServerConfig, databaseConfig);
-            var connectionString = GetSqlConnectionString(databaseConfig);
+            var connectionString = GetBasicSqlConnectionString(databaseConfig);
 
             foreach (var tenant in tenants)
             {
                 var tenantId = GetTenantKey(tenant);
-                Sharding.RegisterNewShard(tenant, tenantId, tenantServerConfig, databaseConfig, catalogConfig);
-
-                // resets all tenants' event dates
-                if (resetEventDate)
+                if (Sharding.RegisterNewShard(tenant, tenantId, tenantServerConfig, databaseConfig, catalogConfig))
                 {
-                    #region EF6
-                    //use EF6 since execution of Stored Procedure in EF Core for anonymous return type is not supported yet
-                    using (var context = new TenantContext(Sharding.ShardMap, tenantId, connectionString))
+                    // resets all tenants' event dates
+                    if (resetEventDate)
                     {
-                        context.Database.ExecuteSqlCommand("sp_ResetEventDates");
-                    }
-                    #endregion
+                        #region EF6
+                        //use EF6 since execution of Stored Procedure in EF Core for anonymous return type is not supported yet
+                        using (var context = new TenantContext(Sharding.ShardMap, tenantId, connectionString))
+                        {
+                            context.Database.ExecuteSqlCommand("sp_ResetEventDates");
+                        }
+                        #endregion
 
-                    #region EF core
-                    //https://github.com/aspnet/EntityFramework/issues/7032
-                    //using (var context = new TenantDbContext(Sharding.ShardMap, tenantId, connectionString))
-                    //{
-                    //     context.Database.ExecuteSqlCommand("sp_ResetEventDates");
-                    //}
-                    #endregion
+                        #region EF core
+                        //https://github.com/aspnet/EntityFramework/issues/7032
+                        //using (var context = new TenantDbContext(Sharding.ShardMap, tenantId, connectionString))
+                        //{
+                        //     context.Database.ExecuteSqlCommand("sp_ResetEventDates");
+                        //}
+                        #endregion
+                    }
                 }
             }
         }
@@ -123,42 +131,79 @@ namespace Events_Tenant.Common.Helpers
         /// Populates the tenant configs.
         /// </summary>
         /// <param name="tenant">The tenant.</param>
-        /// <param name="tenantConfig">The tenant configuration.</param>
+        /// <param name="fullAddress">The full address.</param>
         /// <param name="databaseConfig">The database configuration.</param>
-        /// <param name="venueModel">The venue model.</param>
-        /// <param name="venueTypeModel">The venue type model.</param>
-        /// <param name="tenantModel">The tenant model.</param>
-        /// <param name="countries">The countries.</param>
+        /// <param name="tenantConfig">The tenant configuration.</param>
         /// <returns></returns>
-        public TenantConfig PopulateTenantConfigs(string tenant, TenantConfig tenantConfig, DatabaseConfig databaseConfig, VenueModel venueModel, VenueTypeModel venueTypeModel, TenantModel tenantModel, List<CountryModel> countries)
+        public TenantConfig PopulateTenantConfigs(string tenant, string fullAddress, DatabaseConfig databaseConfig, TenantConfig tenantConfig)
         {
-            var connectionString = GetSqlConnectionString(databaseConfig);
-
-            //get country language from db 
-            var country = _countryRepository.GetCountry(venueModel.CountryCode, connectionString, tenantModel.TenantId);
-            RegionInfo regionalInfo = new RegionInfo(country.Language);
-
-            return new TenantConfig
+            //get user from url
+            string user;
+            string[] hostpieces = fullAddress.Split(new string[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
+            var subdomain = hostpieces[1];
+            if (subdomain.Contains("localhost"))
             {
-                VenueName = venueModel.VenueName,
-                BlobImagePath = tenantConfig.BlobPath + venueTypeModel.VenueType + "-user.jpg",
-                EventTypeNamePlural = venueTypeModel.EventTypeShortNamePlural,
-                TenantId = tenantModel.TenantId,
-                TenantName = tenant,
-                BlobPath = tenantConfig.BlobPath,
-                Currency = regionalInfo.CurrencySymbol,
-                TenantCulture = (!string.IsNullOrEmpty(venueTypeModel.Language) ? venueTypeModel.Language : tenantConfig.TenantCulture),
-                TenantCountries = countries,
-                TenantIdInString = tenantModel.TenantIdInString
-            };
+                user = "testuser";
+            }
+            else
+            {
+                string[] domain = subdomain.Split(new string[] { "." }, StringSplitOptions.RemoveEmptyEntries);
+                user = domain[2];
+            }
+            var connectionString = GetBasicSqlConnectionString(databaseConfig);
 
+            var tenantDetails = _tenantsRepository.GetTenant(tenant);
+            if (tenantDetails != null)
+            {
+                //get the venue details and populate in config settings
+                var venueDetails = _venuesRepository.GetVenueDetails(connectionString, tenantDetails.TenantId);
+                var venueTypeDetails = _venueTypesRepository.GetVenueType(venueDetails.VenueType, connectionString,
+                    tenantDetails.TenantId);
+                var countries = _countryRepository.GetAllCountries(connectionString, tenantDetails.TenantId);
+
+                //get country language from db 
+                var country = _countryRepository.GetCountry(venueDetails.CountryCode, connectionString, tenantDetails.TenantId);
+                RegionInfo regionalInfo = new RegionInfo(country.Language);
+
+                return new TenantConfig
+                {
+                    VenueName = venueDetails.VenueName,
+                    BlobImagePath = tenantConfig.BlobPath + venueTypeDetails.VenueType + "-user.jpg",
+                    EventTypeNamePlural = venueTypeDetails.EventTypeShortNamePlural.ToUpper(),
+                    TenantId = tenantDetails.TenantId,
+                    TenantName = venueDetails.DatabaseName,
+                    BlobPath = tenantConfig.BlobPath,
+                    Currency = regionalInfo.CurrencySymbol,
+                    TenantCulture =
+                        (!string.IsNullOrEmpty(venueTypeDetails.Language)
+                            ? venueTypeDetails.Language
+                            : tenantConfig.TenantCulture),
+                    TenantCountries = countries,
+                    TenantIdInString = tenantDetails.TenantIdInString,
+                    User = user
+                };
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Converts the int key to bytes array.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <returns></returns>
+        public byte[] ConvertIntKeyToBytesArray(int key)
+        {
+            byte[] normalized = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(key));
+
+            // Maps Int32.Min - Int32.Max to UInt32.Min - UInt32.Max.
+            normalized[0] ^= 0x80;
+
+            return normalized;
         }
 
         #endregion
 
         #region Private methods
-
-
 
         /// <summary>
         /// Gets all tenant names from tenant server
@@ -188,6 +233,28 @@ namespace Events_Tenant.Common.Helpers
                 }
             }
             return list;
+        }
+
+        /// <summary>
+        /// Generates the tenant Id using MD5 Hashing.
+        /// </summary>
+        /// <param name="tenantName">Name of the tenant.</param>
+        /// <returns></returns>
+        private int GetTenantKey(string tenantName)
+        {
+            var normalizedTenantName = tenantName.Replace(" ", string.Empty).ToLower();
+
+            //Produce utf8 encoding of tenant name 
+            var tenantNameBytes = Encoding.UTF8.GetBytes(normalizedTenantName);
+
+            //Produce the md5 hash which reduces the size
+            MD5 md5 = MD5.Create();
+            var tenantHashBytes = md5.ComputeHash(tenantNameBytes);
+
+            //Convert to integer for use as the key in the catalog 
+            int tenantKey = BitConverter.ToInt32(tenantHashBytes, 0);
+
+            return tenantKey;
         }
         #endregion
     }
