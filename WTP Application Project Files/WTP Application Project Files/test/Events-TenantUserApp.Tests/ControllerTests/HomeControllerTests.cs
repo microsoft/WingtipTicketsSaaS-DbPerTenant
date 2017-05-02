@@ -52,19 +52,6 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             Assert.Equal("Index", redirectToActionResult.ActionName);
         }
 
-        [Fact]
-        public void Index_GetSpecifivTenant()
-        {
-            //Act
-            var result = _homeController.Index("dogwooddojo");
-
-            // Assert
-            var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
-            Assert.NotNull(redirectToActionResult.ControllerName);
-            Assert.Equal("Index", redirectToActionResult.ActionName);
-            Assert.Equal("Events", redirectToActionResult.ControllerName);
-        }
-
         private VenueModel GetVenueDetails()
         {
             return new VenueModel

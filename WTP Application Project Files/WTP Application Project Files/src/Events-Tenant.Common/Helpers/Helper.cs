@@ -131,25 +131,24 @@ namespace Events_Tenant.Common.Helpers
         /// Populates the tenant configs.
         /// </summary>
         /// <param name="tenant">The tenant.</param>
-        /// <param name="fullAddress">The full address.</param>
+        /// <param name="host">The full address.</param>
         /// <param name="databaseConfig">The database configuration.</param>
         /// <param name="tenantConfig">The tenant configuration.</param>
         /// <returns></returns>
-        public TenantConfig PopulateTenantConfigs(string tenant, string fullAddress, DatabaseConfig databaseConfig, TenantConfig tenantConfig)
+        public TenantConfig PopulateTenantConfigs(string tenant, string host, DatabaseConfig databaseConfig, TenantConfig tenantConfig)
         {
             //get user from url
             string user;
-            string[] hostpieces = fullAddress.Split(new string[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
-            var subdomain = hostpieces[1];
-            if (subdomain.Contains("localhost"))
+            if (host.Contains("localhost"))
             {
                 user = "testuser";
             }
             else
             {
-                string[] domain = subdomain.Split(new string[] { "." }, StringSplitOptions.RemoveEmptyEntries);
-                user = domain[2];
+                string[] hostpieces = host.Split(new string[] { "." }, StringSplitOptions.RemoveEmptyEntries);
+                user = hostpieces[2];
             }
+             
             var connectionString = GetBasicSqlConnectionString(databaseConfig);
 
             var tenantDetails = _tenantsRepository.GetTenant(tenant);

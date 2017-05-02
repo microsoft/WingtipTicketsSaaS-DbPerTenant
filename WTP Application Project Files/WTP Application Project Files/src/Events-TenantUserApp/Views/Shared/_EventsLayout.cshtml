@@ -10,19 +10,18 @@
 @using Microsoft.AspNetCore.Http
 ﻿@inject IViewLocalizer Localizer
 
+
 @{
     Layout = "_Layout";
-}
 
-@{
-    var user = Context.Session.GetObjectFromJson<CustomerModel>("SessionUser");
-
-    if (Startup.SessionUsers.Count > 0)
+    var users = Context.Session.GetObjectFromJson<List<CustomerModel>>("SessionUsers");
+    CustomerModel user = null;
+    if (users != null && users.Count() > 0)
     {
-        var users = Startup.SessionUsers.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
-        if (users.Any())
+        var usersList = users.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
+        if (usersList != null && usersList.Count() > 0)
         {
-            user = users.First();
+            user = usersList.Last();
         }
     }
 
@@ -76,7 +75,7 @@
                             </ul>
 
                             <ul class="nav navbar-nav nav-menu navbar-right">
-                                @if (user != null && user.TenantName == Startup.TenantConfig.TenantName)
+                                @if (user != null)
                                 {
                                     <li>
                                         <div class="menu-border-welcome">@Localizer["WELCOME"] @user.FirstName.ToUpper()</div>

@@ -20,24 +20,22 @@ namespace Events_TenantUserApp.Controllers
 
         private readonly ICustomerRepository _customerRepository;
         private readonly IStringLocalizer<AccountController> _localizer;
-        private readonly IHelper _helper;
         private readonly string _connectionString;
 
         #endregion
 
         #region Constructors
 
-        public AccountController(IStringLocalizer<AccountController> localizer, IStringLocalizer<BaseController> baseLocalizer, ICustomerRepository customerRepository, IHelper helper, IMemoryCache memoryCache)
-            : base(baseLocalizer, memoryCache, helper)
+        public AccountController(IStringLocalizer<AccountController> localizer, IStringLocalizer<BaseController> baseLocalizer, ICustomerRepository customerRepository, IHelper helper)
+            : base(baseLocalizer, helper)
         {
             _localizer = localizer;
             _customerRepository = customerRepository;
-            _helper = helper;
 
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture(Startup.TenantConfig.TenantCulture);
             Thread.CurrentThread.CurrentUICulture = new CultureInfo(Startup.TenantConfig.TenantCulture);
 
-            _connectionString = _helper.GetBasicSqlConnectionString(Startup.DatabaseConfig);
+            _connectionString = helper.GetBasicSqlConnectionString(Startup.DatabaseConfig);
 
         }
 
@@ -54,23 +52,27 @@ namespace Events_TenantUserApp.Controllers
             }
             else
             {
-                if (tenant != Startup.TenantConfig.TenantName)
-                {
-                    SetTenantConfig(tenant);
-                }
+                SetTenantConfig(tenant);
 
                 var customer = _customerRepository.GetCustomer(regEmail, _connectionString, Startup.TenantConfig.TenantId);
                 if (customer != null)
                 {
                     customer.TenantName = tenant;
-                    HttpContext.Session.SetObjectAsJson("SessionUser", customer);
-                    if (Startup.SessionUsers.Any(a => a.Email != null && a.Email.ToUpper() == regEmail.ToUpper() && a.TenantName == tenant))
+
+                    var userSessions = HttpContext.Session.GetObjectFromJson<List<CustomerModel>>("SessionUsers");
+                    if (userSessions == null)
                     {
-                        Startup.SessionUsers.Remove(Startup.SessionUsers.First(a => a.Email.ToUpper() == regEmail.ToUpper() && a.TenantName == tenant));
+                        userSessions = new List<CustomerModel>
+                        {
+                            customer
+                        };
+                        HttpContext.Session.SetObjectAsJson("SessionUsers", userSessions);
                     }
-
-                    Startup.SessionUsers.Add(customer);
-
+                    else
+                    {
+                        userSessions.Add(customer);
+                        HttpContext.Session.SetObjectAsJson("SessionUsers", userSessions);
+                    }
                 }
                 else
                 {
@@ -85,17 +87,14 @@ namespace Events_TenantUserApp.Controllers
         [Route("Logout")]
         public ActionResult Logout(string tenant, string email)
         {
-            if (tenant != Startup.TenantConfig.TenantName)
-            {
-                SetTenantConfig(tenant);
-            }
+            SetTenantConfig(tenant);
 
-            if (Startup.SessionUsers.Any(a => a.Email.ToUpper() == email.ToUpper() && a.TenantName == tenant))
+            var userSessions = HttpContext.Session.GetObjectFromJson<List<CustomerModel>>("SessionUsers");
+            if (userSessions!= null)
             {
-                Startup.SessionUsers.Remove(Startup.SessionUsers.First(a => a.Email.ToUpper() == email.ToUpper() && a.TenantName == tenant));
+                userSessions.Remove(userSessions.First(a => a.Email.ToUpper() == email.ToUpper() && a.TenantName == tenant));
+                HttpContext.Session.SetObjectAsJson("SessionUsers", userSessions);
             }
-
-            HttpContext.Session.Remove("SessionUser");
 
             return RedirectToAction("Index", "Events", new {tenant = Startup.TenantConfig.TenantName});
         }
@@ -109,16 +108,7 @@ namespace Events_TenantUserApp.Controllers
                 return RedirectToAction("Index", "Events", new {tenant = Startup.TenantConfig.TenantName});
             }
 
-            if (Startup.SessionUsers.Any(a => a.Email == customerModel.Email && a.TenantName == tenant))
-            {
-                var message = _localizer["User already exists in session."];
-                DisplayMessage(message, "Error");
-            }
-
-            if (tenant != Startup.TenantConfig.TenantName)
-            {
-                SetTenantConfig(tenant);
-            }
+            SetTenantConfig(tenant);
 
             //check if customer already exists
             var customer = _customerRepository.GetCustomer(customerModel.Email, _connectionString, Startup.TenantConfig.TenantId);
@@ -128,9 +118,21 @@ namespace Events_TenantUserApp.Controllers
                 var customerId = _customerRepository.Add(customerModel, _connectionString, Startup.TenantConfig.TenantId);
                 customerModel.CustomerId = customerId;
                 customerModel.TenantName = tenant;
-                HttpContext.Session.SetObjectAsJson("SessionUser", customerModel);
-                Startup.SessionUsers.Add(customerModel);
 
+                var userSessions = HttpContext.Session.GetObjectFromJson<List<CustomerModel>>("SessionUsers");
+                if (userSessions == null)
+                {
+                    userSessions = new List<CustomerModel>
+                    {
+                        customerModel
+                    };
+                    HttpContext.Session.SetObjectAsJson("SessionUsers", userSessions);
+                }
+                else
+                {
+                    userSessions.Add(customerModel);
+                    HttpContext.Session.SetObjectAsJson("SessionUsers", userSessions);
+                }
             }
             else
             {

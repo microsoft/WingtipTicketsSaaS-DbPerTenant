@@ -14,15 +14,13 @@ namespace Events_TenantUserApp.Controllers
     {
         #region Fields
         private readonly IStringLocalizer<BaseController> _localizer;
-        private readonly IMemoryCache _memoryCache;
         private readonly IHelper _helper;
         #endregion
 
         #region Constructors
-        public BaseController(IStringLocalizer<BaseController> localizer, IMemoryCache memoryCache, IHelper helper) 
+        public BaseController(IStringLocalizer<BaseController> localizer, IHelper helper) 
         {
             _localizer = localizer;
-            _memoryCache = memoryCache;
             _helper = helper;
 
             Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture(Startup.TenantConfig.TenantCulture);
@@ -45,35 +43,8 @@ namespace Events_TenantUserApp.Controllers
 
         protected void SetTenantConfig(string tenant)
         {
-            var tenantConfigs = new List<TenantConfig>();
-            _memoryCache.TryGetValue("TenantConfigs", out tenantConfigs);
-
-            if (tenantConfigs == null)
-            {
-                var fullAddress = HttpContext.Request.Headers["Referer"].ToString();
-                Startup.TenantConfig = _helper.PopulateTenantConfigs(tenant, fullAddress,
-                    Startup.DatabaseConfig, Startup.TenantConfig);
-                tenantConfigs = new List<TenantConfig> { Startup.TenantConfig };
-
-                _memoryCache.Set("TenantConfigs", tenantConfigs);
-            }
-            else
-            {
-                var tenantsInfo = tenantConfigs.Where(i => i.TenantName == tenant);
-
-                if (!tenantsInfo.Any())
-                {
-                    var fullAddress = HttpContext.Request.Headers["Referer"].ToString();
-                    Startup.TenantConfig = _helper.PopulateTenantConfigs(tenant, fullAddress, Startup.DatabaseConfig, Startup.TenantConfig);
-                    tenantConfigs.Add(Startup.TenantConfig);
-
-                    _memoryCache.Set("TenantConfigs", tenantConfigs);
-                }
-                else
-                {
-                    Startup.TenantConfig = tenantsInfo.First();
-                }
-            }
+            var host = HttpContext.Request.Host.ToString();
+            Startup.TenantConfig = _helper.PopulateTenantConfigs(tenant, host, Startup.DatabaseConfig, Startup.TenantConfig);
 
             //localisation per venue's language
             var culture = Startup.TenantConfig.TenantCulture;
@@ -83,6 +54,7 @@ namespace Events_TenantUserApp.Controllers
                 Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
             }
         }
+
         #endregion
 
     }

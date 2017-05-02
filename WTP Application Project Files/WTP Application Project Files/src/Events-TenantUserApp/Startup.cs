@@ -36,7 +36,6 @@ namespace Events_TenantUserApp
         public static TenantServerConfig TenantServerConfig { get; set; }
         public static TenantConfig TenantConfig { get; set; }
         public IConfigurationRoot Configuration { get; }
-        public static List<CustomerModel> SessionUsers;
 
         #endregion
 
@@ -78,8 +77,6 @@ namespace Events_TenantUserApp
                 .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
                 .AddDataAnnotationsLocalization();
 
-            services.AddMemoryCache();
-
             // Adds a default in-memory implementation of IDistributedCache.
             services.AddDistributedMemoryCache();
             services.AddSession();
@@ -110,8 +107,6 @@ namespace Events_TenantUserApp
             //shard management
             InitialiseShardMapManager();
             _helper.RegisterTenantShard(TenantServerConfig, DatabaseConfig, CatalogConfig, TenantServerConfig.ResetEventDates);
-
-            SessionUsers = new List<CustomerModel>();
         }
 
         /// <summary>
@@ -176,18 +171,8 @@ namespace Events_TenantUserApp
                     template: "{tenant}/{controller=Home}/{action=Index}/{id?}");
 
                 routes.MapRoute(
-                    name: "EventRoute",
-                    template: "{tenant}",
-                    defaults: new {controller = "Events", action = "Index"});
-
-                routes.MapRoute(
                     name: "TenantAccount",
                     template: "{tenant}/{controller=Account}/{action=Index}/{id?}");
-
-                routes.MapRoute(
-                    name: "blog",
-                    template: "Blog/{*article}",
-                    defaults: new {controller = "Blog", action = "ReadArticle"});
 
                 routes.MapRoute(
                     name: "FindSeats",

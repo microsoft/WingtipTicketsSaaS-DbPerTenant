@@ -127,11 +127,9 @@ namespace Events_Tenant.Common.Tests.HelperTests
         [TestMethod]
         public void GetUser()
         {
-            var fullAddress = "http://events.wtp.bg1.trafficmanager.net/contosoconcerthall";
-            string[] hostpieces = fullAddress.Split(new string[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
-            var subdomain = hostpieces[1];
-            string[] domain = subdomain.Split(new string[] { "." }, StringSplitOptions.RemoveEmptyEntries);
-            var user = domain[2];
+            var host = "events.wtp.bg1.trafficmanager.net";
+            string[] hostpieces = host.Split(new string[] { "." }, StringSplitOptions.RemoveEmptyEntries);
+            var user = hostpieces[2];
 
             Assert.AreEqual("bg1", user);
         }
@@ -139,9 +137,9 @@ namespace Events_Tenant.Common.Tests.HelperTests
         [TestMethod]
         public void GetUser2()
         {
-            var fullAddress = "http://localhost:41208/contoso";
-            string[] hostpieces = fullAddress.Split(new string[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
-            var subdomain = hostpieces[1];
+            var host = "localhost:41208";
+            string[] hostpieces = host.Split(new string[] { "." }, StringSplitOptions.RemoveEmptyEntries);
+            var subdomain = hostpieces[0];
         }
 
         #region Private methods

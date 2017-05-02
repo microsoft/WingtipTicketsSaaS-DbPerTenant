@@ -1,4 +1,5 @@
 ﻿@using System.Security.Policy
+@using System.Web.Providers.Entities
 @using Events_Tenant.Common.Models
 @using Events_TenantUserApp
 @using Microsoft.AspNetCore.Mvc.Localization
@@ -19,18 +20,18 @@
     <p>@Localizer["Update your list of favorites and <br />never miss an event!"]</p>
 
     @{
-        var user = Context.Session.GetObjectFromJson<CustomerModel>("SessionUser");
-
-        if (Startup.SessionUsers.Count > 0)
+        var users = Context.Session.GetObjectFromJson<List<CustomerModel>>("SessionUsers");
+        CustomerModel user = null;
+        if (users!= null && users.Count() > 0)
         {
-            var users = Startup.SessionUsers.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
-            if (users.Any())
+            var usersList = users.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
+            if (usersList != null && usersList.Count() > 0)
             {
-                user = users.First();
+                user = usersList.Last();
             }
         }
 
-        @if (user != null && user.TenantName == Startup.TenantConfig.TenantName)
+        if (user != null)
         {
             @Html.ActionLink(signOffText, "Logout", "Account", new { }, new { @class = "btn btn-themed-secondary", @style = "width: 100%" })
         }

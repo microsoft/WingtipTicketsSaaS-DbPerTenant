@@ -41,7 +41,6 @@ namespace Events_TenantUserApp.Controllers
         /// <returns></returns>
         public IActionResult Index()
         {
-            LogOutUsers();
             var tenantsModel = _tenantsRepository.GetAllTenants();
 
             //get the venue name for each tenant
@@ -55,37 +54,9 @@ namespace Events_TenantUserApp.Controllers
             return View(tenantsModel);
         }
 
-        /// <summary>
-        /// This method will be hit when passing a tenant name
-        /// and will redirect to the events controller
-        /// </summary>
-        /// <param name="tenantName">Name of the tenant.</param>
-        /// <returns></returns>
-        [Route("{tenantName}")]
-        public ActionResult Index(string tenantName)
-        {
-            LogOutUsers();
-            return RedirectToAction("Index", "Events", new {tenant = tenantName});
-        }
-
-
         public IActionResult Error()
         {
             return View();
-        }
-
-        /// <summary>
-        /// Logs out users who signed in the Tenant Events App
-        /// </summary>
-        private void LogOutUsers()
-        {
-            if (User.Identity.IsAuthenticated)
-            {
-                Startup.SessionUsers = new List<CustomerModel>();
-                HttpContext.Session.Clear();
-
-                HttpContext.Authentication.SignOutAsync("MyCookieMiddlewareInstance");
-            }
         }
     }
 }

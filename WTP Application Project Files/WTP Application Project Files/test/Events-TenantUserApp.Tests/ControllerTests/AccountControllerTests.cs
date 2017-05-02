@@ -21,7 +21,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
     {
         private AccountController _accountController;
 
-        public AccountControllerTests(IStringLocalizer<AccountController> localizer, IStringLocalizer<BaseController> baseLocalizer, IMemoryCache memoryCache)
+        public AccountControllerTests(IStringLocalizer<AccountController> localizer, IStringLocalizer<BaseController> baseLocalizer)
         {
             var mockCustomerRepo = new Mock<ICustomerRepository>();
             mockCustomerRepo.Setup(repo => repo.GetCustomer("test@email.com", "", 123456)).Returns(GetCustomer());
@@ -29,7 +29,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
 
             var mockhelper = new Mock<IHelper>();
 
-            _accountController = new AccountController(localizer, baseLocalizer, mockCustomerRepo.Object, mockhelper.Object, memoryCache);
+            _accountController = new AccountController(localizer, baseLocalizer, mockCustomerRepo.Object, mockhelper.Object);
 
         }
 

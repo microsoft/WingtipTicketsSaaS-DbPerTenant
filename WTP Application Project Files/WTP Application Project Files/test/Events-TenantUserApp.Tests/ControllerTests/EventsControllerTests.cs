@@ -20,9 +20,9 @@ namespace Events_TenantUserApp.Tests.ControllerTests
     [TestClass]
     public class EventsControllerTests
     {
-        private EventsController _eventsController;
+        private readonly EventsController _eventsController;
 
-        public EventsControllerTests(IStringLocalizer<BaseController> baseLocalizer, IMemoryCache memoryCache)
+        public EventsControllerTests(IStringLocalizer<BaseController> baseLocalizer)
         {
             var mockTenantsRepo = new Mock<ITenantsRepository>();
             mockTenantsRepo.Setup(repo => repo.GetTenant("testTenant")).Returns(GetTenantModel());
@@ -42,7 +42,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             var mockEventsRepo = new Mock<IEventsRepository>();
             mockEventsRepo.Setup(repo => repo.GetEventsForTenant("", 12345)).Returns(GetEvents());
 
-            _eventsController = new EventsController(mockEventsRepo.Object, memoryCache, baseLocalizer, mockHelper.Object);
+            _eventsController = new EventsController(mockEventsRepo.Object, baseLocalizer, mockHelper.Object);
 
         }
 

@@ -20,14 +20,14 @@
 }
 
 @{
-    var user = Context.Session.GetObjectFromJson<CustomerModel>("SessionUser");
-
-    if (Startup.SessionUsers.Count > 0)
+    var users = Context.Session.GetObjectFromJson<List<CustomerModel>>("SessionUsers");
+    CustomerModel user = null;
+    if (users != null && users.Count() > 0)
     {
-        var users = Startup.SessionUsers.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
-        if (users.Any())
+        var usersList = users.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
+        if (usersList != null && usersList.Count() > 0)
         {
-            user = users.First();
+            user = usersList.Last();
         }
     }
 }
@@ -124,7 +124,7 @@
 <div class="col-md-3">
 </div>
 <div>
-   @if (user != null && user.TenantName == Startup.TenantConfig.TenantName)
+   @if (user != null)
    {
         <button id="purchaseTicket" type="button" class="btn btn-themed pull-right" data-toggle="modal" data-target=".modal-tickets" data-backdrop="static" style="margin-right: 10px;">
             @Localizer["Purchase tickets"]
@@ -193,7 +193,7 @@
                         @using (Html.BeginForm("PurchaseTickets", "FindSeats", FormMethod.Post, new { @class = "form-horizontal" }))
                         {
                             <input type="hidden" name="eventId" value="@Model.EventDetails.EventId" />
-                            if (user != null && user.TenantName == Startup.TenantConfig.TenantName)
+                            if (user != null)
                             {
                                 <input type="hidden" name="customerId" value="@user.CustomerId" />
                             }

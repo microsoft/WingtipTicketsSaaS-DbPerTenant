@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Events_Tenant.Common.Core.Interfaces;
 using Events_Tenant.Common.Helpers;
 using Events_Tenant.Common.Models;
 using Events_Tenant.Common.Utilities;
 using Events_TenantUserApp.Controllers;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -20,9 +18,9 @@ namespace Events_TenantUserApp.Tests.ControllerTests
     [TestClass]
     public class FindSeatsControllerTests
     {
-        private FindSeatsController _findSeatsController;
+        private readonly FindSeatsController _findSeatsController;
 
-        public FindSeatsControllerTests(IStringLocalizer<FindSeatsController> localizer, IStringLocalizer<BaseController> baseLocalizer, IMemoryCache memoryCache)
+        public FindSeatsControllerTests(IStringLocalizer<FindSeatsController> localizer, IStringLocalizer<BaseController> baseLocalizer)
         {
             var mockEventsRepo = new Mock<IEventsRepository>();
             mockEventsRepo.Setup(repo => repo.GetEvent(1, "", 12345)).Returns(GetEventModel());
@@ -46,7 +44,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             var mockhelper = new Mock<IHelper>();
             mockhelper.Setup(helper => helper.GetBasicSqlConnectionString(new DatabaseConfig())).Returns("");
 
-            _findSeatsController = new FindSeatsController(mockEventSectionRepo.Object, mockSectionRepo.Object, mockEventsRepo.Object, mockTicketRepo.Object, mockTicketPurchaseRepo.Object, mockhelper.Object, localizer, baseLocalizer, memoryCache);
+            _findSeatsController = new FindSeatsController(mockEventSectionRepo.Object, mockSectionRepo.Object, mockEventsRepo.Object, mockTicketRepo.Object, mockTicketPurchaseRepo.Object, mockhelper.Object, localizer, baseLocalizer);
         }
 
         [Fact]

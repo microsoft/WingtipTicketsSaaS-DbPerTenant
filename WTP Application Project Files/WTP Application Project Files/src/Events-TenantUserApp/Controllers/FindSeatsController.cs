@@ -25,7 +25,7 @@ namespace Events_TenantUserApp.Controllers
         private readonly string _connectionString;
 
 
-        public FindSeatsController(IEventSectionRepository eventSectionRepository, ISectionRepository sectionRepository, IEventsRepository eventsRepository, ITicketRepository ticketRepository, ITicketPurchaseRepository ticketPurchaseRepository, IHelper helper, IStringLocalizer<FindSeatsController> localizer, IStringLocalizer<BaseController> baseLocalizer, IMemoryCache memoryCache) : base(baseLocalizer, memoryCache, helper)
+        public FindSeatsController(IEventSectionRepository eventSectionRepository, ISectionRepository sectionRepository, IEventsRepository eventsRepository, ITicketRepository ticketRepository, ITicketPurchaseRepository ticketPurchaseRepository, IHelper helper, IStringLocalizer<FindSeatsController> localizer, IStringLocalizer<BaseController> baseLocalizer) : base(baseLocalizer, helper)
         {
             _eventSectionRepository = eventSectionRepository;
             _sectionRepository = sectionRepository;
@@ -45,10 +45,7 @@ namespace Events_TenantUserApp.Controllers
         {
             if (eventId != 0)
             {
-                if (tenant != Startup.TenantConfig.TenantName)
-                {
-                    SetTenantConfig(tenant);
-                }
+                SetTenantConfig(tenant);
 
                 var eventDetails = _eventsRepository.GetEvent(eventId, _connectionString, Startup.TenantConfig.TenantId);
 
@@ -79,10 +76,7 @@ namespace Events_TenantUserApp.Controllers
         [Route("GetAvailableSeats")]
         public ActionResult GetAvailableSeats(string tenant, int sectionId, int eventId)
         {
-            if (tenant != Startup.TenantConfig.TenantName)
-            {
-                SetTenantConfig(tenant);
-            }
+            SetTenantConfig(tenant);
 
             var sectionDetails = _sectionRepository.GetSection(sectionId, _connectionString, Startup.TenantConfig.TenantId);
             var totalNumberOfSeats = sectionDetails.SeatRows * sectionDetails.SeatsPerRow;
@@ -113,10 +107,7 @@ namespace Events_TenantUserApp.Controllers
                 PurchaseTotal = Convert.ToDecimal(ticketPrice)
             };
 
-            if (tenant != Startup.TenantConfig.TenantName)
-            {
-                SetTenantConfig(tenant);
-            }
+            SetTenantConfig(tenant);
 
             var latestPurchaseTicketId = _iTicketPurchaseRepository.GetNumberOfTicketPurchases(_connectionString, Startup.TenantConfig.TenantId);
             ticketPurchaseModel.TicketPurchaseId = latestPurchaseTicketId + 1;
