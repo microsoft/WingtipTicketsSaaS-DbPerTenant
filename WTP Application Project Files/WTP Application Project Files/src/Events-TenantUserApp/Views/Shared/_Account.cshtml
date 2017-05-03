@@ -1,0 +1,43 @@
+﻿@using System.Security.Policy
+@using System.Web.Providers.Entities
+@using Events_Tenant.Common.Models
+@using Events_TenantUserApp
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@inject IViewLocalizer Localizer
+
+@{
+    var signOffText = @Localizer["Log Out"].Value;
+}
+
+<div class="row spacer-25">
+</div>
+<div class="box-light">
+    <h3>
+        <span class="box-light-splitter">@Localizer["my"]</span>@Localizer["tickets"]
+    </h3>
+
+    <p>@Localizer["Update your list of favorites and <br />never miss an event!"]</p>
+
+    @{
+        var users = Context.Session.GetObjectFromJson<List<CustomerModel>>("SessionUsers");
+        CustomerModel user = null;
+        if (users!= null && users.Count() > 0)
+        {
+            var usersList = users.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
+            if (usersList != null && usersList.Count() > 0)
+            {
+                user = usersList.Last();
+            }
+        }
+
+        if (user != null)
+        {
+            @Html.ActionLink(signOffText, "Logout", "Account", new { }, new { @class = "btn btn-themed-secondary", @style = "width: 100%" })
+        }
+        else
+        {
+            <a href="#" class="btn btn-themed-secondary" style="width: 100%" data-toggle="modal" data-target=".bs-example-modal-lg">@Localizer["Sign In"]</a>
+        }
+    }
+</div>

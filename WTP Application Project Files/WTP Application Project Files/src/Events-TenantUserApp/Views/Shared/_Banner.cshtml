@@ -1,0 +1,23 @@
+﻿@using System.Security.Policy
+@using Events_TenantUserApp
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@inject IViewLocalizer Localizer
+
+<div class="row">
+    <div class="col-xs-12 ">
+        <div class="banner">
+            <div class="row cover-2">
+                <img src=@Startup.TenantConfig.BlobImagePath class="img-responsive" style="width: 100%">
+            </div>
+            <div class="banner-home-left">
+                <div class="banner-caption">
+                    <span class="banner-splitter">@Localizer["Next"]</span> @Model.EventName
+                </div>
+            </div>
+            <div class="banner-home-right">
+                <a href="@Url.Action("FindSeats", "FindSeats", new { eventId = @Model.EventId })">@Localizer["Tickets"]<span class="pull-right">></span></a>
+            </div>
+        </div>
+    </div>
+</div>

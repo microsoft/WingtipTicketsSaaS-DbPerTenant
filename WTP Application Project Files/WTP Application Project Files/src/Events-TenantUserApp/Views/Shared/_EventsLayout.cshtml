@@ -1,0 +1,341 @@
+﻿@using System.Globalization
+@using System.Security.Policy
+@using System.Web.Providers.Entities
+@using Events_Tenant.Common.Helpers
+@using Microsoft.AspNetCore.Http.Features
+@using Microsoft.AspNetCore.Mvc.Localization
+@using Events_Tenant.Common.Models
+@using Events_TenantUserApp
+@using Microsoft.AspNetCore.Hosting.Internal
+@using Microsoft.AspNetCore.Http
+﻿@inject IViewLocalizer Localizer
+
+
+@{
+    Layout = "_Layout";
+
+    var users = Context.Session.GetObjectFromJson<List<CustomerModel>>("SessionUsers");
+    CustomerModel user = null;
+    if (users != null && users.Count() > 0)
+    {
+        var usersList = users.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
+        if (usersList != null && usersList.Count() > 0)
+        {
+            user = usersList.Last();
+        }
+    }
+
+    var countries = Startup.TenantConfig.TenantCountries;
+    var eventTypeNamePlural = Startup.TenantConfig.EventTypeNamePlural;
+    var browseConcertText = @Localizer["Browse Concerts"].Value;
+    var allConcertsText = @Localizer["ALL "].Value + eventTypeNamePlural;
+    var signOffText = @Localizer["[LOG OUT]"].Value;
+}
+
+
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+<!-- Header Section -->
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+
+<header>
+    <div class="container">
+        <div class="col-xs-12">
+            <div class="row">
+                <div class="col-xs-12">
+                        <a href="/Home/Index">
+                            <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg" />
+                            <h1 id="venueName" class="logo-heading">@Startup.TenantConfig.VenueName</h1>
+                        </a>
+                </div>
+                <div class="col-xs-1">
+                </div>
+            </div>
+
+            <div class="rowHomePage">
+                <nav class="navbar navbar-default menu-bar-default">
+                    <div class="container-fluid no-padding">
+                        <!-- -------------------------------------------------------------------------------------------------------------------------- -->
+                        <!-- Navigation Links -->
+                        <!-- -------------------------------------------------------------------------------------------------------------------------- -->
+
+                        <div class="collapse navbar-collapse menu-bar" id="navbar-collapse">
+                            <ul class="nav navbar-nav nav-menu">
+                                <li>
+                                    @if (ViewData["Title"].ToString() == browseConcertText)
+                                    {
+                                        <div class="menu-border-fixed">@Localizer["ALL "] @eventTypeNamePlural</div>
+                                    }
+                                    else
+                                    {
+                                        @Html.ActionLink(allConcertsText, "Index", "Events", new { tenant = Startup.TenantConfig.TenantName })
+                                        <span class="menu-border"></span>
+                                    }
+
+                                </li>
+                            </ul>
+
+                            <ul class="nav navbar-nav nav-menu navbar-right">
+                                @if (user != null)
+                                {
+                                    <li>
+                                        <div class="menu-border-welcome">@Localizer["WELCOME"] @user.FirstName.ToUpper()</div>
+                                        @Html.ActionLink(signOffText, "Logout", "Account", new {email = user.Email}, new {@class = "no-padding"})
+                                    </li>
+                                }
+                                else
+                                {
+                                    <li>
+                                        <div class="menu-border-welcome">@Localizer["WELCOME"]</div>
+                                        <a href="#" class="no-padding" data-toggle="modal" data-target=".bs-example-modal-lg" data-backdrop="static" data-keyboard="false">@Localizer["[SIGN IN]"]</a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+<!-- Content Section -->
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+
+<div class="content">
+
+    @RenderBody()
+
+</div>
+
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+<!-- Footer Section -->
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+
+<footer>
+    <div class="btm-footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-xs-12">
+
+                    <div class="col-xs-6">
+                        <div>
+                            <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg" />
+                            <h1 id="venueName2" class="logo-heading"><span>@Startup.TenantConfig.VenueName</span></h1>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-5 pull-right footer-menu">
+
+                        <div class="row">
+                            <div class="text-left">
+                                <a href=@Startup.DatabaseConfig.LearnHowFooterUrl target="_blank">@Localizer["LEARN HOW TO BUILD A SAAS APP ON SQL DATABASE"]</a>
+                            </div>
+                        </div>
+
+                        <div class="copyright col-xs-12 text-left" style="margin-right: 10px;">
+                            <p>
+                                @Localizer["Running on Azure SQL Database."] &copy; @DateTime.Now.Year @Localizer["Microsoft"]<br />
+                                @Localizer["server:"] @Startup.TenantServerConfig.TenantServer <br />
+                                @Localizer["database:"] @Startup.TenantConfig.TenantName &nbsp; &nbsp; &nbsp; @Localizer["tenant id:"] @Startup.TenantConfig.TenantIdInString
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xs-1">
+                </div>
+                <div class="btm-orange col-xs-4" style="margin-left: 12px;">
+                    @Localizer["POWERED BY THE WINGTIP TICKETS PLATFORM"]
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+<!-- Login/Registration Modal -->
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+
+<div class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content no-radius">
+
+            <div class="modal-header custom-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg" />
+                <h1 class="logo-heading" id="modalVenueName">@Startup.TenantConfig.VenueName</h1>
+                <div class="col-xs-5" style="padding-top:20px" >
+                    <h2 class="sub-heading">
+                        @Localizer["My Account"]
+                    </h2>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <div class="row">
+
+                    <div class="col-xs-6">
+                        @using (Html.BeginForm("Login", "Account", FormMethod.Post))
+                        {
+                            <h3 class="form-heading">@Localizer["Returning Users"]</h3>
+
+                            <div class="form-group">
+                                <input type="email" class="form-control" id="regEmail" name="regEmail" placeholder=@Localizer["Email"]>
+                            </div>
+                            <div class="form-group">
+                                <input type="password" class="form-control" id="password" name="password" placeholder=@Localizer["Password"] disabled="disabled">
+                            </div>
+
+                            <button type="submit" class="btn btn-themed" id="currentCustomerRegistration" name="currentCustomerRegistration" data-backdrop="static" data-keyboard="false">@Localizer["Sign In"]</button>
+                        }
+                    </div>
+
+                    <div class="col-xs-6">
+                        @using (Html.BeginForm("Register", "Account", FormMethod.Post))
+                        {
+                            <h3 class="form-heading">@Localizer["New Users"]</h3>
+
+                            <div class="form-group">
+                                @*localisation of placeholders containing space not working on asp.net core*@
+                                @*<input type="text" class="form-control" id="firstName" name="firstName" placeholder=@Localizer["First name"]>*@
+                                <input type="text" class="form-control" id="firstName" name="firstName" placeholder="First name">
+                            </div>
+                            <div class="form-group">
+                                @*<input type="text" class="form-control" id="lastName" name="lastName" placeholder=@Localizer["Last name"]>*@
+                                <input type="text" class="form-control" id="lastName" name="lastName" placeholder="Last name">
+                            </div>
+                            <div class="form-group">
+                                <input type="email" class="form-control" id="email" name="email" placeholder=@Localizer["Email"]>
+                            </div>
+                            <div class="form-group">
+                                <input type="password" class="form-control" id="password" name="password" placeholder=@Localizer["Password"] disabled="disabled">
+                            </div>
+                            <div class="form-group">
+
+                                <select class="form-control input-box dropdown" id="countryCode" name="countryCode" placeholder=@Localizer["Country"]>
+
+                                    @foreach (var country in countries)
+                                    {
+                                        <option value=@country.CountryCode> @country.CountryName </option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                @*<input type="text" class="form-control" id ="postalCode" name="postalCode" placeholder=@Localizer["Zip/postal code"]>*@
+                                <input type="text" class="form-control" id ="postalCode" name="postalCode" placeholder="Zip/postal code">
+                            </div>
+
+                            <button type="submit" class="btn btn-themed" id="newCustomerRegistration" name="newCustomerRegistration">@Localizer["Register"]</button>
+                        }
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div><!-- -------------------------------------------------------------------------------------------------------------------------- -->
+<!-- Confirmation Modal -->
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+
+<div class="modal fade" id="AlertModal" tabindex="-1" role="dialog" @*aria-labelledby="ConfirmationModal" *@ @*aria-hidden="true" *@>
+    <div class="modal-dialog modal-lg" >
+        <div class="modal-content" style="margin:20%;">
+
+            <div class="modal-header">
+                <div class="row">
+                    <div class="col-xs-8" style="padding-left:15px">
+                        <h1 id="AlertHeading" class="logo-heading">@Localizer["Confirmation"]</h1>
+                    </div>
+                    <div class="col-xs-4">
+                        <h2 class="sub-heading" style="padding: 5px">
+                            <button type="button" class="btn-close" data-dismiss="modal">
+                                <span aria-hidden="true">&times;</span>
+                                <span class="sr-only">Close</span>
+                            </button>
+                        </h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <div class="row">
+
+                    <div class="col-xs-12">
+                        <p id="AlertMessage"></p>
+                        <br/>
+                        <button type="button" class="btn btn-block btn-themed" id="currentCustomerRegistration" name="currentCustomerRegistration" data-dismiss="modal" data-backdrop="static" data-keyboard="false">@Localizer["Close"]</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="~/lib/jquery/dist/jquery.js"></script>
+<script language="javascript" type="text/javascript">
+    
+    document.title = '@Localizer["Events"]: @Startup.TenantConfig.VenueName @Startup.TenantConfig.User';
+
+    function showAlert(heading, message) {
+        $('#AlertHeading').html(heading);
+        $('#AlertMessage').html(message);
+        $('#AlertModal').modal('show');
+    }
+
+    $(document).ready(function () {
+
+        $("#currentCustomerRegistration").attr('disabled', 'disabled');
+        $("#newCustomerRegistration").attr('disabled', 'disabled');
+
+        $('#regEmail').change(function () {
+            $('#password').text('******');
+        });
+        $('#email').change(function () {
+            $('#password').text('******');
+        });
+
+        $("#regEmail").on("change", function () {
+            if ($("#regEmail").val() != "") {
+                $("#currentCustomerRegistration").removeAttr('disabled');
+            } else {
+                $("#currentCustomerRegistration").attr('disabled', 'disabled');
+            }
+        });
+
+        $("#firstName, #lastName, #email, #countryCode, #postalCode").on("change", function () {
+            if ($("#firstName").val() != "" && $("#lastName").val() != "" && $("#email").val() != "" && $("#countryCode").val() != "" && $("#postalCode").val() != "") {
+                $("#newCustomerRegistration").removeAttr('disabled');
+            } else {
+                $("#newCustomerRegistration").attr('disabled', 'disabled');
+            }
+        });
+
+
+        $(function () {
+            var lenFit = 28;
+            var un1 = $('#venueName2');
+            var un2 = $('#modalVenueName');
+
+            // Get the length of venue name.
+            var lenVenueName = un1.html().length;
+            if (lenFit < lenVenueName) {
+
+                // Calculate the new font size.
+                var sizeNow = parseInt(un1.css("font-size"));
+                var sizeNew = (sizeNow * lenFit / lenVenueName);
+
+                // Set the new font size to the venue name.
+                un1.css("font-size", sizeNew);
+                un2.css("font-size", sizeNew);
+            }
+        });
+
+    });
+
+</script>
+
+

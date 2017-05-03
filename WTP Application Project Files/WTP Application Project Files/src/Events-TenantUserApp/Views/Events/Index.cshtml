@@ -1,0 +1,58 @@
+﻿@using System.Globalization
+@using System.Security.Policy
+@using Microsoft.AspNetCore.Http.Features
+@using Microsoft.AspNetCore.Mvc.Localization
+@using Events_Tenant.Common.Models
+@using Events_TenantUserApp
+@using Microsoft.EntityFrameworkCore.Metadata.Internal
+@inject IViewLocalizer Localizer
+@model List<EventModel>
+
+
+@{
+    Layout = "_EventsLayout";
+}
+
+@{
+    ViewData["Title"] = @Localizer["Browse Concerts"].Value;
+}
+
+
+<!-- ------------------------------------------------------------------------------------------------------------------- -->
+<!-- Heading Bar -->
+<!-- ------------------------------------------------------------------------------------------------------------------- -->
+
+    <div class="col-xs-12 ">
+        @if (Model != null && Model.Any())
+        {
+            @Html.Partial("_Banner", Model[0])
+        }
+    </div>
+   
+    <div class="row">
+        <!-- ------------------------------------------------------------------------------------------------------------------- -->
+        <!-- Event List -->
+        <!-- ------------------------------------------------------------------------------------------------------------------- -->
+
+        <div class="col-xs-8">
+            <div class="row spacer-25">
+            </div>
+            <div class="event-panel">
+                @if (Model != null && Model.Any())
+                {
+                    @Html.Partial("_EventList", Model)
+                }
+            </div>
+        </div>
+
+
+        <div class="col-xs-4">
+
+            <!-- ------------------------------------------------------------------------------------------------------------------- -->
+            <!-- Account Panel -->
+            <!-- ------------------------------------------------------------------------------------------------------------------- -->
+
+            @Html.Partial("_Account")
+
+        </div>
+    </div>

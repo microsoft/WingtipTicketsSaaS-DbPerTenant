@@ -1,0 +1,357 @@
+﻿@using System.Security.Policy
+@using Events_Tenant.Common.Models
+@using Events_TenantUserApp
+@using Microsoft.AspNetCore.Mvc.Localization
+@using Events_TenantUserApp.ViewModels
+@using Microsoft.AspNetCore.Hosting.Internal
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.EntityFrameworkCore.Metadata.Internal
+
+@inject IViewLocalizer Localizer
+@model FindSeatViewModel
+
+
+@{
+    Layout = "_EventsLayout";
+}
+
+@{
+    ViewData["Title"] = @Localizer["Purchase Ticket"].Value;
+}
+
+@{
+    var users = Context.Session.GetObjectFromJson<List<CustomerModel>>("SessionUsers");
+    CustomerModel user = null;
+    if (users != null && users.Count() > 0)
+    {
+        var usersList = users.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
+        if (usersList != null && usersList.Count() > 0)
+        {
+            user = usersList.Last();
+        }
+    }
+}
+
+<!-- ------------------------------------------------------------------------------------------------------------------- -->
+<!-- Heading Bar -->
+<!-- ------------------------------------------------------------------------------------------------------------------- -->
+
+
+<div class="col-xs-12 ">
+    <div class="banner">
+        <div class="row" style="padding-left:18px">
+            <img src=@Startup.TenantConfig.BlobImagePath class="img-responsive" style="width: 100%">
+        </div>
+        <div class="banner-home-left-fullWidth" style="left:11px; width:98.3%">
+            <div class="banner-caption"><span class="banner-splitter">@Model.EventDetails.EventName</span> @Model.EventDetails.Date.ToString("dddd MMM. dd, yyyy")</div>
+        </div>
+    </div>
+</div>
+
+<div class="col-xs-custom">
+    <h2>@Model.EventDetails.SubTitle</h2>
+</div>
+
+<div class="row row-underline-light" style="margin-left: 11px;">
+</div>
+
+
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+<!-- Ticket Quantity Section -->
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+
+
+<div class="col-xs-7">
+
+    <div class="form-group">
+        <div class="label-bold col-xs-4">
+            <label>@Localizer["Section and seat price:"]</label>
+        </div>
+        <div class="col-xs-8">
+            <select class="form-control input-box dropdown" id="section" name="section">
+
+                @foreach (var seatSection in Model.SeatSections)
+                {
+                    <option value=@seatSection.SectionId>@seatSection.SectionName @Startup.TenantConfig.Currency @seatSection.StandardPrice.ToString("F")</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="clearfix">
+    </div>
+    <br />
+
+    <div class="form-group">
+        <div class="label-bold col-xs-4">
+            <label>@Localizer["Seats available:"]</label>
+        </div>
+        <div class="label-bold col-xs-3">
+            <label id="seatsAvailable">@Model.SeatsAvailable</label>
+        </div>
+    </div>
+
+    <div class="clearfix">
+    </div>
+    <br />
+
+    <div class="form-group">
+        <div class="label-bold col-xs-4">
+            <label>@Localizer["Quantity:"]</label>
+        </div>
+        <div class="col-xs-3">
+            <input type="number" min="0" id="quantity" name="quantity" class="form-control" placeholder="0">
+        </div>
+    </div>
+
+    <div class="clearfix">
+    </div>
+    <br />
+
+    <div class="form-group">
+        <div class="label-bold col-xs-4">
+            <label>@Localizer["Total:"]</label>
+        </div>
+        <div class="label-bold col-xs-3">
+            <label id="total" name="total">@Startup.TenantConfig.Currency<span id="spanTotal1"></span></label>
+        </div>
+    </div>
+
+    <div class="clearfix">
+    </div>
+</div>
+
+<div class="col-md-3">
+</div>
+<div>
+   @if (user != null)
+   {
+        <button id="purchaseTicket" type="button" class="btn btn-themed pull-right" data-toggle="modal" data-target=".modal-tickets" data-backdrop="static" style="margin-right: 10px;">
+            @Localizer["Purchase tickets"]
+        </button>
+    }
+    else
+    {
+        <button id="loginUser" type="button" class="btn btn-themed pull-right" data-toggle="modal" data-target=".bs-example-modal-lg" data-backdrop="static" data-keyboard="false" style="margin-right: 10px;">
+            @Localizer["Sign in to purchase tickets"]
+        </button>
+    }
+</div>
+
+<div class="clearfix">
+</div>
+
+
+
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+<!-- Ticket Purchase Dialog -->
+<!-- -------------------------------------------------------------------------------------------------------------------------- -->
+
+<div id="purchaseTicketModel" class="modal fade modal-tickets" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content no-radius">
+
+            <div class="modal-header custom-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <div class="row">
+                    <div class="col-xs-8" style="padding-right: 15px;padding-left: 15px;">
+                        <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg" />
+                        <h1 class="logo-heading">@Startup.TenantConfig.VenueName</h1>
+                    </div>
+                    <div class="sub-heading2">
+                        @Localizer["Purchase tickets"]
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <div class="row clearfix">
+
+                    <div class="col-sm-12 col-md-6 ticket-info">
+                        <h3>@Localizer["Ticket Information"]</h3>
+
+                        <ul>
+                            <li>Event: @Model.EventDetails.EventName</li>
+                            <li>Venue: @Startup.TenantConfig.VenueName</li>
+                            <li>Date: @String.Format("{0:D}", Model.EventDetails.Date)</li>
+                        </ul>
+                        <br />
+                        <ul>
+                            <li id="liTicketQuantity">@Localizer["Tickets:"] <span id="spanTicketQty"></span></li>
+                            <li id="liPrice">Total Cost: @Startup.TenantConfig.Currency<span id="spanTotal2"></span></li>
+                        </ul>
+
+                        <h3>@Localizer["Ticket Delivery"]</h3>
+                        <ul>
+                            <li>
+                                @Localizer["Tickets will be sent by email. Show a print-out or electronic copy of the email to be admitted to the event."]
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="col-sm-12 col-md-6 ticket-info">
+                        @using (Html.BeginForm("PurchaseTickets", "FindSeats", FormMethod.Post, new { @class = "form-horizontal" }))
+                        {
+                            <input type="hidden" name="eventId" value="@Model.EventDetails.EventId" />
+                            if (user != null)
+                            {
+                                <input type="hidden" name="customerId" value="@user.CustomerId" />
+                            }
+                            <input type="hidden" name="ticketPrice" id="ticketPrice" />
+                            <input type="hidden" name="ticketCount" id="ticketCount" />
+                            <input type="hidden" name="sectionId" id="sectionId" />
+
+                            <h3>@Localizer["Payment Information"]</h3>
+
+                            <div class="form-group">
+                                <div class="col-xs-12">
+                                    @*<input type="text" class="form-control" name="nameOnCard" placeholder=@Localizer["Name on card"]>*@
+                                    <input type="text" class="form-control" name="nameOnCard" placeholder="Name on card">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="col-xs-12">
+                                    @*<input type="text" class="form-control" name="cardNumber" placeholder=@Localizer["Card number (no dashes)"]>*@
+                                    <input type="text" class="form-control" name="cardNumber" placeholder="Card number (no dashes)">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="label-bold col-xs-12">
+                                    <label class="subscript hidden-xs">@Localizer["Expiration Date"]</label>
+                                </div>
+                                <div class="label-bold col-xs-6">
+                                    <input type="text" class="form-control" name="month" placeholder=@Localizer["Month"]>
+                                </div>
+                                <div class="label-bold col-xs-6">
+                                    <input type="text" class="form-control" name="year" placeholder=@Localizer["Year"]>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="col-xs-6">
+                                    @*<input type="password" class="form-control" id="exampleInputPassword1" placeholder=@Localizer["Security code"]>*@
+                                    <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Security code">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-xs-6">
+                                </div>
+                                <div class="col-xs-6">
+                                    <button type="submit" id="submitOrder" name="submitOrder" style="width: 100%" class="btn btn-themed-secondary pull-right">
+                                        @Localizer["Submit Order"]
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script type="text/javascript" src="~/lib/jquery/dist/jquery.js"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+
+        $("#spanTotal1").html("0.00");
+
+        $("#purchaseTicket").attr('disabled','disabled');
+
+        $("#quantity").keyup(function() {
+            if(($(this).val() != '') && ($(this).val() != '0')) {
+                $("#purchaseTicket").removeAttr('disabled');
+            }
+            else {
+                $("#purchaseTicket").attr('disabled', 'disabled');
+            }
+        });
+
+        $("#quantity").click(function() {
+            if(($(this).val() != '') && ($(this).val() != '0')) {
+                $("#purchaseTicket").removeAttr('disabled');
+            }
+            else {
+                $("#purchaseTicket").attr('disabled', 'disabled');
+            }
+        });
+
+        $("#section").change(function() {
+            var selectedSection = $("#section").val();
+            var prices = $("#section option:selected").html();
+
+            var arr = prices.split('@Startup.TenantConfig.Currency');
+            var sectionName = arr[0].trim();
+
+            var price = Number(prices.replace(/[^0-9\.]+/g,""));
+            var quantity = $("#quantity").val();
+
+            var total = (price * quantity).toString();
+            var totalPrice = total;
+
+            $("#spanTotal1").html(totalPrice);
+            $("#spanTotal2").html(totalPrice);
+            $("#spanTicketQty").html(quantity + " " + sectionName);
+            $("#sectionId").val(selectedSection);
+            $("#ticketPrice").val(total);
+            $("#ticketCount").val(quantity);
+
+            $.ajax({
+                url: '@Url.Action("GetAvailableSeats", "FindSeats")',
+                data: { sectionId: selectedSection, eventId: @Model.EventDetails.EventId },
+                contentType: 'application/json; charset=utf-8',
+                type: 'GET',
+                success: function(data) {
+                    $("#seatsAvailable").html(data);
+                },
+                error: function() {
+                    alert("error");
+                }
+            });
+        });
+
+
+        $("#quantity").change(function() {
+
+            var selectedSection = $("#section").val();
+            var prices = $("#section option:selected").html();
+           
+            var arr = prices.split('@Startup.TenantConfig.Currency');
+            var sectionName = arr[0].trim();
+
+            var price = Number(prices.replace(/[^0-9\.]+/g, ""));
+            var quantity = parseInt($("#quantity").val(), 10);
+            var availableSeats = parseInt($("#seatsAvailable")[0].innerText, 10);
+            if (quantity > availableSeats) {
+                @*alert(@Localizer["The quantity is invalid."]);*@
+                alert("The quantity is invalid.");
+            } else {
+                var total = (price * quantity).toString();
+                var totalPrice = total;
+
+                $("#spanTotal1").html(totalPrice);
+                $("#spanTotal2").html(totalPrice);
+                $("#spanTicketQty").html(quantity + " " + sectionName);
+                $("#sectionId").val(selectedSection);
+                $("#ticketPrice").val(total);
+                $("#ticketCount").val(quantity);
+            }
+        });
+
+
+        var number = document.getElementById('quantity');
+        // Listen for input event on numInput.
+        number.onkeydown = function(e) {
+            if(!((e.keyCode > 95 && e.keyCode < 106)
+              || (e.keyCode > 47 && e.keyCode < 58) 
+              || e.keyCode == 8)) {
+                return false;
+            }
+        }
+
+    });
+</script>

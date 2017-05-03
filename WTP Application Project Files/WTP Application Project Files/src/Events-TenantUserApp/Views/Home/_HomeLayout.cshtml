@@ -1,0 +1,78 @@
+﻿@using System.Globalization
+@using System.Security.Policy
+@using Microsoft.AspNetCore.Http.Features
+@using Microsoft.AspNetCore.Localization
+@using Microsoft.AspNetCore.Mvc.Localization
+@using Events_Tenant.Common.Models
+@using Events_TenantUserApp
+
+﻿@inject IViewLocalizer Localizer
+
+@{
+    Layout = "_Layout";
+}
+
+<div class="page-heading">
+    <div class="row">
+        <div class="col-xs-1">
+            <div>
+                <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg" />
+            </div>
+        </div>
+        <div class="col-xs-11" style="padding-right: 0.8%">
+            <div class="logo-heading2"><span>@Localizer["Wingtip Tickets Platform"]</span></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="logo-heading" style="width: 100.75%"><span>@Localizer["Events Hub"]</span></div>
+        </div>
+    </div>
+</div>
+
+<div class="bodycontainer" style="min-height: 90%; height: 100%; width: 102%;margin-left: -8px">
+        @RenderBody()
+</div>
+
+<footer class="footer" style="width: 102%; margin-left: -8px">
+
+    <div class="row">
+        <div class="col-xs-1" style="padding-left: 30px">
+            <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg"/>
+        </div>
+        <div class="col-xs-5" style="padding-left: 30px">
+            <div class="logo-heading2" style="padding-right: 0.8%"><span>@Localizer["Wingtip Tickets Platform"]</span></div>
+        </div>
+        <div class="col-xs-6 pull-right">
+            <div class="row">
+                <div class="footerLinks_desc">
+                    <p>
+                        <a href=@Startup.DatabaseConfig.LearnHowFooterUrl target="_blank">@Localizer["LEARN HOW TO BUILD A SAAS APP ON SQL DATABASE"]</a>
+                    </p>
+                </div>
+            </div>
+
+            <div class="copyright">
+                <div class="p-copyright">
+                    @Localizer["Running on Azure SQL Database."] &copy; @DateTime.Now.Year @Localizer["Microsoft"]<br/>
+                    @Localizer["server:"] @Startup.CatalogConfig.CatalogServer <br/>
+                    @Localizer["database:"] @Startup.CatalogConfig.CatalogDatabase<br/>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xs-1">
+        </div>
+        <div class="btm-text col-xs-4-custom" style="margin-left: 25px;">
+            @Localizer["Running on Azure SQL Database"]
+        </div>
+    </div>
+</footer>
+
+<script language="javascript" type="text/javascript">
+document.title = 'Event Hub';
+</script>
+

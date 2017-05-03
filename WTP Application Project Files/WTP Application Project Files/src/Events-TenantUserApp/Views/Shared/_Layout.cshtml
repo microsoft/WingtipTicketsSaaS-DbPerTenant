@@ -1,0 +1,59 @@
+﻿@using System.Globalization
+@using System.Security.Policy
+@using Microsoft.AspNetCore.Http.Features
+@using Microsoft.AspNetCore.Localization
+@using Microsoft.AspNetCore.Mvc.Localization
+@using Events_Tenant.Common.Models
+@using Events_TenantUserApp
+
+﻿@inject IViewLocalizer Localizer
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Event Hub</title>
+
+    <environment names="Development">
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
+        <link rel="stylesheet" href="~/css/site.css" />
+        <link rel="stylesheet" href="~/Themes/Pop.css" />
+        <link rel="stylesheet" href="~/lib/jquery-datatables/jquery.dataTables.css" />
+        <link runat="server" rel="shortcut icon" href="~/favicon.ico" type="image/x-icon" />
+        <link runat="server" rel="icon" href="~/favicon.ico" type="image/ico" />
+    </environment>
+
+    <environment names="Staging,Production">
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
+        <link rel="stylesheet" href="~/css/site.css" />
+        <link rel="stylesheet" href="~/Themes/Pop.css" />
+        <link rel="stylesheet" href="~/lib/jquery-datatables/jquery.dataTables.css" />
+        <link runat="server" rel="shortcut icon" href="~/favicon.ico" type="image/x-icon" />
+        <link runat="server" rel="icon" href="~/favicon.ico" type="image/ico" />
+    </environment>
+</head>
+
+<body>
+    <div class="container body-content">
+        @RenderBody()
+    </div>
+
+    <environment names="Development">
+        <script src="~/lib/jquery/dist/jquery.js"></script>
+        <script src="~/lib/bootstrap/dist/js/bootstrap.js"></script>
+        <script src="~/js/site.js" asp-append-version="true"></script>
+        <script src="~/js/jquery.dataTables.js"></script>
+    </environment>
+    <environment names="Staging,Production">
+        <script src="~/lib/jquery/dist/jquery.js"></script>
+        <script src="~/lib/bootstrap/dist/js/bootstrap.js"></script>
+        <script src="~/js/site.js" asp-append-version="true"></script>
+        <script src="~/js/jquery.dataTables.js"></script>
+    </environment>
+
+    @RenderSection("scripts", required: false)
+
+    @Html.Raw(TempData["msg"])
+</body>
+</html>

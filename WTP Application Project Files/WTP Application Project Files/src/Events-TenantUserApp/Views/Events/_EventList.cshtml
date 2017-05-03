@@ -1,0 +1,38 @@
+﻿@using System.Security.Policy
+@using Microsoft.AspNetCore.Mvc.Localization
+@inject IViewLocalizer Localizer
+
+<div class="row spacer-25">
+</div>
+
+@{
+    if (Model != null)
+    {
+        var eventIndex = 0;
+
+        foreach (var concert in Model)
+        {
+            <div class="event-block">
+                <div class="@(eventIndex % 2 == 0 ? "event-date" : "event-date event-date-shaded")">
+                    <span class="event-date-top">@concert.Date.ToString("MMM").ToUpper()</span><br />
+                    <span class="event-date-mid">@concert.Date.Day</span><br />
+                    <span class="event-date-btm">@concert.Date.DayOfWeek.ToString().ToUpper().Substring(0, 3)</span><br />
+                </div>
+
+                <div class="event-info">
+                    <h3 class="event-performer">@concert.EventName</h3>
+                    <p class="event-venue">@concert.SubTitle</p>
+                </div>
+
+                <div class="event-button">
+                    @{
+                        var ticketText = @Localizer["Tickets"];
+                    }
+                    @Html.ActionLink(ticketText.Value, "FindSeats", "FindSeats", new { eventId = concert.EventId }, new { @class = "btn btn-themed-secondary" })
+                </div>
+            </div>
+
+            eventIndex++;
+        }
+    }
+}
