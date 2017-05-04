@@ -1,0 +1,71 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "adminUserName": {
+      "type": "string"
+    },
+    "serverName": {
+      "type": "string"  
+    },
+    "elasticPoolName": {
+      "type": "string"
+    },
+    "adminUserPassword": {
+      "type": "string"
+    },
+    "databaseNames": {
+    "type": "array"
+    },
+    "bacpacUrl": {
+        "type": "string"
+    },
+    "storageKeyType": {
+    "type": "string"
+    },
+    "storageKey": {
+      "type": "securestring"
+    }
+  },
+  "resources": [ 
+    { 
+        "apiVersion": "2015-01-01", 
+        "name": "[concat('TenantDatabaseDeployment-',parameters('databaseNames')[copyIndex()])]",
+        "type": "Microsoft.Resources/deployments",
+        "copy": { 
+            "name": "newdbs",
+            "count": "[length(parameters('databaseNames'))]"
+            }, 
+        "properties": { 
+            "mode": "Incremental", 
+            "templateLink": {
+            "uri": "https://wtpdeploystorageaccount.blob.core.windows.net/templates/tenantdatabasetemplate.json",
+            "contentVersion": "1.0.0.0"
+            }, 
+            "parameters": {
+                "location": {"value": "[parameters('location')]"
+                },
+                "serverName": {"value": "[parameters('serverName')]"
+                },
+                "adminUserName": {"value": "[parameters('adminUserName')]"
+                },
+                "adminUserPassword": {"value": "[parameters('adminUserPassword')]"
+                },
+                "databaseName": {"value": "[parameters('databaseNames')[copyIndex()]]"
+                },
+                "elasticPoolName": {"value": "[parameters('elasticPoolName')]"
+                },
+                "bacpacUrl": {"value": "[parameters('bacpacUrl')]"
+                },
+                "storageKeyType": {"value": "[parameters('storageKeyType')]"
+                },
+                "storageKey": {"value": "[parameters('storageKey')]"
+                } 
+            }
+        }
+    } 
+  ]
+}
