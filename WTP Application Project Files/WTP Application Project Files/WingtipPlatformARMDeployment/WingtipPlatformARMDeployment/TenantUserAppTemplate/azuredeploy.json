@@ -116,7 +116,8 @@
         {
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]"
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]",
+            "AllowAllAzureIps"
           ],
           "name": "[variables('tenantFabrikamJazzClub')]",
           "location": "[variables('location')]",
@@ -148,7 +149,8 @@
         {
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]"
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]",
+            "AllowAllAzureIps"
           ],
           "name": "[variables('tenantDogwoodDojo')]",
           "location": "[variables('location')]",
@@ -253,7 +255,8 @@
         },
         {
           "dependsOn": [
-            "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]",
+            "AllowAllAzureIps"
           ],
           "name": "[variables('baseTenantDB')]",
           "location": "[variables('location')]",
