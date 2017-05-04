@@ -34,7 +34,11 @@ param (
     [string]$TenantName,
 
     [parameter(Mandatory=$true)]
-    [DateTime]$RestorePoint
+    [DateTime]$RestorePoint,
+
+    # NoEcho stops the output of the signed in user to prevent double echo  
+    [parameter(Mandatory=$false)]
+    [switch] $NoEcho
 )
 
 #----------------------------------------------------------[Initializations]----------------------------------------------------------
@@ -46,7 +50,7 @@ Import-Module $PSScriptRoot\..\..\Common\CatalogAndDatabaseManagement -Force
 Import-Module $PSScriptRoot\..\..\Common\SubscriptionManagement -Force
 
 # Get Azure credentials if not already logged on
-Initialize-Subscription 
+Initialize-Subscription -NoEcho:$NoEcho.IsPresent
 
 #-----------------------------------------------------------[Main Script]------------------------------------------------------------
 

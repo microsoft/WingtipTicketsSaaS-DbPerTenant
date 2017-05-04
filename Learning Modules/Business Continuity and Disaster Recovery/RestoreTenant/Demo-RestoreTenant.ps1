@@ -8,7 +8,7 @@ Import-Module "$PSScriptRoot\..\..\Common\SubscriptionManagement" -Force
 Import-Module "$PSScriptRoot\..\..\UserConfig" -Force
 
 # Get Azure credentials if not already logged on,  Use -Force to select a different subscription 
-Initialize-Subscription -NoEcho
+Initialize-Subscription
 
 # Get the resource group and user names used when the WTP application was deployed from UserConfig.psm1.  
 $wtpUser = Get-UserConfig
@@ -50,9 +50,9 @@ if ($DemoScenario -eq 1)
   $deletedEvent = & $PSScriptRoot\..\..\Utilities\Remove-UnsoldEventFromTenant.ps1 `
                     -WtpResourceGroupName $wtpUser.ResourceGroupName `
                     -WtpUser $wtpUser.Name `
-                    -TenantName $TenantName
+                    -TenantName $TenantName `
+                    -NoEcho
   
-  Write-Output "Deleted event '$deletedEvent' from $TenantName"
   exit
 }
 
@@ -74,7 +74,8 @@ if ($DemoScenario -eq 2)
       -WtpResourceGroupName $wtpUser.ResourceGroupName `
       -WtpUser $wtpUser.Name `
       -TenantName $TenantName `
-      -RestorePoint $restorePoint
+      -RestorePoint $restorePoint `
+      -NoEcho
 
   # Open the events page for the restored venue
   Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)_old"
@@ -93,7 +94,8 @@ if ($DemoScenario -eq 3)
   & $PSScriptRoot\..\..\Utilities\Remove-RestoredTenant.ps1 `
      -WtpResourceGroupName $wtpUser.ResourceGroupName `
      -WtpUser $wtpUser.Name `
-     -TenantName $TenantName
+     -TenantName $TenantName `
+     -NoEcho
   exit
 }
 
@@ -116,7 +118,8 @@ if ($DemoScenario -eq 4)
       -WtpResourceGroupName $wtpUser.ResourceGroupName `
       -WtpUser $wtpUser.Name `
       -TenantName $TenantName `
-      -RestorePoint $restorePoint
+      -RestorePoint $restorePoint `
+      -NoEcho
 
   # Open the events page for the restored venue
   Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"

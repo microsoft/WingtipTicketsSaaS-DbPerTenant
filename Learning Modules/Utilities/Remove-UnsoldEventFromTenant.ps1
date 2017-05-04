@@ -11,14 +11,18 @@ param (
     [string]$WtpUser,
 
     [parameter(Mandatory=$true)]
-    [string]$TenantName
+    [string]$TenantName,
+
+    # NoEcho stops the output of the signed in user to prevent double echo  
+    [parameter(Mandatory=$false)]
+    [switch] $NoEcho
 )
 
 Import-Module $PSScriptRoot\..\Common\CatalogAndDatabaseManagement -Force
 Import-Module $PSScriptRoot\..\Common\SubscriptionManagement -Force
 
 # Get Azure credentials if not already logged on
-Initialize-Subscription
+Initialize-Subscription -NoEcho:$NoEcho.IsPresent
 
 # Get catalog database that contains metadata about all Wingtip tenant databases
 $catalog = Get-Catalog `
@@ -75,7 +79,7 @@ if ($eventName)
         -QueryTimeout 30 `
         -EncryptConnection
 
-    Write-Verbose "Deleted event '$($eventName.EventName)' from $TenantName venue."
+    Write-Host "Deleted event '$($eventName.EventName)' from $TenantName venue."
     return $eventName.EventName
 }
 else 

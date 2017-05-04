@@ -11,7 +11,11 @@ param (
     [string]$WtpUser,
 
     [parameter(Mandatory=$true)]
-    [string]$TenantName
+    [string]$TenantName,
+
+    # NoEcho stops the output of the signed in user to prevent double echo  
+    [parameter(Mandatory=$false)]
+    [switch] $NoEcho
 )
 
 
@@ -22,7 +26,7 @@ Import-Module $PSScriptRoot\..\Common\CatalogAndDatabaseManagement -Force
 Import-Module $PSScriptRoot\..\Common\SubscriptionManagement -Force
 
 # Get Azure credentials if not already logged on
-Initialize-Subscription
+Initialize-Subscription -NoEcho:$NoEcho.IsPresent
 
 $catalog = Get-Catalog `
             -ResourceGroupName $WtpResourceGroupName `
