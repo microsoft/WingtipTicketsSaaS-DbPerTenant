@@ -32,14 +32,15 @@
     "customerCatalogEdition": "Standard",
     "webAppSku": "Standard",
     "tenantServer": "[concat(variables('tenantservername'),'-',variables('lowerCaseUser'))]",
-    "tenantContosoConcertHallStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvnext/',variables('tenantContosoConcertHall'),'.bacpac')]",
-    "tenantFabrikamJazzClubStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvnext/',variables('tenantFabrikamJazzClub'),'.bacpac')]",
-    "tenantDogwoodDojoStorageUri": "[concat('https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvnext/',variables('tenantDogwoodDojo'),'.bacpac')]",
-    "catalogDatabaseStorageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvnext/wingtipcatalogdb.bacpac",
-    "baseTenantDatabaseStorageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvnext/wingtiptenantdb.bacpac",
+    "tenantContosoConcertHallStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs/',variables('tenantContosoConcertHall'),'.bacpac')]",
+    "tenantFabrikamJazzClubStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs/',variables('tenantFabrikamJazzClub'),'.bacpac')]",
+    "tenantDogwoodDojoStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs/',variables('tenantDogwoodDojo'),'.bacpac')]",
+    "catalogDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtipcatalogdb.bacpac",
+    "baseTenantDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtiptenantdb.bacpac",
     "wtpTenantUserTrafficManagerUniqueDnsName": "[concat('events.wtp.',variables('lowerCaseUser'))]",
     "wtpTenantUser": "[concat('eventswtp-',variables('lowerCaseUser'))]",
-    "wtpTenantUserAppPackageUri": "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-packagesvnext/tenantUserAppPackage.zip"
+    "wtpTenantUserAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages/tenantUserAppPackage.zip"
+
   },
   "resources": [
     {
@@ -84,7 +85,7 @@
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]",
-            "AllowAllAzureIps"
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/AllowAllAzureIps')]"
           ],
           "name": "[variables('tenantContosoConcertHall')]",
           "location": "[variables('location')]",
@@ -116,7 +117,8 @@
         {
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]"
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]",
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/AllowAllAzureIps')]"
           ],
           "name": "[variables('tenantFabrikamJazzClub')]",
           "location": "[variables('location')]",
@@ -148,7 +150,8 @@
         {
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]"
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]",
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/AllowAllAzureIps')]"
           ],
           "name": "[variables('tenantDogwoodDojo')]",
           "location": "[variables('location')]",
@@ -220,7 +223,7 @@
         {
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]",
-            "AllowAllAzureIps"
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/firewallrules/AllowAllAzureIps')]"
           ],
           "name": "[variables('catalogDatabaseName')]",
           "location": "[variables('location')]",
@@ -253,7 +256,8 @@
         },
         {
           "dependsOn": [
-            "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]",
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/firewallrules/AllowAllAzureIps')]"
           ],
           "name": "[variables('baseTenantDB')]",
           "location": "[variables('location')]",
@@ -287,8 +291,8 @@
         {
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]",
-            "[variables('baseTenantDB')]",
-            "[variables('catalogDatabaseName')]"
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('baseTenantDB'))]",
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('catalogDatabaseName'))]"
           ],
           "apiVersion": "2014-04-01-preview",
           "name": "Open",
@@ -357,7 +361,7 @@
           "type": "config",
           "name": "appsettings",
           "properties": {
-            "BlobPath": "https://wtpdeploystorageaccount.blob.core.windows.net/imagesvnext/",
+          "BlobPath": "https://wingtipsaas.blob.core.windows.net/images/",
             "ConnectionTimeOut": "30",
             "CatalogDatabase": "[variables('catalogDatabaseName')]",
             "CatalogServer": "[variables('catalogServer')]",
