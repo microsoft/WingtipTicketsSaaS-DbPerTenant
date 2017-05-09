@@ -11,7 +11,7 @@ More information about the sample app and the associated tutorials can be found 
 
 To deploy the app to Azure, click on the link below.  You should deploy the app in a new resource group, and provide a short 'user' value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
 
-To launch the app, enter **http://events.wtp.USER.trafficmanager.net** in a browser, substituting the user value entered when deploying. 
+To launch the app, enter ```http://events.wtp.USER.trafficmanager.net``` in a browser, substituting the *user* value entered when deploying. 
 
 <a href="http://aka.ms/deploywtpapp" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
