@@ -48,7 +48,8 @@ New-AzureRmSqlDatabase `
     -ResourceGroupName $WtpResourceGroupName `
     -ServerName $catalogServerName `
     -DatabaseName $databaseName `
-    -RequestedServiceObjectiveName "P1"
+    -RequestedServiceObjectiveName "P1" `
+    > $null
 
 # Pre-create the tenant analytics columnstore table schema
 
@@ -62,6 +63,8 @@ CREATE TABLE [dbo].[AllTicketsPurchasesfromAllTenants](
 	[TicketPurchaseId] [int] NULL,
 	[PurchaseDate] [datetime] NULL,
 	[PurchaseTotal] [money] NULL,
+    [RowNumber] [int] NULL,
+    [SeatNumber] [int] NULL,
 	[CustomerId] [int] NULL,
 	[CustomerPostalCode] [char](10) NULL,
 	[CountryCode] [char](3) NULL,

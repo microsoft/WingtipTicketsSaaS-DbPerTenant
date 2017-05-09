@@ -11,15 +11,15 @@ GO
 -- Which venues are currently registered on the Wingtip platform?
 SELECT	VenueName,
 		VenueType
-FROM	dbo.VenuesGlobal
+FROM	dbo.Venues
 
 GO
 
 -- What are the most popular venue types?
 SELECT VenueType, 
 	   Count(TicketId) AS PurchasedTicketCount
-FROM   dbo.VenuesGlobal 
-	   INNER JOIN dbo.VenueTickets ON VenuesGlobal.VenueId = VenueTickets.VenueId
+FROM   dbo.Venues 
+	   INNER JOIN dbo.VenueTickets ON Venues.VenueId = VenueTickets.VenueId
 GROUP  BY VenueType
 ORDER  BY PurchasedTicketCount DESC
 
@@ -47,7 +47,7 @@ EXEC sp_execute_remote
 	  FROM		VenueEvents
 				INNER JOIN VenueTickets ON VenueTickets.EventId = VenueEvents.EventId
 				INNER JOIN VenueTicketPurchases ON VenueTicketPurchases.TicketPurchaseId = VenueTickets.TicketPurchaseId
-				INNER JOIN VenuesGlobal ON VenueEvents.VenueId = VenuesGlobal.VenueId
+				INNER JOIN Venues ON VenueEvents.VenueId = Venues.VenueId
 	  GROUP		BY VenueName, EventName, Subtitle
 	  ORDER		BY PurchaseTotal DESC'
 
@@ -64,7 +64,7 @@ SELECT	TOP (10)
 FROM	VenueEvents
 		INNER JOIN VenueTickets ON (VenueTickets.EventId = VenueEvents.EventId AND VenueTickets.VenueId = VenueEvents.VenueId)
 		INNER JOIN VenueTicketPurchases ON (VenueTicketPurchases.TicketPurchaseId = VenueTickets.TicketPurchaseId AND VenueTicketPurchases.VenueId = VenueEvents.VenueId)
-		INNER JOIN VenuesGlobal ON VenueEvents.VenueId = VenuesGlobal.VenueId
+		INNER JOIN Venues ON VenueEvents.VenueId = Venues.VenueId
 GROUP	BY VenueName, Subtitle, EventName, (CAST(VenueEvents.Date AS DATE))
 ORDER	BY SUM(PurchaseTotal) DESC
 

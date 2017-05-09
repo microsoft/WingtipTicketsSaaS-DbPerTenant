@@ -90,7 +90,8 @@ $commandText = "
     SET QUOTED_IDENTIFIER OFF;
     GO
 
-    CREATE EXTERNAL TABLE [dbo].[Events] (
+    CREATE EXTERNAL TABLE [dbo].[VenueEvents] (
+        [VenueId] INT NOT NULL,
         [EventId] INT NOT NULL,
         [EventName] NVARCHAR (50) NOT NULL,
         [Subtitle] NVARCHAR (50) NULL,
@@ -110,7 +111,8 @@ $commandText = "
     SET QUOTED_IDENTIFIER OFF;
     GO
 
-    CREATE EXTERNAL TABLE [dbo].[TicketPurchases] (
+    CREATE EXTERNAL TABLE [dbo].[VenueTicketPurchases] (
+        [VenueId] INT NOT NULL,
         [TicketPurchaseId] INT NOT NULL,
         [PurchaseDate] DATETIME NOT NULL,
         [PurchaseTotal] MONEY NOT NULL,
@@ -130,7 +132,8 @@ $commandText = "
     SET QUOTED_IDENTIFIER OFF;
     GO
 
-    CREATE EXTERNAL TABLE [dbo].[Tickets] (
+    CREATE EXTERNAL TABLE [dbo].[VenueTickets] (
+        [VenueId] INT NOT NULL,
         [TicketId] INT NOT NULL,
         [RowNumber] INT NOT NULL,
         [SeatNumber] INT NOT NULL,
@@ -152,13 +155,15 @@ $commandText = "
     SET QUOTED_IDENTIFIER OFF;
 
     GO
-    CREATE EXTERNAL TABLE [dbo].[Venue] (
+    CREATE EXTERNAL TABLE [dbo].[Venues] (
+        [VenueId] INT NOT NULL,
         [VenueName] NVARCHAR (50) NOT NULL,
         [VenueType] CHAR (30) NOT NULL,
-        [AdminEmail] VARCHAR (50) NOT NULL,
-        [AdminPassword] NCHAR (30) NULL,
+        [AdminEmail] NCHAR (30) NOT NULL,
         [PostalCode] CHAR (10) NULL,
-        [CountryCode] CHAR (3) NOT NULL
+        [CountryCode] CHAR (3) NOT NULL,
+        [Server] NVARCHAR(128) NOT NULL,
+        [DatabaseName] NVARCHAR(128) NOT NULL
     )
         WITH (
         DATA_SOURCE = [WtpTenantDBs],

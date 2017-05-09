@@ -4,8 +4,7 @@
 
 .DESCRIPTION
   Creates an Elastic Job that extracts ticket sales data from a tenant database and 
-  outputs it to an analysis database or data warehouse 
-#>
+  outputs it to an analysis database or data warehouse #>
 param(
     [Parameter(Mandatory=$true)]
     [string]$WtpResourceGroupName,
@@ -17,47 +16,52 @@ param(
     [string]$JobExecutionCredentialName,
 
     [Parameter(Mandatory=$true)]
+    [string]$TargetGroupName,
+
+    [Parameter(Mandatory=$true)]
     [string]$OutputServer,
 
     [Parameter(Mandatory=$true)]
-    [string]$OutputDataWarehouse,
+    [string]$OutputDatabase,
 
     [Parameter(Mandatory=$true)]
     [string]$OutputServerCredentialName,
 
     [Parameter(Mandatory=$false)]
-    [string]$OutputTableName = "AllTicketPurchasesFromAllTenants"
+    [string]$OutputTableName = "AllTicketsPurchasesFromAllTenants",
+
+    [Parameter(Mandatory=$false)]
+    [string]$JobName = "Extract all tenants ticket purchases"
 )
 
+Import-Module $PSScriptRoot\..\..\Common\CatalogAndDatabaseManagement -Force
 Import-Module $PSScriptRoot\..\..\Common\SubscriptionManagement -Force
-Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 
 
 # Get Azure credentials if not already logged on,  Use -Force to select a different subscription 
 Initialize-Subscription
+
+Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 
 $config = Get-Configuration
 
 # Get server that contains all tenant databases 
 $tenantServer = $config.TenantServerNameStem + $WtpUser + ".database.windows.net"
 
-# Get 'operations' server that contains catalog database, elastic job database, and other tenant management databases
-#$opsServer = <jobAccountServer>
+# Get server that contains job account database
+$jobAccountServer = $config.JobAccountServerNameStem + $WtpUser + ".database.windows.net"
 
-$opsServer = $config.CatalogServerNameStem + $WtpUser + ".database.windows.net"
-
-$jobName = "Extract all tenants ticket purchases to DW"
+$jobName = $JobName
 $jobDescription = "Retrieve ticket sales data from all Wingtip tenants"
 
 $commandText = "
-    DECLARE @jobIdentifier uniqueidentifier;
-    
+        
     -- Create a target group
-    EXEC [jobs].sp_add_target_group @target_group_name = 'TenantGroupDW';
+    EXEC [jobs].sp_add_target_group @target_group_name = '$TargetGroupName';
 
     -- Add all tenant servers to target group
     EXEC [jobs].sp_add_target_group_member
-    @target_group_name = 'TenantGroupDW',
+    @target_group_name = '$TargetGroupName',
     @membership_type = 'Include',
     @target_type = 'SqlServer',
     @refresh_credential_name='$JobExecutionCredentialName',
@@ -68,46 +72,36 @@ $commandText = "
     @job_name='$jobName',
     @description='$jobDescription',
     @enabled=1,
-    @schedule_interval_type='Once',
-    @job_id= @jobIdentifier OUTPUT;
-    
+    @schedule_interval_type='Once';
+        
     -- Add job step to retrieve all tenant ticket purchases
     EXEC jobs.sp_add_jobstep
     @job_name='$jobName',
     @command=N'
-    WITH Venues_CTE (VenueId, VenueName, VenueType, VenuePostalCode, VenueCapacity, X)
-    AS
-    (SELECT TOP 1 Convert(int, HASHBYTES(''md5'',VenueName)) AS VenueId, VenueName, VenueType, PostalCode AS VenuePostalCode,
-            (SELECT SUM ([SeatRows]*[SeatsPerRow]) FROM [dbo].[Sections]) AS VenueCapacity,
-        1 AS X FROM Venues)
-    SELECT v.VenueId, v.VenueName, v.VenueType,v.VenuePostalCode, v.VenueCapacity, tp.TicketPurchaseId, tp.PurchaseDate, tp.PurchaseTotal, c.CustomerId, c.PostalCode as CustomerPostalCode, c.CountryCode, e.EventId, e.EventName, e.Subtitle as EventSubtitle, e.Date as EventDate FROM 
-    Venues_CTE as v
-    INNER JOIN TicketPurchases AS tp ON v.X = 1
-    INNER JOIN Tickets AS t ON t.TicketPurchaseId = tp.TicketPurchaseId
-    INNER JOIN Events AS e ON t.EventId = e.EventId
-    INNER JOIN Customers AS c ON tp.CustomerId = c.CustomerId',
+    SELECT VenueId, VenueName, VenueType, VenuePostalCode, VenueCapacity, TicketPurchaseId, PurchaseDate, PurchaseTotal, RowNumber, SeatNumber, CustomerId, CustomerPostalCode, CountryCode, EventId, EventName, EventSubtitle, EventDate, `$(job_execution_id) as job_execution_id  
+    FROM TicketFacts',
     @retry_attempts=2,
     @credential_name='$JobExecutionCredentialName',
-    @target_group_name='TenantGroupDW',
+    @target_group_name='$TargetGroupName',
     @output_type='SqlDatabase',
     @output_credential_name='$JobExecutionCredentialName',
     @output_server_name='$OutputServer',
-    @output_database_name='$OutputDataWarehouse',
+    @output_database_name='$OutputDatabase',
     @output_table_name='$OutputTableName';
     
     PRINT N'Elastic job submitted';"
 
-    Invoke-Sqlcmd `
-    -ServerInstance $opsServer `
-    -Username $config.CatalogAdminUserName `
-    -Password $config.CatalogAdminPassword `
+    Invoke-SqlAzureWithRetry `
+    -ServerInstance $jobAccountServer `
+    -Username $config.JobAccountAdminUserName `
+    -Password $config.JobAccountAdminPassword `
     -Database $config.JobAccountDatabaseName `
     -Query $commandText `
     -ConnectionTimeout 30 `
     -QueryTimeout 30 `
-    -EncryptConnection
+    -ErrorAction Stop
 
-Write-output "Copying tenant ticket purchases to '$outputDataWarehouse' ..."
+Write-output "Copying tenant ticket purchases to '$OutputDatabase' ..."
 
 # Check for status of job
 $copyComplete = $false 
@@ -121,9 +115,9 @@ while(!$copyComplete)
         WHERE [job_name] = '$jobName' and [step_id] IS NULL"
     
     $jobStatus = Invoke-Sqlcmd `
-                    -ServerInstance $opsServer `
-                    -Username $config.CatalogAdminUserName `
-                    -Password $config.CatalogAdminPassword `
+                    -ServerInstance $jobAccountServer `
+                    -Username $config.JobAccountAdminUserName `
+                    -Password $config.JobAccountAdminPassword `
                     -Database $config.JobAccountDatabaseName `
                     -Query $jobStatusQuery `
                     -ConnectionTimeout 30 `
@@ -141,9 +135,9 @@ while(!$copyComplete)
         WHERE [job_name] = '$jobName' and [step_id] IS NOT NULL and [target_database_name] IS NOT NULL"
 
     $tenantStatus = Invoke-Sqlcmd `
-                        -ServerInstance $opsServer `
-                        -Username $config.CatalogAdminUserName `
-                        -Password $config.CatalogAdminPassword `
+                        -ServerInstance $jobAccountServer `
+                        -Username $config.JobAccountAdminUserName `
+                        -Password $config.JobAccountAdminPassword `
                         -Database $config.JobAccountDatabaseName `
                         -Query $tenantStatusQuery `
                         -ConnectionTimeout 30 `
@@ -173,7 +167,7 @@ while(!$copyComplete)
         if ($tenantStatus.Length)
         {
             $inProgressTenants = $tenantStatus.Length - $completedTenants.Length
-            Write-Output "----Processing $inProgressTenants tenant(s)----" 
+            Write-Output "----Job Executions running in $inProgressTenants tenant(s)----" 
             Start-Sleep -s 5   
         }
     }
@@ -185,12 +179,12 @@ Write-output "Deleting completed job from job database ..."
 
 $commandText = "
     EXEC [jobs].[sp_delete_job] '$jobName'
-    EXEC [jobs].[sp_delete_target_group] 'TenantGroupDW' "
+    EXEC [jobs].[sp_delete_target_group] '$TargetGroupName' "
     
     Invoke-Sqlcmd `
-        -ServerInstance $opsServer `
-        -Username $config.CatalogAdminUserName `
-        -Password $config.CatalogAdminPassword `
+        -ServerInstance $jobAccountServer `
+        -Username $config.JobAccountAdminUserName `
+        -Password $config.JobAccountAdminPassword `
         -Database $config.JobAccountDatabaseName `
         -Query $commandText `
         -ConnectionTimeout 30 `

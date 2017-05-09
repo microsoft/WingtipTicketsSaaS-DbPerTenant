@@ -20,7 +20,7 @@ Import-Module $PSScriptRoot\..\..\Common\SubscriptionManagement -Force
 # Get Azure credentials if not already logged on,  Use -Force to select a different subscription 
 Initialize-Subscription
 
-Import-Module $PSScriptRoot\..\..\AppVersionSpecific -Force
+Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 
 $config = Get-Configuration
 
@@ -34,7 +34,7 @@ $TenantAnalyticsDWDatabaseName = Get-AzureRmSqlDatabase `
                 -DatabaseName $databaseName `
                 -ErrorAction SilentlyContinue
 
-if($TenantAnalyticsDatabaseName)
+if($TenantAnalyticsDWDatabaseName)
 {
     Write-Output "Tenant Analytics DW database '$databaseName' already exists."
     exit
@@ -47,4 +47,5 @@ New-AzureRmSqlDatabase `
     -ResourceGroupName $WtpResourceGroupName `
     -ServerName $catalogServerName `
     -DatabaseName $databaseName `
-    -RequestedServiceObjectiveName "DW400"
+    -RequestedServiceObjectiveName "DW400" `
+    > $null

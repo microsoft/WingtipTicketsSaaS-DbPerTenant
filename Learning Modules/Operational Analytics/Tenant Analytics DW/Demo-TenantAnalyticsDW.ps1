@@ -15,14 +15,14 @@ $config = Get-Configuration
 $AnalyticsServerName = "<Existing Analytics Server>"
 $AnalyticsDataWarehouseName = "<Existing Analytics DataWarehouse>"
 
-$DemoScenario = 0
+$DemoScenario = 4
 <# Select the demo scenario that will be run. It is recommended you run the scenarios below in order. 
      Demo   Scenario
       0       None
       1       Purchase tickets for events at all venues
       2       Deploy tenant analytics data warehouse 
-      3       Deploy job account database to manage the data extract jobs
-      4       Create and run job to extract tenant data to the data warehouse for analysis
+      3       Deploy job account  and job account database to manage the data extract jobs
+      4       Create and run job to extract tenant data to a data warehouse for analysis
 #>
 
 ## ------------------------------------------------------------------------------------------------
@@ -54,10 +54,10 @@ if ($DemoScenario -eq 2)
     exit
 }
 
-### Deploy job account database to manage the data extract jobs
+### Deploy job account and job account database to manage the data extract jobs
 if ($DemoScenario -eq 3)
 {
-    & $PSSciptRoot\..\..\Schema Management\Deploy-JobAccount.ps1 `
+    & "$PSScriptRoot\..\..\Schema Management\Deploy-JobAccount.ps1" `
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name
     exit
@@ -69,16 +69,20 @@ if ($DemoScenario -eq 4)
     # Retrieve Wingtip default analytics server and data warehouse if no existing analytics server/datawarehouse have been provided
     if ($AnalyticsServerName -eq "<Existing Analytics Server>" -or $AnalyticsDataWarehouseName -eq "<Existing Analytics DataWarehouse>")
     {
-        $AnalyticsServerName = $config.catalogServerNameStem
+        $AnalyticsServerName = $config.catalogServerNameStem + $wtpUser.Name + ".database.windows.net"
         $AnalyticsDataWarehouseName = $config.TenantAnalyticsDWDatabaseName
     }
 
-    & $PSScriptRoot\Copy-TenantDataToDataWarehouse.ps1 `
+    & "$PSScriptRoot\..\Tenant Analytics\Start-TicketDataExtractJob.ps1" `
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name `
         -JobExecutionCredentialName $config.JobAccountCredentialName `
+        -TargetGroupName "TenantGroup-DW" `
         -OutputServer $AnalyticsServerName `
-        -OutputDataWarehouse $AnalyticsDataWarehouseName `
-        -OutputServerCredentialName $config.JobAccountCredentialName
+        -OutputDatabase $AnalyticsDataWarehouseName `
+        -OutputServerCredentialName $config.JobAccountCredentialName `
+        -JobName "Extract all tenants ticket purchases to data warehouse"
     exit
 }
+
+Write-Output "Invalid scenario selected"
