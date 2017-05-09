@@ -9,7 +9,8 @@ NOTE: if you install the application you will be charged for the Azure resources
 
 More information about the sample app and the associated tutorials can be found here: [https://aka.ms/sqldbsaastutorial](https://aka.ms/sqldbsaastutorial)
 
-To deploy the app to Azure click on the link below.  You should deploy the app in a new resource group, and provide a short 'user' value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
+To deploy the app to Azure, click on the link below.  You should deploy the app in a new resource group, and provide a short 'user' value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
+
 
 <a href="http://aka.ms/deploywtpapp" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
