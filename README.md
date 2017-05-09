@@ -15,7 +15,7 @@ To launch the app, enter ```http://events.wtp.USER.trafficmanager.net``` in a br
 
 <a href="http://aka.ms/deploywtpapp" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
-    
+</a>
 
 ## License
 Microsoft Wingtip SaaS sample application and tutorials are licensed under the MIT license. See the [LICENSE](https://github.com/Microsoft/WingtipSaaS/blob/master/license) file for more details.
