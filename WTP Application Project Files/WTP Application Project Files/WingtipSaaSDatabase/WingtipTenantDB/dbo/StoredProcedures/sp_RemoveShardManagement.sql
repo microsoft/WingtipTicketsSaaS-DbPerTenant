@@ -1,8 +1,13 @@
-﻿CREATE PROCEDURE sp_RemoveShardManagement
+﻿CREATE PROCEDURE [dbo].[sp_RemoveShardManagement]
 AS
 
 DECLARE @Schema nvarchar(200) = '__ShardManagement'
 DECLARE @Sql NVARCHAR(MAX) = '';
+
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = '__ShardManagement')
+BEGIN
+	RETURN
+END
 
 --constraints
 SELECT @Sql = @Sql + 'ALTER TABLE '+ QUOTENAME(@Schema) + '.' + QUOTENAME(t.name) + ' DROP CONSTRAINT ' + QUOTENAME(f.name)  + ';' + CHAR(13)
@@ -45,5 +50,4 @@ ORDER BY SEQUENCE_NAME
 SELECT @Sql = @Sql + 'DROP SCHEMA '+ QUOTENAME(@Schema) + ';' + CHAR(13)
 
 EXECUTE sp_executesql @Sql
-
 GO

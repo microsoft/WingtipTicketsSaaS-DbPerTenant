@@ -40,6 +40,7 @@
     "wtpTenantUserTrafficManagerUniqueDnsName": "[concat('events.wtp.',variables('lowerCaseUser'))]",
     "wtpTenantUser": "[concat('eventswtp-',variables('lowerCaseUser'))]",
     "wtpTenantUserAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages/tenantUserAppPackage.zip"
+
   },
   "resources": [
     {
@@ -360,7 +361,7 @@
           "type": "config",
           "name": "appsettings",
           "properties": {
-            "BlobPath": "https://wingtipsaas.blob.core.windows.net/images/",
+          "BlobPath": "https://wingtipsaas.blob.core.windows.net/images/",
             "ConnectionTimeOut": "30",
             "CatalogDatabase": "[variables('catalogDatabaseName')]",
             "CatalogServer": "[variables('catalogServer')]",

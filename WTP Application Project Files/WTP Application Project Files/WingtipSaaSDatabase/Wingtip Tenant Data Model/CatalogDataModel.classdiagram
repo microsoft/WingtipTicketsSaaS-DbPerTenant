@@ -37,6 +37,42 @@
             </relationshipOwnedElementsInternal>
             <elementDefinition Id="0421878f-9140-4db1-903a-d0b73ee852d9" />
           </association>
+          <association Id="b518078e-7b38-4a91-8718-9ea5ecab4379" isDerived="false" sourceEndRoleName="Tenant" targetEndRoleName="ServicePlan" isLeaf="false" isAbstract="false">
+            <classMoniker Id="c6ec3315-1115-4ff7-a2f6-a6a37086634e" LastKnownName="ServicePlan" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="be0769e4-93ab-4de4-a419-68106ed10e53" name="Tenant" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false" isNavigableOwned="false">
+                  <lowerValueInternal>
+                    <literalString Id="0816fcc9-22b1-4c61-9d17-63d6d4cc768c" name="Lower" value="*">
+                      <elementDefinition Id="829604b3-0cbb-46fd-8d52-667d2f830142" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="b8f386cf-4de0-4874-936a-b42ee455d634" name="Upper" value="*">
+                      <elementDefinition Id="b7565eb8-9f68-4815-8434-c3b1f508a133" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="d75d7308-ab51-468d-bcde-984e1d5bd587" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="9adfb05a-56ce-420b-b6e8-d3eb0fdb0871" name="ServicePlan" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+                  <lowerValueInternal>
+                    <literalString Id="1e85ea98-e321-4295-843a-7a9e1f7210c4" name="Lower" value="0">
+                      <elementDefinition Id="ab4603b8-5bc0-4897-b0f9-ad25819956ce" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="fcbd5aed-4806-4300-9ecd-70393b49108b" name="Upper" value="1">
+                      <elementDefinition Id="4e66e379-075b-49fd-8b2b-75faa85659c4" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="ecb29de6-1115-4513-96d9-1a7e9d3db714" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="b0ffaf6d-649d-42d8-9616-d9992a879698" />
+          </association>
         </targetEnds>
         <ownedAttributesInternal>
           <property Id="73e96a24-fdeb-40e8-8a7b-b22d6caccb14" name="TenantName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
@@ -45,16 +81,10 @@
           <property Id="a126f128-c2ca-44fc-9eac-606b2f8c15e5" name="ServicePlan" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="996e13f6-dcdb-44bd-a90d-4b3bb02f27bf" />
           </property>
-          <property Id="738e3feb-6f99-402d-8df3-669c5aecc197" name="LastValidated" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
-            <elementDefinition Id="75b1f7e8-8745-43af-9c74-7e83a75b85f7" />
-          </property>
-          <property Id="f7bdd43f-cb66-4818-a3a9-c33022b7c204" name="LastValidatedOutcome" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
-            <elementDefinition Id="56ea059c-4c06-48dd-8141-cea687dd372e" />
-          </property>
           <property Id="7b1e74f6-f291-42f0-9788-e47ec85b9945" name="LastUpdated" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="2822955f-26fa-4866-97f1-1ed509a08e24" />
           </property>
-          <property Id="e89216d5-2c0b-4756-8223-756d128291b7" name="TenantId" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+          <property Id="e89216d5-2c0b-4756-8223-756d128291b7" name="TenantRawId" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="d0e0dcbc-104d-4f24-a385-a4bfa7348942" />
           </property>
         </ownedAttributesInternal>
@@ -64,23 +94,23 @@
       <class Id="0203855b-b7c1-4988-b5cc-067a6fc4f28c" name="Database" isAbstract="false" isLeaf="false" isActiveClass="false">
         <elementDefinition Id="684282b9-5533-4c93-ade8-6d8bb7ce9c28" />
         <ownedAttributesInternal>
-          <property Id="44105c7e-4ccb-4219-9a07-b8287690c9ab" name="DatabaseName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
-            <elementDefinition Id="c41a2375-fe9f-45f6-a417-6c1e5090bc53" />
-          </property>
           <property Id="6e80745e-2684-4e4c-ac9f-25c6165b8f2f" name="ServiceObjective" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="e9e1b941-954a-45d8-8405-187794b90015" />
-          </property>
-          <property Id="db32b807-0aff-4202-808d-8ef4390de550" name="LastValidated" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
-            <elementDefinition Id="464f50fa-ab30-4fc5-815a-7c3cb722066b" />
-          </property>
-          <property Id="2b2b9b2a-a7d0-4669-bf30-7010a095abe0" name="LastValidatedOutcome" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
-            <elementDefinition Id="06588162-0295-491a-bc9e-6535fbaae87d" />
           </property>
           <property Id="8097c2a8-d012-4e58-bd7f-7c5c61ab2876" name="State" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="fcf6929d-5bb1-410c-b7d8-d9a01d128064" />
           </property>
           <property Id="433a52ad-c549-4d10-a283-4abaf816d923" name="LastUpdated" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="9b27fdb2-de9b-44e7-a9da-6662cb4fb2b2" />
+          </property>
+          <property Id="b1db7c8d-8b81-499a-a5e8-a29d2bedbd5d" name="ElasticPoolName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="06a05fa0-7f51-41d6-bbe2-123f46df5b02" />
+          </property>
+          <property Id="3d168588-ea18-4f33-86a1-6511ede750bc" name="ServerName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="b667aca4-1da5-457f-8220-1da154d967d9" />
+          </property>
+          <property Id="03cc54ab-892b-4603-89c3-cb9bbf2760c2" name="DatabaseName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="de06f8df-205c-417b-8913-9722bc26a40e" />
           </property>
         </ownedAttributesInternal>
       </class>
@@ -152,14 +182,8 @@
           <property Id="564f82e3-1725-4fa6-9e0f-df5d3631399a" name="DatabasesMax" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="fc4dce5d-67c1-4223-a3b9-10c5510ba1b4" />
           </property>
-          <property Id="88e6b167-05dc-4aea-a559-1b35f9bb83b1" name="MaxPools" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+          <property Id="88e6b167-05dc-4aea-a559-1b35f9bb83b1" name="PoolsMax" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="632b4c25-4289-4987-a658-6e7c33d72667" />
-          </property>
-          <property Id="197e919d-8307-4d98-b2ea-2866f96e230b" name="LastValidated" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
-            <elementDefinition Id="4a53295b-9a7e-4929-9c0f-27c2a26d757c" />
-          </property>
-          <property Id="643874b8-c2d5-4931-8a22-0b0c6f425829" name="LastValidatedOutcome" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
-            <elementDefinition Id="8d8d9733-cf48-4149-9569-cef7fa624fc2" />
           </property>
           <property Id="55a880e2-f16b-4551-91fd-9a33155bcfed" name="DatabasesThreshold" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="5c444923-3fb3-4dc9-851f-63cf08a65158" />
@@ -218,20 +242,14 @@
           <property Id="38d587e6-9f74-47e3-86aa-ce28281f8e7e" name="State" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="da5b2bbc-bb43-4a3b-b7ce-3f25140d8e10" />
           </property>
-          <property Id="6f13d41e-3a89-4b3c-bbae-a08551c75ad7" name="MaxDatabases" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+          <property Id="6f13d41e-3a89-4b3c-bbae-a08551c75ad7" name="DatabasesMaxCount" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="2e4efa4f-1567-47c6-8fc4-e10bbe0a48cf" />
           </property>
-          <property Id="5c7d8d47-5c4a-49f6-9dcb-35a9bea05f1d" name="DatabasesBuffer" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+          <property Id="5c7d8d47-5c4a-49f6-9dcb-35a9bea05f1d" name="DatabasesBufferCount" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="92d20b2c-964c-46d8-90ac-c3714bb66d29" />
           </property>
-          <property Id="1b7f4e32-c1e0-4d30-8652-ba74e5c5d1a8" name="Configuration" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+          <property Id="1b7f4e32-c1e0-4d30-8652-ba74e5c5d1a8" name="Dtu" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="fd306c11-3fe2-4ada-81f5-6afbdb47a84b" />
-          </property>
-          <property Id="82053ae6-a54b-4cfb-80a9-1dae41e104f0" name="LastValidated" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
-            <elementDefinition Id="fbe0daff-140a-4d29-80fd-7c3c75cc8a2f" />
-          </property>
-          <property Id="07be4ef7-3ead-4e95-b347-60765684dd87" name="LastValidatedOutcome" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
-            <elementDefinition Id="a6691036-deba-412c-9cff-6fae556d35b6" />
           </property>
           <property Id="d55797eb-8c2a-4d75-b161-ceee8372f984" name="DatabasesThreshold" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="9500be21-24b6-4984-b87f-95b0b29c7eae" />
@@ -239,18 +257,42 @@
           <property Id="11500c99-6ca6-4808-892d-18da95f81421" name="LastUpdated" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="024a20b0-b796-4a9c-b1c1-0116fb57df68" />
           </property>
+          <property Id="497d56ba-a3b7-43a0-a12c-94bd67e08c21" name="Edition" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="b5a21df3-fd79-41e3-8811-331279dcbd28" />
+          </property>
+          <property Id="a3cde0bf-6d14-4956-a232-5a8e5ee2d94a" name="DatabaseDtuMax" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="da9be6fa-53ce-44fa-b6bb-8964dbb5a394" />
+          </property>
+          <property Id="ef743ed4-14f7-4e09-84fe-65b47e6448a9" name="DatabaseDtuMin" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="288ec2a3-2772-4aca-b552-285f470420c2" />
+          </property>
+          <property Id="c3867085-e409-463f-a665-e09215b19ef5" name="ServerName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="d0a399e5-e5f8-4cfc-9fff-2748156e3b00" />
+          </property>
         </ownedAttributesInternal>
       </class>
     </logicalClassDesignerModelHasTypes>
     <logicalClassDesignerModelHasTypes>
-      <class Id="5c5f080a-5ad8-44db-934d-081a781f6c76" name="ProvisioningModel" isAbstract="false" isLeaf="false" isActiveClass="false">
+      <class Id="5c5f080a-5ad8-44db-934d-081a781f6c76" name="ProvisioningRegion" isAbstract="false" isLeaf="false" isActiveClass="false">
         <elementDefinition Id="cae1e85b-fcc7-459f-967b-3a19bb89d914" />
         <ownedAttributesInternal>
-          <property Id="8dbf1e98-87af-4de7-880f-e259c56e9054" name="PrimaryServerRegion" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+          <property Id="8dbf1e98-87af-4de7-880f-e259c56e9054" name="Geography" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="e8c55c72-01b1-406d-8941-162194561166" />
           </property>
-          <property Id="3a612e81-4017-4d51-b0bc-aa3f4e4abcfd" name="RecoveryServerRegion" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+          <property Id="3a612e81-4017-4d51-b0bc-aa3f4e4abcfd" name="IsPrimary" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="65f870b5-90e5-4cd5-90eb-314b65c7d593" />
+          </property>
+          <property Id="407e1c5e-b5db-4403-9c67-3309eb7564ff" name="RegionName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="2755a996-eda4-4dce-8477-7e484e1fc1f2" />
+          </property>
+          <property Id="b25c5bd9-fb25-4673-ad6a-f8a7279c33c0" name="IsRecovery" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="55d24bec-2aa6-4fcc-8c5c-41bbc839c991" />
+          </property>
+          <property Id="1a233b40-0891-4f9e-b0e5-6b90e0a5e332" name="RecoveryForRegion" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="ab2676c1-5190-4480-85dc-57cd51792a89" />
+          </property>
+          <property Id="611b0912-4ec1-469a-b21f-c18e353b214d" name="State" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="d9b040ab-a8a6-464f-9596-f7275692653b" />
           </property>
         </ownedAttributesInternal>
       </class>
@@ -275,8 +317,36 @@
       </class>
     </logicalClassDesignerModelHasTypes>
     <logicalClassDesignerModelHasTypes>
-      <class Id="8dea5e17-88dc-4b48-94a2-394baed1df99" name="Configuration" isAbstract="false" isLeaf="false" isActiveClass="false">
+      <class Id="8dea5e17-88dc-4b48-94a2-394baed1df99" name="ProvisioningModel" isAbstract="false" isLeaf="false" isActiveClass="false">
         <elementDefinition Id="ae81e42a-30b2-45c7-9756-03633dbad740" />
+        <targetEnds>
+          <association Id="b4b8c2fd-e542-431c-a623-5846770419a4" isDerived="false" sourceEndRoleName="ProvisioningModel" targetEndRoleName="ProvisioningRegion" isLeaf="false" isAbstract="false">
+            <classMoniker Id="5c5f080a-5ad8-44db-934d-081a781f6c76" LastKnownName="ProvisioningRegion" />
+            <relationshipOwnedElementsInternal>
+              <associationHasOwnedEnds>
+                <memberEnd Id="bb687088-84e8-4cb0-9b5a-38de4cf607f3" name="ProvisioningModel" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="Composite" isComposite="false" isNavigableOwned="false">
+                  <elementDefinition Id="49f28732-61d9-4689-a86c-e12c3bc640a8" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+              <associationHasOwnedEnds>
+                <memberEnd Id="e44d891c-bfdd-4c6d-9d0f-a237cd7a67ed" name="ProvisioningRegion" isLeaf="false" isStatic="false" isReadOnly="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="true">
+                  <lowerValueInternal>
+                    <literalString Id="b05ae651-3d9d-44fc-8188-18ac6cf93bb5" name="Lower" value="*">
+                      <elementDefinition Id="198deb07-4a56-4eb6-8aac-b711434b13c7" />
+                    </literalString>
+                  </lowerValueInternal>
+                  <upperValueInternal>
+                    <literalString Id="e61bd06d-0d4d-476e-94db-a95f75959d25" name="Upper" value="*">
+                      <elementDefinition Id="90cf755a-899e-4664-998c-4664f8e6e36d" />
+                    </literalString>
+                  </upperValueInternal>
+                  <elementDefinition Id="e4a6ed4e-93f6-46b2-a540-623203da302a" />
+                </memberEnd>
+              </associationHasOwnedEnds>
+            </relationshipOwnedElementsInternal>
+            <elementDefinition Id="30e6a308-99c4-458d-96dd-13dc85865e40" />
+          </association>
+        </targetEnds>
         <ownedAttributesInternal>
           <property Id="f9469f17-9da5-4732-8404-074c393d69cb" name="ServerDatabasesMax" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="7ae97bb9-8578-4e5d-99f0-9a62b15d5be7" />
@@ -287,10 +357,10 @@
           <property Id="aa837b10-6936-4573-8b38-81fe8d5205ec" name="PoolDtu" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="64910348-f487-47e6-9ca6-ac8878e163aa" />
           </property>
-          <property Id="ead0869b-45f6-4d55-acb7-dc766746b1a4" name="PoolDatabaseMaxDtu" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+          <property Id="ead0869b-45f6-4d55-acb7-dc766746b1a4" name="PoolDatabaseDtuMax" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="021214e0-e71b-41ef-b621-ca30b9cbb43b" />
           </property>
-          <property Id="80ac67e2-b829-4367-b6ab-1eb053cbc97c" name="PoolDatabaseMinDtu" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+          <property Id="80ac67e2-b829-4367-b6ab-1eb053cbc97c" name="PoolDatabaseDtuMin" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="efb683d0-11e3-4c19-a84e-4956d14be40a" />
           </property>
           <property Id="c883e990-0a00-415d-bb8e-48b152ac4601" name="PoolDatabasesThreshold" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
@@ -307,6 +377,59 @@
           </property>
           <property Id="42f6b86f-854e-4270-bfce-dd9dd2e3b7e5" name="ServerNameStem" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
             <elementDefinition Id="d9e03a8f-6f50-4e5d-bafe-0a83a8d9cd3c" />
+          </property>
+          <property Id="b0d00f55-1ef3-49ae-a638-c8188c2ae286" name="ServerPoolsMax" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="15d60c50-4572-48ab-bf72-72a8b5a098bd" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="c6ec3315-1115-4ff7-a2f6-a6a37086634e" name="ServicePlan" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="6b2f5309-0539-45c8-947f-85f618ca363d" />
+        <ownedAttributesInternal>
+          <property Id="1d8450a5-75c4-4e13-9e2b-155d50feebea" name="ServicePlanName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="58bc3e77-cf55-4b38-96de-5dac4c5280c1" />
+          </property>
+          <property Id="43be3338-ee72-4347-a0f0-648e37689024" name="BaseRateMonthly" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="7756cf55-7657-4392-bba4-abcb5d583c3e" />
+          </property>
+          <property Id="71ae67d5-9e53-4702-9d9f-a9f556a57696" name="Description" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="471a2acf-7068-48ca-89dc-3794d6da3fa9" />
+          </property>
+          <property Id="2924b5f9-0d32-404e-a15e-8094833b87bb" name="ShortDescriptionn" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="6f9e1091-9447-47c6-8979-d3bd97728675" />
+          </property>
+        </ownedAttributesInternal>
+      </class>
+    </logicalClassDesignerModelHasTypes>
+    <logicalClassDesignerModelHasTypes>
+      <class Id="1ace3e26-6833-4661-8abe-b203494d5c89" name="TenantRequest" isAbstract="false" isLeaf="false" isActiveClass="false">
+        <elementDefinition Id="796e3570-9501-4fa5-aef5-a78c1671c952" />
+        <ownedAttributesInternal>
+          <property Id="ea36ec35-a097-4b11-a6b9-36f9142d9d0e" name="TenantName" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="bf3f4827-df2e-47a4-9b28-cc1a4130978a" />
+          </property>
+          <property Id="4ce79881-6e89-43fd-8b08-d895caa0c8f6" name="ServicePlan" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="af7a68fb-1823-459c-bb8e-25dd1a6c30b6" />
+          </property>
+          <property Id="a34ecb21-b803-4d99-a5d8-7323b983a2ff" name="RequestTime" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="0f99d565-9cd4-4638-a7c7-780b60f3c3b1" />
+          </property>
+          <property Id="86729049-9a0f-4142-804f-98c0b1eac434" name="Outcome" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="c1f77a01-521c-4b7c-b7da-1cfc7ff4d84b" />
+          </property>
+          <property Id="6bb43cfc-0f6f-4eeb-b524-b227585043b9" name="OutcomeTime" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="f866f36b-57a0-4a95-98b7-f36c407204ae" />
+          </property>
+          <property Id="f1cbc206-d884-4b9c-a449-78c90e85c65d" name="Region" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="dc6638ec-beaf-436b-a044-5cab23c82424" />
+          </property>
+          <property Id="158f03e6-333e-4ebc-9026-336826c9b483" name="TenantId" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="448d715f-5e7d-4b77-9804-42022faf8987" />
+          </property>
+          <property Id="e0e87925-7a74-48f6-88ce-f707dead072b" name="TenantRawId" isLeaf="false" isStatic="false" isReadOnly="false" isUnique="false" isDerived="false" isDerivedUnion="false" aggregation="None" isComposite="false">
+            <elementDefinition Id="c20aebb1-2aaf-4015-9979-ec72e3f9fc38" />
           </property>
         </ownedAttributesInternal>
       </class>

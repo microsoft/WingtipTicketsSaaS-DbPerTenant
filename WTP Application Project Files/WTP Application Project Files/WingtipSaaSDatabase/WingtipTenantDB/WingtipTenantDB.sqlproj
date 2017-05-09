@@ -83,6 +83,7 @@
     <None Include="DemoScripts\UpdateVenueTypes.sql" />
     <Build Include="dbo\StoredProcedures\sp_RemoveShardManagement.sql" />
     <Build Include="dbo\Views\EventsWithNoTickets.sql" />
+    <Build Include="dbo\StoredProcedures\sp_DeleteEvent.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="WingtipTenantDB.publish.xml" />

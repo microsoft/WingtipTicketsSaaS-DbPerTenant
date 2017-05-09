@@ -11,14 +11,14 @@ DELETE FROM [dbo].[Customers]
 DELETE FROM [dbo].[EventSections]
 DELETE FROM [dbo].[Events]
 DELETE FROM [dbo].[Sections]
-DELETE FROM [dbo].[Venues]
+DELETE FROM [dbo].[Venue]
 GO
 
 -- Venue
-INSERT INTO [dbo].[Venues]
-   ([VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode])
+INSERT INTO [dbo].[Venue]
+   ([VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode], [Lock])
      VALUES
-           ('Dogwood Dojo','JudoClub','admin@dogwooddojo.com',NULL,'98052','USA')
+           ('Dogwood Dojo','judo','admin@dogwooddojo.com',NULL,'98052','USA','X')
 GO
 
 -- Sections

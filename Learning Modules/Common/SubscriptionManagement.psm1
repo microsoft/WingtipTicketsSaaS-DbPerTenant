@@ -7,7 +7,11 @@ function Initialize-Subscription
     param(
         # Force requires the user selects a subscription explicitly 
         [parameter(Mandatory=$false)]
-        [switch] $Force
+        [switch] $Force,
+
+        # NoEcho stops the output of the signed in user to prevent double echo  
+        [parameter(Mandatory=$false)]
+        [switch] $NoEcho
     )
 
     If(!$Force) 
@@ -16,8 +20,11 @@ function Initialize-Subscription
         {
             # Use previous login credentials if already logged in 
             $AzureContext = Get-AzureRmContext
-            Write-Output "Signed-in as $($AzureContext.Account), Subscription '$($AzureContext.Subscription.SubscriptionId)' '$($AzureContext.Subscription.SubscriptionName)'"
-            Write-Verbose $AzureContext
+            if (!$NoEcho)
+            {            
+                Write-Output "Signed-in as $($AzureContext.Account), Subscription '$($AzureContext.Subscription.SubscriptionId)' '$($AzureContext.Subscription.SubscriptionName)'"
+                Write-Verbose $AzureContext
+            }
             return
         }
         catch
@@ -44,11 +51,11 @@ function Initialize-Subscription
     elseif($subscriptionList.Length -gt 1)
     {
         # Display available subscriptions 
-        $index = 0
+        $index = 1
         foreach($subscription in $subscriptionList)
         {
-            $index++
             $subscription | Add-Member -type NoteProperty -name "Row" -value $index
+            $index++
         }
 
         # Prompt for selection 
@@ -58,15 +65,15 @@ function Initialize-Subscription
         # Select single Azure subscription for session 
         try
         {
-            [int]$rowSelection = Read-Host "Enter the row number (1-$index) of a subscription" -ErrorAction Stop
+            [int]$selectedRow = Read-Host "Enter the row number to select the subscription to use" -ErrorAction Stop
 
-            $context = Select-AzureRmSubscription -SubscriptionId $subscriptionList[($rowSelection - 1)] -ErrorAction Stop
+            $context = Select-AzureRmSubscription -SubscriptionId $subscriptionList[($selectedRow - 1)] -ErrorAction Stop
 
             Write-Output "Subscription Id '$($context.Subscription.SubscriptionId)' selected."
         }
         catch
         { 
-            Write-Error 'Invalid subscription Id provided. Exiting...'
+            Write-Error 'Invalid selection. Exiting...'
             exit 
         }
     }

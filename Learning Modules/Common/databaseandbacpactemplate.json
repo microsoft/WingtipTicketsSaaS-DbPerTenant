@@ -1,0 +1,63 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "serverName": {
+      "type": "string"
+    },
+    "adminUserName": {
+      "type": "string"
+    },
+    "adminUserPassword": {
+      "type": "string"
+    },
+    "databaseName": {
+      "type": "string"
+    },
+    "requestedServiceObjectiveName": {
+        "type": "string"
+    },
+    "bacpacUrl": {
+        "type": "string"
+    },
+    "storageKeyType": {
+    "type": "string"
+    },
+    "storageKey": {
+      "type": "securestring"
+    }
+
+  },
+  "resources": [
+    {
+      "apiVersion": "2014-04-01-preview",
+      "name": "[concat(parameters('serverName'), '/', parameters('databaseName'))]",
+      "location": "[parameters('location')]",
+      "type": "Microsoft.Sql/servers/databases",
+      "properties": {
+        "requestedServiceObjectiveName": "[parameters('requestedServiceObjectiveName')]"
+      },
+      "resources": [
+        {
+          "name": "Import",
+          "type": "extensions",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', parameters('serverName'), '/databases/', parameters('databaseName'))]"
+          ],
+          "properties": {
+            "storageKeyType": "[parameters('storageKeyType')]",
+            "storageKey": "[parameters('storageKey')]",
+            "storageUri": "[parameters('bacpacUrl')]",
+            "administratorLogin": "[concat(parameters('adminUserName'), '@', parameters('serverName'))]",
+            "administratorLoginPassword": "[parameters('adminUserPassword')]",
+            "operationMode": "Import"
+          }
+        }
+      ]
+    }
+  ]
+}
