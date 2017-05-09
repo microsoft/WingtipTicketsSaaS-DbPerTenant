@@ -173,7 +173,7 @@ function Get-Catalog
 
     if (!$shardmapManager)
     {
-        throw "Failed to initialize shard map manager from '$(config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
+        throw "Failed to initialize shard map manager from '$($config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
     }
 
     # Initialize shard map
@@ -994,7 +994,11 @@ function New-Tenant
         [string]$PoolName,
 
         [Parameter(Mandatory=$false)]
-        [string]$VenueType
+        [string]$VenueType,
+
+        [Parameter(Mandatory=$false)]
+        [string]$PostalCode = "98052"
+
     )
 
     $WtpUser = $WtpUser.ToLower()
@@ -1024,6 +1028,7 @@ function New-Tenant
         -ElasticPoolName $PoolName `
         -TenantName $TenantName `
         -VenueType $VenueType `
+        -PostalCode $PostalCode `
         -WtpUser $WtpUser
 
     # Register the tenant and database in the catalog
@@ -1216,7 +1221,6 @@ function Remove-CatalogInfoFromTenantDatabase
         -Password $adminPassword `
         -ServerInstance ($TenantDatabase.ServerName + ".database.windows.net") `
         -Database $TenantDatabase.DatabaseName `
-        -ConnectionTimeout 30 `
         -Query $commandText `
 }
 
@@ -1232,12 +1236,15 @@ function Remove-ExtendedDatabase
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
+        [string]$ServerName,
+
+        [parameter(Mandatory=$true)]
         [string]$DatabaseName
     )
 
     $commandText = "
         DELETE FROM Databases 
-        WHERE DatabaseName = $DatabaseName;"
+        WHERE ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';"
 
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -1245,8 +1252,6 @@ function Remove-ExtendedDatabase
         -Password $config.CatalogAdminPassword `
         -Database $Catalog.Database.DatabaseName `
         -Query $commandText `
-        -ConnectionTimeout 30 `
-        -QueryTimeout 30 `
 }
 
 
@@ -1277,9 +1282,7 @@ function Remove-ExtendedElasticPool{
         -Database $Catalog.Database.DatabaseName `
         -Query $commandText `
         -UserName $config.CatalogAdminUserName `
-        -Password $config.CatalogAdminPassword `
-        -ConnectionTimeout 30 `
-        -QueryTimeout 15     
+        -Password $config.CatalogAdminPassword    
 }
 
 
@@ -1313,7 +1316,7 @@ function Remove-ExtendedServer
 
 <#
 .SYNOPSIS
-    Removes extended tenant and associated database meta data entries from catalog  
+    Removes extended tenant entry from catalog  
 #>
 function Remove-ExtendedTenant
 {
@@ -1341,9 +1344,7 @@ function Remove-ExtendedTenant
     # Delete the tenant name from the Tenants table
     $commandText = "
         DELETE FROM Tenants 
-        WHERE TenantId = $rawkeyHexString;
-        DELETE FROM Databases 
-        WHERE ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';"
+        WHERE TenantId = $rawkeyHexString;"
 
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `

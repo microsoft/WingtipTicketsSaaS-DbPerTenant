@@ -16,7 +16,7 @@ Param(
 
     # Duration of the load generation session in minutes. Due to the way loads are applied, some 
     # activity may continue after this time. 
-    [int]$DurationMinutes = 60,
+    [int]$DurationMinutes = 120,
 
     # If enabled, causes a single tenant to have a specific distinct load applied
     # Use with SingleTenantIntensity to demonstrate moving a database in or out of a pool  
@@ -83,267 +83,337 @@ $densityLoadFactor = 0.08
 
 $CatalogServerName = $config.CatalogServerNameStem + $WtpUser
 
-$shards = Get-Shards -ShardMap $catalog.ShardMap
 
-$ServerNames = @()
-foreach ($shard in $Shards)
+$jobs = @{}
+
+## Start job invocation loop
+
+$start = Get-Date
+
+$sleepCount = 0
+$sleep = 10
+
+Write-Output "`nStarting job execution.  Load generator will look for new databases every $sleep seconds for $durationMinutes ."
+write-output "`nUse Ctrl-C to stop invoking jobs.  Already started jobs will continue and can be managed:."
+ 
+Write-Output "`n  Use Get-Job to view status of all jobs" 
+Write-Output "  Use Receive-Job <job id> -Keep to view output from an individual job" 
+Write-Output "  Use Stop-Job <job id> to stop a job.  Use Stop-Job * to stop all jobs (which can take a minute or more)"
+Write-Output "  Use Remove-Job <job id> to remove a job.  Use Remove-Job * to remove all jobs.  Use -Force to stop and remove.`n"
+
+while (1 -eq 1)
 {
-    $serverName = $shard.Location.Server.split(".",2)[0]
-    $ServerNames += $serverName
-}
+    $shards = Get-Shards -ShardMap $catalog.ShardMap
 
-$serverNames = $serverNames| sort | Get-Unique
+    $ServerNames = @()
+    foreach ($shard in $Shards)
+    {
+        $serverName = $shard.Location.Server.split(".",2)[0]
+        $ServerNames += $serverName
+    }
+
+    $serverNames = $serverNames| sort | Get-Unique
    
-# Array that will contain all databases to be targeted
-$allDbs = @() 
+    # Array that will contain all databases to be targeted
+    $allDbs = @() 
 
-foreach($serverName in $serverNames)
-{
-    [array]$serverPools = (Get-AzureRmSqlElasticPool -ResourceGroupName $WtpResourceGroupName -ServerName $serverName).ElasticPoolName
-    $poolNumber = 1
-
-    foreach($elasticPool in $serverPools)
+    foreach($serverName in $serverNames)
     {
-        # Set up the relative load level for each pool
-        if($Unbalanced.IsPresent -and $serverPools.Count -gt 1)
+        [array]$serverPools = (Get-AzureRmSqlElasticPool -ResourceGroupName $WtpResourceGroupName -ServerName $serverName).ElasticPoolName
+        $poolNumber = 1
+
+        foreach($elasticPool in $serverPools)
         {
-            # alternating pools on the same server are given high and low loads 
-            if ($poolNumber % 2 -ne 0)
+            # Set up the relative load level for each pool
+            if($Unbalanced.IsPresent -and $serverPools.Count -gt 1)
             {
-                $loadFactor = $highPoolLoadFactor
-                Write-Output ("Pool " + $elasticPool + " on " + $serverName + " has high load factor - " + $loadFactor)         
+                # alternating pools on the same server are given high and low loads 
+                if ($poolNumber % 2 -ne 0)
+                {
+                    $loadFactor = $highPoolLoadFactor
+                    Write-Output ("Pool " + $elasticPool + " on " + $serverName + " has high load factor - " + $loadFactor)         
+                }
+                else
+                {
+                    $loadFactor = $lowPoolLoadFactor 
+                    Write-Output ("Pool "+ $elasticPool + " on " + $serverName + " has low load factor - " + $loadFactor)        
+                }
             }
             else
             {
-                $loadFactor = $lowPoolLoadFactor 
-                Write-Output ("Pool "+ $elasticPool + " on " + $serverName + " has low load factor - " + $loadFactor)        
+                # Neutral default for the relative load level for databases in a pool
+                $loadFactor = 1.0
             }
-        }
-        else
-        {
-            # Neutral default for the relative load level for databases in a pool
-            $loadFactor = 1.0
-        }
                
-        $elasticDbs = (Get-AzureRmSqlElasticPoolDatabase -ResourceGroupName $WtpResourceGroupName -ServerName $serverName -ElasticPoolName $elasticPool).DatabaseName
+            $elasticDbs = (Get-AzureRmSqlElasticPoolDatabase -ResourceGroupName $WtpResourceGroupName -ServerName $serverName -ElasticPoolName $elasticPool).DatabaseName
 
-        Foreach($elasticDb in $elasticDbs)
-        {          
-            # vary the baseline DTU level of each database using a random factor x the input intensity x load factor for the pool 
+            Foreach($elasticDb in $elasticDbs)
+            {          
+                # vary the baseline DTU level of each database using a random factor x the input intensity x load factor for the pool 
 
-            $burstFactor = Get-Random -Minimum $burstMinFactor -Maximum $burstMaxFactor # randomizes the intensity of each database
-            $burstDtu = [math]::Ceiling($Intensity * $BurstFactor * $loadFactor)
+                $burstFactor = Get-Random -Minimum $burstMinFactor -Maximum $burstMaxFactor # randomizes the intensity of each database
+                $burstDtu = [math]::Ceiling($Intensity * $BurstFactor * $loadFactor)
 
 
-            # add db with its pool-based load factor to the list
-            $dbProperties = @{ServerName=($serverName + ".database.windows.net");DatabaseName=$elasticDb;BurstDtu=$burstDtu;LoadFactor=$loadFactor;ElasticPoolName=$elasticPool;PoolDbCount=$elasticDbs.Count}
-            $db = New-Object PSObject -Property $dbProperties
+                # add db with its pool-based load factor to the list
+                $dbProperties = @{ServerName=($serverName + ".database.windows.net");DatabaseName=$elasticDb;BurstDtu=$burstDtu;LoadFactor=$loadFactor;ElasticPoolName=$elasticPool;PoolDbCount=$elasticDbs.Count}
+                $db = New-Object PSObject -Property $dbProperties
 
-            $allDbs += $db       
-        }
+                $allDbs += $db       
+            }
         
-        $poolNumber ++        
+            $poolNumber ++        
+        }
+
+        # Get standalone dbs and add to $allDbs
+
+        $StandaloneDbs = (Get-AzureRmSqlDatabase -ResourceGroupName $WtpResourceGroupName -ServerName $serverName |  where {$_.CurrentServiceObjectiveName -ne "ElasticPool"} | where {$_.DatabaseName -ne "master"} ).DatabaseName 
+        Foreach ($standaloneDb in $StandaloneDbs)
+        {
+                $burstLevel = Get-Random -Minimum $burstMinFactor -Maximum $burstMaxFactor # randomizes the intensity of each database
+                $burstDtu = [math]::Ceiling($burstLevel * $Intensity)
+
+                #store db with a neutral load factor
+                $dbProperties = @{ServerName=($serverName + ".database.windows.net");DatabaseName=$StandaloneDb;BurstDtu=$burstDtu;LoadFactor=1.0;ElasticPoolName="";PoolDbCount=0.0}
+                $db = New-Object PSObject -Property $dbProperties
+
+                $allDbs += $db
+        } 
     }
 
-    Write-Output ""
-
-    # Get standalone dbs and add to $allDbs
-
-    $StandaloneDbs = (Get-AzureRmSqlDatabase -ResourceGroupName $WtpResourceGroupName -ServerName $serverName |  where {$_.CurrentServiceObjectiveName -ne "ElasticPool"} | where {$_.DatabaseName -ne "master"} ).DatabaseName 
-    Foreach ($standaloneDb in $StandaloneDbs)
+    if ($SingleTenant.IsPresent -and $SingleTenantDatabaseName -ne "")
     {
-            $burstLevel = Get-Random -Minimum $burstMinFactor -Maximum $burstMaxFactor # randomizes the intensity of each database
-            $burstDtu = [math]::Ceiling($burstLevel * $Intensity)
+        $SingleTenantDatabaseName = Get-NormalizedTenantname $SingleTenantDatabaseName
 
-            #store db with a neutral load factor
-            $dbProperties = @{ServerName=($serverName + ".database.windows.net");DatabaseName=$StandaloneDb;BurstDtu=$burstDtu;LoadFactor=1.0;ElasticPoolName="";PoolDbCount=0.0}
-            $db = New-Object PSObject -Property $dbProperties
+        #validate that the name is one of the database names about to be processed
+        $allDBNames = $allDBs | select -ExpandProperty DatabaseName
 
-            $allDbs += $db
-    } 
-}
-
-if ($SingleTenant.IsPresent -and $SingleTenantDatabaseName -ne "")
-{
-    $SingleTenantDatabaseName = Get-NormalizedTenantname $SingleTenantDatabaseName
-
-    #validate that the name is one of the database names about to be processed
-    $allDBNames = $allDBs | select -ExpandProperty DatabaseName
-
-    if (-not ($allDBNames -contains $SingleTenantDatabaseName))
-    {
-        throw "The Single Tenant Database Name '$SingleTenantDatabaseName' was not found.  Check the spelling and try again."
-    }     
-}
-
-# spawn jobs to spin up load on each database in $allDbs
-# note there are limits to using PS jobs at scale; this should only be used for small scale demonstrations 
-
-# Set the end time for all jobs
-$endTime = [DateTime]::Now.AddMinutes($DurationMinutes)
-
-# Script block for job that executes the load generation stored procedure on each database 
-$scriptBlock = `
-    {
-        param($server,$dbName,$AdminUser,$AdminPassword,$DurationMinutes,$intervalMin,$intervalMax,$burstMinDuration,$burstMaxDuration,$baseDtu,$loadFactor,$densityLoadFactor,$poolDbCount)
-
-        import-module sqlserver
-
-        Write-Output ("Database " + $dbName + "/" + $server + " Load factor: " + $loadFactor + " Density weighting: " + ($densityLoadFactor*$poolDbCount)) 
-
-        $endTime = [DateTime]::Now.AddMinutes($DurationMinutes)
-
-        $firstTime = $true
-
-        While ([DateTime]::Now -lt $endTime)
+        if (-not ($allDBNames -contains $SingleTenantDatabaseName))
         {
-            # add variable delay before execution, this staggers bursts
-            # load factor is applied to reduce interval for high or intense loads, and increase interval for low loads
-            # density load factor extends interval for higher density pools to reduce overloading
-            if($firstTime)
-            {
-                $snooze = [math]::ceiling((Get-Random -Minimum 0 -Maximum ($intervalMax - $intervalMin)) / $loadFactor)
-                $snooze = $snooze + ($snooze * $densityLoadFactor * $poolDbCount)
-                $firstTime = $false
-            }
-            else
-            {
-                $snooze = [math]::ceiling((Get-Random -Minimum $intervalMin -Maximum $intervalMax) / $loadFactor)
-                $snooze = $snooze + ($snooze * $densityLoadFactor * $poolDbCount)
-            }
-            Write-Output ("Snoozing for " + $snooze + " seconds")  
-            Start-Sleep $snooze
+            throw "The Single Tenant Database Name '$SingleTenantDatabaseName' was not found.  Check the spelling and try again."
+        }     
+    }
 
-            # vary each burst to add realism to the workload
+    # spawn jobs to spin up load on each database in $allDbs
+    # note there are limits to using PS jobs at scale; this should only be used for small scale demonstrations 
+
+    # Set the end time for all jobs
+    $endTime = [DateTime]::Now.AddMinutes($DurationMinutes)
+
+    # Script block for job that executes the load generation stored procedure on each database 
+    $scriptBlock = `
+        {
+            param($server,$dbName,$AdminUser,$AdminPassword,$DurationMinutes,$intervalMin,$intervalMax,$burstMinDuration,$burstMaxDuration,$baseDtu,$loadFactor,$densityLoadFactor,$poolDbCount)
+
+            import-module sqlserver
+
+            Write-Output ("Database " + $dbName + "/" + $server + " Load factor: " + $loadFactor + " Density weighting: " + ($densityLoadFactor*$poolDbCount)) 
+
+            $endTime = [DateTime]::Now.AddMinutes($DurationMinutes)
+
+            $firstTime = $true
+
+            While ([DateTime]::Now -lt $endTime)
+            {
+                # add variable delay before execution, this staggers bursts
+                # load factor is applied to reduce interval for high or intense loads, and increase interval for low loads
+                # density load factor extends interval for higher density pools to reduce overloading
+                if($firstTime)
+                {
+                    $snooze = [math]::ceiling((Get-Random -Minimum 0 -Maximum ($intervalMax - $intervalMin)) / $loadFactor)
+                    $snooze = $snooze + ($snooze * $densityLoadFactor * $poolDbCount)
+                    $firstTime = $false
+                }
+                else
+                {
+                    $snooze = [math]::ceiling((Get-Random -Minimum $intervalMin -Maximum $intervalMax) / $loadFactor)
+                    $snooze = $snooze + ($snooze * $densityLoadFactor * $poolDbCount)
+                }
+                Write-Output ("Snoozing for " + $snooze + " seconds")  
+                Start-Sleep $snooze
+
+                # vary each burst to add realism to the workload
             
-            # vary burst duration
-            $burstDuration = Get-Random -Minimum $burstMinDuration -Maximum $burstMaxDuration
+                # vary burst duration
+                $burstDuration = Get-Random -Minimum $burstMinDuration -Maximum $burstMaxDuration
 
-            # Increase burst duration based on load factor.  Has marginal effect on low loadfactor databases.
-            $burstDuration += ($loadFactor * 2)           
+                # Increase burst duration based on load factor.  Has marginal effect on low loadfactor databases.
+                $burstDuration += ($loadFactor * 2)           
 
-            # vary DTU 
-            $dtuVariance = Get-Random -Minimum 0.9 -Maximum 1.1
-            $burstDtu = [Math]::ceiling($baseDtu * $dtuVariance)
+                # vary DTU 
+                $dtuVariance = Get-Random -Minimum 0.9 -Maximum 1.1
+                $burstDtu = [Math]::ceiling($baseDtu * $dtuVariance)
 
-            # ensure burst DTU doesn't exceed 100 
-            if($burstDtu -gt 100) 
-            {
-                $burstDtu = 100
-            }
+                # ensure burst DTU doesn't exceed 100 
+                if($burstDtu -gt 100) 
+                {
+                    $burstDtu = 100
+                }
 
-            # configure and submit the SQL script to run the load generator
-            $sqlScript = "EXEC sp_CpuLoadGenerator @duration_seconds = " + $burstDuration + ", @dtu_to_simulate = " + $burstDtu               
-            try
-            {
-                Invoke-Sqlcmd -ServerInstance $server `
-                    -Database $dbName `
-                    -Username $AdminUser `
-                    -Password $AdminPassword `
-                    -Query $sqlscript `
-                    -ConnectionTimeout 30 `
-                    -QueryTimeout 36000         
-            }
-            catch
-            {
-                write-error $_.Exception.Message
-                Write-Output ("Error connecting to tenant database " + $dbName + "/" + $server)
-            }
+                # configure and submit the SQL script to run the load generator
+                $sqlScript = "EXEC sp_CpuLoadGenerator @duration_seconds = " + $burstDuration + ", @dtu_to_simulate = " + $burstDtu               
+                try
+                {
+                    Invoke-Sqlcmd -ServerInstance $server `
+                        -Database $dbName `
+                        -Username $AdminUser `
+                        -Password $AdminPassword `
+                        -Query $sqlscript `
+                        -ConnectionTimeout 30 `
+                        -QueryTimeout 36000         
+                }
+                catch
+                {
+                    write-error $_.Exception.Message
+                    Write-Output ("Error connecting to tenant database " + $dbName + "/" + $server)
+                }
 
-            [string]$message = $([DateTime]::Now) 
-            Write-Output ( $message + " Starting load: " + $burstDtu + " DTUs for " + $burstDuration + " seconds")  
+                [string]$message = $([DateTime]::Now) 
+                Write-Output ( $message + " Starting load: " + $burstDtu + " DTUs for " + $burstDuration + " seconds")  
 
-            # exit loop if end time exceeded
-            if ([DateTime]::Now -gt $endTime)
-            {
-                break;
+                # exit loop if end time exceeded
+                if ([DateTime]::Now -gt $endTime)
+                {
+                    break;
+                }
             }
         }
+
+    # Start a job for each database.  Each job runs for the specified session duration and triggers load periodically.
+    # The base-line load level for each db is set by the entry in $allDbs.  Burst duration, interval and DTU are randomized
+    # slightly within each job to create a more realistic workload
+
+    $randomTenantIndex = 0
+
+    if ($SingleTenant -and $SingleTenantDatabaseName -eq "")
+    {
+        $randomTenantIndex = Get-Random -Minimum 1 -Maximum ($allDbs.Count + 1)        
     }
 
-# Start a job for each database.  Each job runs for the specified session duration and triggers load periodically.
-# The base-line load level for each db is set by the entry in $allDbs.  Burst duration, interval and DTU are randomized
-# slightly within each job to create a more realistic workload
+    $i = 1
 
-$randomTenantIndex = 0
-
-if ($SingleTenant -and $SingleTenantDatabaseName -eq "")
-{
-    $randomTenantIndex = Get-Random -Minimum 1 -Maximum ($allDbs.Count + 1)        
-}
-
-$i = 1
-
-foreach ($db in $allDBs)
-{
-    # Customize the load applied for each database
-    if ($SingleTenant)
+    foreach ($db in $allDBs)
     {
-        if ($i -eq $randomTenantIndex) 
+        # skip further processing if job is already started for this database
+        if ($jobs.ContainsKey($db.DatabaseName))
         {
-            # this is the randomly selected database, so use the single-tenant factors
-            $burstDtu = $SingleTenantDtu
-            $loadFactor = $intenseLoadFactor 
-        }        
-        elseif ($randomTenantIndex -eq 0 -and $SingleTenantDatabaseName -eq $db.DatabaseName) 
+            continue
+        } 
+
+        if($sleeping -eq $true)
         {
-            # this is the named database, so use the single-tenant factors
-            $burstDtu = $SingleTenantDtu
-            $loadFactor = $intenseLoadFactor 
+            $sleeping = $false
+            # emit next job output on a new line
+            Write-Output "`n"
+        }
+
+        # Customize the load applied for each database
+        if ($SingleTenant)
+        {
+            if ($i -eq $randomTenantIndex) 
+            {
+                # this is the randomly selected database, so use the single-tenant factors
+                $burstDtu = $SingleTenantDtu
+                $loadFactor = $intenseLoadFactor 
+            }        
+            elseif ($randomTenantIndex -eq 0 -and $SingleTenantDatabaseName -eq $db.DatabaseName) 
+            {
+                # this is the named database, so use the single-tenant factors
+                $burstDtu = $SingleTenantDtu
+                $loadFactor = $intenseLoadFactor 
+            }
+            else 
+            {             
+                # use per-db computed factors 
+                $burstDtu = $db.BurstDtu
+                $loadFactor = $db.LoadFactor
+            }
         }
         else 
-        {             
-            # use per-db computed factors 
+        {
+            # use per-db computed factors
             $burstDtu = $db.BurstDtu
             $loadFactor = $db.LoadFactor
         }
+
+        $poolDbCount = $db.PoolDbCount
+
+        $i ++   
+
+        $outputText = " Starting load with load factor $loadFactor with baseline DTU $burstDtu"
+        if ($db.ElasticPoolName -ne "")
+        {
+            $outputText += " in pool " + $db.ElasticPoolName
+        }
+        else
+        {
+            $outputText += " standalone"
+        }
+
+        if ($LongerBursts.IsPresent)
+        {
+            $outputText += " [BOOSTED]"
+        }
+    
+        # start the load generation job for the current database
+        
+        $job = Start-Job `
+            -ScriptBlock $scriptBlock `
+            -Name $db.DatabaseName `
+            -ArgumentList $(`
+            $db.ServerName,$db.DatabaseName,`
+            $TenantAdminUser,$TenantAdminPassword,`
+            $DurationMinutes,$intervalMin,$intervalMax,`
+            $burstMinDuration,$burstMaxDuration,$burstDtu,`
+            $loadFactor,$densityLoadFactor,$poolDbCount)    
+
+        # add job to dictionary of currently running jobs
+        $jobs += @{$job.Name = $job}
+
+        $outputText = ("Job $($job.Id) $($Job.Name) $outputText")
+        write-output $outputText
     }
-    else 
+    $settings = "`nSettings: Duration: $DurationMinutes mins, Intensity: $intensity, LongerBursts: $LongerBursts, Unbalanced: $Unbalanced, SingleTenant: $SingleTenant"
+
+    if($SingleTenant)
     {
-        # use per-db computed factors
-        $burstDtu = $db.BurstDtu
-        $loadFactor = $db.LoadFactor
+        if ($SingleTenantDatabaseName -ne "")
+        {
+            $settings += ", Database: $SingleTenantDatabaseName"
+        }
+        $settings += ", DTU: $singleTenantDtu"
     }
 
-    $poolDbCount = $db.PoolDbCount
+    $now = Get-Date
+    $runtime = ($now - $start).Minutes
 
-    $i ++   
-
-    $outputText = " Starting load on " + $db.DatabaseName + "/" + $db.ServerName + " with load factor " + $loadFactor + " Baseline DTU " + $burstDtu
-    if ($db.ElasticPoolName -ne "")
+    if ($runtime -ge $DurationMinutes)
     {
-        $outputText += " in pool " + $db.ElasticPoolName
+        Write-Output "`n`nLoad generation session stopping after $runtime minutes"
+        exit
+    }
+
+    if ($sleepCount -ge 59)
+    {
+        write-host "."
+        $sleepCount = 0
     }
     else
     {
-        $outputText += " standalone"
+        write-host -NoNewline "."
     }
 
-    if ($LongerBursts.IsPresent)
-    {
-        $outputText += " [BOOSTED]"
-    }
+    $sleeping = $true
+    $sleepCount ++
     
-    $job = Start-Job -ScriptBlock $scriptBlock -ArgumentList $(`
-        $db.ServerName,$db.DatabaseName,$TenantAdminUser,$TenantAdminPassword,$DurationMinutes,$intervalMin,$intervalMax,$burstMinDuration,$burstMaxDuration,$burstDtu,$loadFactor,$densityLoadFactor,$poolDbCount)    
-
-    $outputText = ("Job " + $job.Id + $outputText)
-    write-output $outputText
-}
-$settings = "`nSettings: Duration: $DurationMinutes mins, Intensity: $intensity, LongerBursts: $LongerBursts, Unbalanced: $Unbalanced, SingleTenant: $SingleTenant"
-
-if($SingleTenant)
-{
-    if ($SingleTenantDatabaseName -ne "")
-    {
-        $settings += ", Database: $SingleTenantDatabaseName"
-    }
-    $settings += ", DTU: $singleTenantDtu"
+    Sleep $sleep
 }
 
+<#
 Write-output "`nAll database jobs started at $(Get-Date)"
 Write-Output $settings
 Write-Output "`nUse Get-Job to view status of all jobs" 
-Write-Output "Use Receive-Job <job #> -Keep to view output from an individual job" 
-Write-Output "Use Stop-Job <job #> to stop a job.  Use Stop-Job * to stop all jobs (which can take a minute or more)"
-Write-Output "Use Remove-Job <job #> to remove a job.  Use Remove-Job * to remove all jobs.  Use -Force to stop and remove."
+Write-Output "Use Receive-Job <job id> -Keep to view output from an individual job" 
+Write-Output "Use Stop-Job <job id> to stop a job.  Use Stop-Job * to stop all jobs (which can take a minute or more)"
+Write-Output "Use Remove-Job <job id> to remove a job.  Use Remove-Job * to remove all jobs.  Use -Force to stop and remove."
+#>

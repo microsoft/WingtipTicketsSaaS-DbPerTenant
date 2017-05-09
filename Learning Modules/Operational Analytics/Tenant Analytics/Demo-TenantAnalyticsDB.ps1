@@ -1,4 +1,4 @@
-﻿# Helper script for demonstrating tenant analytics scripts -deploys the Tenant Analytics database to the catalog server
+﻿# Helper script for demonstrating tenant analytics scripts
 
 Import-Module "$PSScriptRoot\..\..\Common\SubscriptionManagement" -Force
 Import-Module "$PSScriptRoot\..\..\UserConfig" -Force
@@ -14,7 +14,8 @@ $DemoScenario = 0
      Demo   Scenario
       0       None
       1       Purchase tickets for events at all venues
-      2       Deploy operational analytics database 
+      2       Deploy tenant analytics database
+      3       Deploy tenant analytics columnstore database (creates a Premium P1 database)
 #>
 
 ## ------------------------------------------------------------------------------------------------
@@ -41,6 +42,15 @@ if ($DemoScenario -eq 1)
 if ($DemoScenario -eq 2)
 {
     & $PSScriptRoot\Deploy-TenantAnalyticsDB.ps1 `
+        -WtpResourceGroupName $wtpUser.ResourceGroupName `
+        -WtpUser $wtpUser.Name
+    exit
+}
+
+### Provision a columnstore database for operational tenant analytics results
+if ($DemoScenario -eq 3)
+{
+    & $PSScriptRoot\Deploy-TenantAnalyticsDB-CS.ps1 `
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name
     exit

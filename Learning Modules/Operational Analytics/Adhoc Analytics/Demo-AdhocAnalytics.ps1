@@ -31,7 +31,7 @@ if ($DemoScenario -eq 1)
 {
     Write-Output "Running ticket generator ..."
 
-    & $PSScriptRoot\..\..\Utilities\TicketGenerator.ps1 `
+    & $PSScriptRoot\..\..\Utilities\TicketGenerator2.ps1 `
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name
     exit

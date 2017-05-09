@@ -1,9 +1,7 @@
 ﻿# Invokes load generator script over the tenant databases currently defined in the catalog.  
-
-# NOTE: If additional tenants are added restart the generator to include them.
  
 # Duration of the load generation session. Some activity may continue after this time. 
-$DurationMinutes = 60
+$DurationMinutes = 120
 
 # If SingleTenant is enabled (scenario 4), this specifies the tenant database to be overloaded. 
 # If set to "" a random tenant database is chosen.
@@ -42,7 +40,7 @@ if ($DemoScenario -eq 0)
 if ($DemoScenario -eq 1)
 {       
     # First, stop and remove any prior running jobs
-    Write-Output "Stopping any prior jobs. This can take a minute or more... "
+    Write-Output "`nStopping any prior jobs. This can take a minute or more... "
     Remove-Job * -Force
 
     # Intensity of load, roughly approximates to average eDTU loading on the pool 
@@ -62,7 +60,7 @@ if ($DemoScenario -eq 1)
 if ($DemoScenario -eq 2)
 {       
     # First, stop and remove any prior running jobs
-    Write-Output "Stopping any prior jobs. This can take a minute or more... "    
+    Write-Output "`nStopping any prior jobs. This can take a minute or more... "    
     Remove-Job * -Force
 
     # Intensity of load, roughly approximates to average eDTU loading on the pool 
@@ -83,7 +81,7 @@ if ($DemoScenario -eq 2)
 if ($DemoScenario -eq 3)
 {       
     # First, stop and remove any prior running jobs
-    Write-Output "Stopping any prior jobs. This can take a minute or more... "
+    Write-Output "`nStopping any prior jobs. This can take a minute or more... "
     Remove-Job * -Force
 
     # Intensity of load, roughly approximates to average eDTU loading on the pool 
@@ -103,7 +101,7 @@ if ($DemoScenario -eq 3)
 if ($DemoScenario -eq 4)
 {       
     # First, stop and remove any prior running jobs
-    Write-Output "Stopping any prior jobs. This can take a minute or more... "
+    Write-Output "`nStopping any prior jobs. This can take a minute or more... "
     Remove-Job * -Force
 
     # Intensity of load, roughly approximates to average eDTU loading on the pool 
@@ -125,7 +123,7 @@ if ($DemoScenario -eq 4)
 if ($DemoScenario -eq 5)
 {       
     # First, stop and remove any prior running jobs
-    Write-Output "Stopping any prior jobs. This can take a minute or more... "
+    Write-Output "`nStopping any prior jobs. This can take a minute or more... "
     Remove-Job * -Force
 
     # Intensity of load, roughly approximates to average eDTU loading on the pool 

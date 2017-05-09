@@ -41,8 +41,8 @@ Param(
 
 $WtpUser = $WtpUser.ToLower()
 
-Import-Module $PSScriptRoot\..\Common\SubscriptionManagement -Force
-Import-Module $PSScriptRoot\..\Common\CatalogAndDatabaseManagement -Force
+Import-Module $PSScriptRoot\..\..\Common\SubscriptionManagement -Force
+Import-Module $PSScriptRoot\..\..\Common\CatalogAndDatabaseManagement -Force
 
 $config = Get-Configuration
 
@@ -57,7 +57,7 @@ $catalog = Get-Catalog -ResourceGroupName $WtpResourceGroupName -WtpUser $WtpUse
 # Validate tenant name
 $TenantName = $TenantName.Trim()
 Test-LegalName $TenantName > $null
-Test-LegalVenueTypeName -Catalog $catalog -VenueType $VenueType > $null
+Test-ValidVenueType -Catalog $catalog -VenueType $VenueType > $null
 
 # Compute the tenant key from the tenant name, key to be used to register the tenant in the catalog 
 $tenantKey = Get-TenantKey -TenantName $TenantName 

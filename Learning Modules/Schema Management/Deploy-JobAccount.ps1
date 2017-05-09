@@ -2,7 +2,7 @@
 
 <#
 .SYNOPSIS
-  Creates an Elastic job account   
+  Creates an elastic job account and associated database   
 
 .DESCRIPTION
   Creates the Job account database and then the job account. Both are created in the resource group
@@ -23,7 +23,6 @@ Import-Module "$PSScriptRoot\..\Common\SubscriptionManagement" -Force
 Import-Module "$PSScriptRoot\..\WtpConfig" -Force
 
 $config = Get-Configuration
-$TenantName = "Contoso Concert Hall"
 
 # Get Azure credentials if not already logged on. 
 Initialize-Subscription
@@ -39,6 +38,31 @@ if(!$resourceGroup)
 $catalogServerName = $config.CatalogServerNameStem + $WtpUser
 $fullyQualfiedCatalogServerName = $catalogServerName + ".database.windows.net"
 $databaseName = $config.JobAccountDatabaseName
+
+# Check if the job account already exists and the latest Azure PowerShell SDK has been installed 
+try 
+{
+    $jobaccount = Get-AzureRmSqlJobAccount -ResourceGroupName $WtpResourceGroupName `
+        -ServerName $CatalogServerName `
+        -JobAccountName $($config.JobAccount) 
+}
+catch 
+{
+    if ($_.Exception.Message -like "*'Get-AzureRmSqlJobAccount' is not recognized*")
+    {
+        Write-Error "'Get-AzureRmSqlJobAccount' not found. Download and install the Azure PowerShell SDK that includes support for Elastic Jobs: 
+        https://github.com/jaredmoo/azure-powershell/releases"
+    }
+}
+
+# Check if current Azure subscription is signed up for Preview of Elastic jobs 
+$registrationStatus = Get-AzureRmProviderFeature -ProviderName Microsoft.Sql -FeatureName sqldb-JobAccounts
+
+if ($registrationStatus.RegistrationState -eq "NotRegistered")
+{
+    Write-Error "Your current subscription is not white-listed for the preview of Elastic jobs. Please contact Microsoft to white-list your subscription."
+    throw
+}
 
 # Check the job account database already exists
 $database = Get-AzureRmSqlDatabase -ResourceGroupName $WtpResourceGroupName `
@@ -68,12 +92,6 @@ catch
 	throw
 }
 
-# Check the job account already exists
-$jobaccount = Get-AzureRmSqlJobAccount -ResourceGroupName $WtpResourceGroupName `
-    -ServerName $CatalogServerName `
-    -JobAccountName $($config.JobAccount) `
-	-ErrorAction SilentlyContinue
-
 # Create the job account if it doesn't already exist
 try
 {
@@ -96,11 +114,12 @@ catch
 	throw
 }
 
+$credentialName = $config.JobAccountCredentialName
 $commandText = "
     CREATE MASTER KEY;
     GO
 
-    CREATE DATABASE SCOPED CREDENTIAL [mydemocred]
+    CREATE DATABASE SCOPED CREDENTIAL [$credentialName]
         WITH IDENTITY = N'$($config.CatalogAdminUserName)', SECRET = N'$($config.CatalogAdminPassword)';
     GO
     
@@ -141,5 +160,3 @@ $commandText = "
 	
 Write-Output "Deployment of job account database '$($config.JobAccountDatabaseName)' and job account '$($config.JobAccount)' are complete."
 
-# Open the admin page for the Contoso Concert Hall tenant to view venue types available
-Start-Process "http://admin.wtp.$WtpUser.trafficmanager.net/$($normalizedTenantName)"

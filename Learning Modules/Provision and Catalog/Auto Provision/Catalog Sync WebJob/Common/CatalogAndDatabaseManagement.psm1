@@ -1216,7 +1216,6 @@ function Remove-CatalogInfoFromTenantDatabase
         -Password $adminPassword `
         -ServerInstance ($TenantDatabase.ServerName + ".database.windows.net") `
         -Database $TenantDatabase.DatabaseName `
-        -ConnectionTimeout 30 `
         -Query $commandText `
 }
 
@@ -1232,12 +1231,15 @@ function Remove-ExtendedDatabase
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
+        [string]$ServerName,
+
+        [parameter(Mandatory=$true)]
         [string]$DatabaseName
     )
 
     $commandText = "
         DELETE FROM Databases 
-        WHERE DatabaseName = $DatabaseName;"
+        WHERE ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';"
 
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -1245,8 +1247,6 @@ function Remove-ExtendedDatabase
         -Password $config.CatalogAdminPassword `
         -Database $Catalog.Database.DatabaseName `
         -Query $commandText `
-        -ConnectionTimeout 30 `
-        -QueryTimeout 30 `
 }
 
 
@@ -1277,9 +1277,7 @@ function Remove-ExtendedElasticPool{
         -Database $Catalog.Database.DatabaseName `
         -Query $commandText `
         -UserName $config.CatalogAdminUserName `
-        -Password $config.CatalogAdminPassword `
-        -ConnectionTimeout 30 `
-        -QueryTimeout 15     
+        -Password $config.CatalogAdminPassword    
 }
 
 
@@ -1313,7 +1311,7 @@ function Remove-ExtendedServer
 
 <#
 .SYNOPSIS
-    Removes extended tenant and associated database meta data entries from catalog  
+    Removes extended tenant entry from catalog  
 #>
 function Remove-ExtendedTenant
 {
@@ -1341,9 +1339,7 @@ function Remove-ExtendedTenant
     # Delete the tenant name from the Tenants table
     $commandText = "
         DELETE FROM Tenants 
-        WHERE TenantId = $rawkeyHexString;
-        DELETE FROM Databases 
-        WHERE ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';"
+        WHERE TenantId = $rawkeyHexString;"
 
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `

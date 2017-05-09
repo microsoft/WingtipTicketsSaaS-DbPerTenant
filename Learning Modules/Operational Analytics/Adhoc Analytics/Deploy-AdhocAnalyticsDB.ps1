@@ -155,7 +155,7 @@ $commandText = "
     CREATE EXTERNAL TABLE [dbo].[Venue] (
         [VenueName] NVARCHAR (50) NOT NULL,
         [VenueType] CHAR (30) NOT NULL,
-        [AdminEmail] NCHAR (30) NOT NULL,
+        [AdminEmail] VARCHAR (50) NOT NULL,
         [AdminPassword] NCHAR (30) NULL,
         [PostalCode] CHAR (10) NULL,
         [CountryCode] CHAR (3) NOT NULL
@@ -187,16 +187,16 @@ $commandText = "
     INSERT INTO [dbo].[VenueTypes]
         ([VenueType],[VenueTypeName],[EventTypeName],[EventTypeShortName],[EventTypeShortNamePlural],[Language])
     VALUES
-        ('MultiPurposeVenue','Multi Purpose Venue','Event', 'Event','Events','en-us'),
-        ('ClassicalConcertHall','Classical Concert Hall','Classical Concert','Concert','Concerts','en-us'),
-        ('JazzClub','Jazz Club','Jazz Session','Session','Sessions','en-us'),
-        ('JudoClub','Judo Club','Judo Tournament','Tournament','Tournaments','en-us'),
-        ('SoccerClub','Soccer Club','Soccer Match', 'Match','Matches','en-us'),
-        ('MotorRacing','Motor Racing','Car Race', 'Race','Races','en-us'),
-        ('DanceStudio', 'Dance Studio', 'Performance', 'Performance', 'Performances','en-us'),
-        ('BluesClub', 'Blues Club', 'Blues Session', 'Session','Sessions','en-us' ),
-        ('RockMusicVenue','Rock Music Venue','Rock Concert','Concert', 'Concerts','en-us'),
-        ('Opera','Opera','Opera','Opera','Operas','en-us');      
+        ('multipurpose','Multi-Purpose','Event', 'Event','Events','en-us'),
+        ('classicalmusic','Classical Music ','Classical Concert','Concert','Concerts','en-us'),
+        ('jazz','Jazz','Jazz Session','Session','Sessions','en-us'),
+        ('judo','Judo','Judo Tournament','Tournament','Tournaments','en-us'),
+        ('soccer','Soccer','Soccer Match', 'Match','Matches','en-us'),
+        ('motorracing','Motor Racing','Car Race', 'Race','Races','en-us'),
+        ('dance', 'Dance', 'Performance', 'Performance', 'Performances','en-us'),
+        ('blues', 'Blues', 'Blues Session', 'Session','Sessions','en-us' ),
+        ('rockmusic','Rock Music','Rock Concert','Concert', 'Concerts','en-us'),
+        ('opera','Opera','Opera','Opera','Operas','en-us');      
     GO
 
     PRINT N'Update complete.';

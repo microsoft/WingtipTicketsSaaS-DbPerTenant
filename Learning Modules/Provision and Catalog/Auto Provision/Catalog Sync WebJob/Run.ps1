@@ -338,6 +338,19 @@ While (1 -eq 1)
                         }
                     }
                 }
+
+                # validate that all extended database entries have a corresponding extended tenant entry
+                foreach($catalogDatabase in $catalogDatabases)
+                {
+                    $compoundDatabaseName = "$($CatalogDatabase.ServerName)/$($CatalogDatabase.DatabaseName)"
+
+                    if (-not $tenantDatabasesDict.ContainsKey($compoundDatabaseName))
+                    {
+                        # if the database entry does not reflect a tenant, remove it (this can happen if the tenent has been removed) 
+                        Remove-ExtendedDatabase -Catalog $catalog -DatabaseName $CatalogDatabase.DatabaseName
+                    }
+                }
+                  
             } 
         }
     }

@@ -67,6 +67,7 @@ foreach ($newTenant in $NewTenants)
 {
     $newTenantName = $newTenant[0].Trim()
     $newTenantVenueType = $newTenant[1].Trim()
+    $newTenantPostalCode = $newTenant[2].Trim()
 
     try
     {
@@ -83,6 +84,7 @@ foreach ($newTenant in $NewTenants)
         Name = $newTenantName
         NormalizedName = $normalizedNewTenantName
         VenueType = $newTenantVenueType
+        PostalCode = $newTenantPostalCode
         }
 
     $allNewTenants += $newTenantObj
@@ -118,7 +120,7 @@ foreach ($newTenant in $NewTenants)
 if ($batchDatabaseNames.Count -gt 0)
 {
 
-    Write-Output "Provisioning $($newTenantDatabaseNames.Count) databases..." 
+    Write-Output "Provisioning $($batchDatabaseNames.Count) databases..." 
     
     try
     {
@@ -164,7 +166,8 @@ foreach($tenant in $allNewTenants)
         -ServerName $serverName `
         -DatabaseName $tenant.NormalizedName `
         -TenantName $tenant.Name `
-        -VenueType $tenant.VenueType
+        -VenueType $tenant.VenueType `
+        -PostalCode $tenant.PostalCode
 
     $tenantKey = Get-TenantKey -TenantName $tenant.Name
 
