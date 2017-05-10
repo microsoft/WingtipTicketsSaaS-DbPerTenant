@@ -7,15 +7,21 @@ The basic application, which includes three pre-defined databases for three venu
 
 NOTE: if you install the application you will be charged for the Azure resources created.  Actual costs incurred are based on your subscription offer type but are nominal if the application is not scaled up unreasonably and is deleted promptly after you have finished exploring the tutorials.
 
-More information about the sample app and the associated tutorials can be found here: [https://aka.ms/sqldbsaastutorial](https://aka.ms/sqldbsaastutorial)
+More information about the sample app and the associated tutorials are here: [https://aka.ms/sqldbsaastutorial](https://aka.ms/sqldbsaastutorial)
 
-To deploy the app to Azure, click on the link below.  You should deploy the app in a new resource group, and provide a short 'user' value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
-
-To launch the app, enter ```http://events.wtp.USER.trafficmanager.net``` in a browser, substituting the *user* value entered when deploying. 
+To deploy the app to Azure, click the link below.  Deploy the app in a new resource group, and provide a short 'user' value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
 
 <a href="http://aka.ms/deploywtpapp" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
+
+After deployment completes, launch the app by browsing to ```http://events.wtp.USER.trafficmanager.net```, substituting *USER* with the value you set during deployment. 
+
+**IMPORTANT:** Executable contents (scripts, dlls) may be blocked by Windows when zip files are downloaded from an external source and extracted. If you download the [Learning Modules](https://github.com/Microsoft/WingtipSaaS/tree/master/Learning%20Modules) as a zip file, make sure you unblock the .zip before extracting:
+
+1. Right click the zip file and select **Properties**.
+1. On the **General** tab, select **Unblock** and select **OK**.
+
 
 ## License
 Microsoft Wingtip SaaS sample application and tutorials are licensed under the MIT license. See the [LICENSE](https://github.com/Microsoft/WingtipSaaS/blob/master/license) file for more details.
