@@ -9,15 +9,19 @@ NOTE: if you install the application you will be charged for the Azure resources
 
 More information about the sample app and the associated tutorials are here: [https://aka.ms/sqldbsaastutorial](https://aka.ms/sqldbsaastutorial)
 
-To deploy the app to Azure, click the link below.  Deploy the app in a new resource group, and provide a short 'user' value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
+To deploy the app to Azure, click the link below.  Deploy the app in a new resource group, and provide a short *user* value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
+
 
 <a href="http://aka.ms/deploywtpapp" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
+
 After deployment completes, launch the app by browsing to ```http://events.wtp.USER.trafficmanager.net```, substituting *USER* with the value you set during deployment. 
 
-**IMPORTANT:** Executable contents (scripts, dlls) may be blocked by Windows when zip files are downloaded from an external source and extracted. If you download the [Learning Modules](https://github.com/Microsoft/WingtipSaaS/tree/master/Learning%20Modules) as a zip file, make sure you unblock the .zip before extracting:
+**IMPORTANT:** If you download and extract the repo or [Learning Modules](https://github.com/Microsoft/WingtipSaaS/tree/master/Learning%20Modules) from a zip file, make sure you unblock the .zip file before extracting. Executable contents (scripts, dlls) may be blocked by Windows when zip files are downloaded from an external source and extracted.
+
+To avoid scripts from being blocked by Windows:
 
 1. Right click the zip file and select **Properties**.
 1. On the **General** tab, select **Unblock** and select **OK**.
