@@ -12,35 +12,34 @@
   "variables": {
     "lowerCaseUser": "[toLower(parameters('user'))]",
     "location": "[resourceGroup().location]",
-    "tenantServerName": "tenants1",
     "elasticPoolEdition": "Standard",
     "elasticPoolName": "Pool1",
-    "poolDtu": "50",
+    "elasticPoolDtu": "50",
     "databaseDtuMin": "0",
     "databaseDtuMax": "50",
     "administratorLogin": "developer",
     "administratorLoginPassword": "P@ssword1",
-    "tenantContosoConcertHall": "contosoconcerthall",
-    "tenantFabrikamJazzClub": "fabrikamjazzclub",
-    "tenantDogwoodDojo": "dogwooddojo",
-    "baseTenantDB": "basetenantdb",
-    "requestedServiceObjectiveName": "S1",
+    "webAppSku": "Standard",
+    "sqlRequestedServiceObjectiveName": "S1",
+    "sqlCollation": "SQL_Latin1_General_CP1_CI_AS",
+    "sqlEdition": "Standard",
     "catalogServerName": "catalog",
     "catalogDatabaseName": "tenantcatalog",
     "catalogServer": "[concat(variables('catalogServerName'),'-', variables('lowerCaseUser'))]",
-    "customerCatalogCollation": "SQL_Latin1_General_CP1_CI_AS",
-    "customerCatalogEdition": "Standard",
-    "webAppSku": "Standard",
+    "baseTenantDB": "basetenantdb",
+    "tenantServerName": "tenants1",
+    "tenantContosoConcertHall": "contosoconcerthall",
+    "tenantFabrikamJazzClub": "fabrikamjazzclub",
+    "tenantDogwoodDojo": "dogwooddojo",
     "tenantServer": "[concat(variables('tenantservername'),'-',variables('lowerCaseUser'))]",
     "tenantContosoConcertHallStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs/',variables('tenantContosoConcertHall'),'.bacpac')]",
     "tenantFabrikamJazzClubStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs/',variables('tenantFabrikamJazzClub'),'.bacpac')]",
     "tenantDogwoodDojoStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs/',variables('tenantDogwoodDojo'),'.bacpac')]",
     "catalogDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtipcatalogdb.bacpac",
     "baseTenantDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtiptenantdb.bacpac",
-    "wtpTenantUserTrafficManagerUniqueDnsName": "[concat('events.wtp.',variables('lowerCaseUser'))]",
-    "wtpTenantUser": "[concat('eventswtp-',variables('lowerCaseUser'))]",
-    "wtpTenantUserAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages/tenantUserAppPackage.zip"
-
+    "wtpEventsAppTrafficManagerUniqueDnsName": "[concat('events.wtp.',variables('lowerCaseUser'))]",
+    "wtpEventsApp": "[concat('eventswtp-',variables('lowerCaseUser'))]",
+    "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages/tenantUserAppPackage.zip"
   },
   "resources": [
     {
@@ -67,6 +66,18 @@
           "type": "firewallrules"
         },
         {
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]"
+          ],
+          "name": "Open",
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "255.255.255.255"
+          },
+          "type": "firewallrules"
+        },
+        {
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]"
           ],
@@ -76,7 +87,7 @@
           "apiVersion": "2014-04-01-preview",
           "properties": {
             "edition": "[variables('elasticPoolEdition')]",
-            "dtu": "[variables('poolDtu')]",
+            "dtu": "[variables('elasticPoolDtu')]",
             "databaseDtuMin": "[variables('databaseDtuMin')]",
             "databaseDtuMax": "[variables('databaseDtuMax')]"
           }
@@ -85,7 +96,8 @@
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/AllowAllAzureIps')]"
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/AllowAllAzureIps')]",
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/Open')]"
           ],
           "name": "[variables('tenantContosoConcertHall')]",
           "location": "[variables('location')]",
@@ -118,7 +130,8 @@
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/AllowAllAzureIps')]"
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/AllowAllAzureIps')]",
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/Open')]"
           ],
           "name": "[variables('tenantFabrikamJazzClub')]",
           "location": "[variables('location')]",
@@ -151,7 +164,8 @@
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
             "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/elasticpools/',variables('elasticPoolName'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/AllowAllAzureIps')]"
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/AllowAllAzureIps')]",
+            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/firewallrules/Open')]"
           ],
           "name": "[variables('tenantDogwoodDojo')]",
           "location": "[variables('location')]",
@@ -179,21 +193,6 @@
               }
             }
           ]
-        },
-        {
-          "apiVersion": "2014-04-01-preview",
-          "dependsOn": [
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantFabrikamJazzClub'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantDogwoodDojo'))]",
-            "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantContosoConcertHall'))]"
-          ],
-          "name": "Open",
-          "properties": {
-            "startIpAddress": "0.0.0.0",
-            "endIpAddress": "255.255.255.255"
-          },
-          "type": "firewallrules"
         }
       ]
     },
@@ -208,7 +207,7 @@
         "administratorLoginPassword": "[variables('administratorLoginPassword')]"
       },
       "resources": [
-       {
+        {
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
           ],
@@ -222,18 +221,31 @@
         },
         {
           "dependsOn": [
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
+          ],
+          "apiVersion": "2014-04-01-preview",
+          "name": "Open",
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "255.255.255.255"
+          },
+          "type": "firewallrules"
+        },
+        {
+          "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/firewallrules/AllowAllAzureIps')]"
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/firewallrules/AllowAllAzureIps')]",
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/firewallrules/Open')]"
           ],
           "name": "[variables('catalogDatabaseName')]",
           "location": "[variables('location')]",
           "type": "databases",
           "apiVersion": "2014-04-01-preview",
           "properties": {
-            "collation": "[variables('customerCatalogCollation')]",
-            "edition": "[variables('CustomerCatalogEdition')]",
+            "collation": "[variables('sqlCollation')]",
+            "edition": "[variables('sqlEdition')]",
             "maxSizeBytes": "1073741824",
-            "requestedServiceObjectiveName": "[variables('requestedServiceObjectiveName')]"
+            "requestedServiceObjectiveName": "[variables('sqlRequestedServiceObjectiveName')]"
           },
           "resources": [
             {
@@ -257,17 +269,18 @@
         {
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/firewallrules/AllowAllAzureIps')]"
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/firewallrules/AllowAllAzureIps')]",
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/firewallrules/Open')]"
           ],
           "name": "[variables('baseTenantDB')]",
           "location": "[variables('location')]",
           "type": "databases",
           "apiVersion": "2014-04-01-preview",
           "properties": {
-            "collation": "[variables('customerCatalogCollation')]",
-            "edition": "[variables('customerCatalogEdition')]",
+            "collation": "[variables('sqlCollation')]",
+            "edition": "[variables('sqlEdition')]",
             "maxSizeBytes": "1073741824",
-            "requestedServiceObjectiveName": "[variables('requestedServiceObjectiveName')]"
+            "requestedServiceObjectiveName": "[variables('sqlRequestedServiceObjectiveName')]"
           },
           "resources": [
             {
@@ -287,20 +300,6 @@
               }
             }
           ]
-        },
-        {
-          "dependsOn": [
-            "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('baseTenantDB'))]",
-            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('catalogDatabaseName'))]"
-          ],
-          "apiVersion": "2014-04-01-preview",
-          "name": "Open",
-          "properties": {
-            "startIpAddress": "0.0.0.0",
-            "endIpAddress": "255.255.255.255"
-          },
-          "type": "firewallrules"
         }
       ]
     },
@@ -314,26 +313,26 @@
         "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantContosoConcertHall'))]",
         "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantFabrikamJazzClub'))]"
       ],
-      "name": "[variables('wtpTenantUser')]",
+      "name": "[variables('wtpEventsApp')]",
       "apiVersion": "2014-06-01",
       "location": "[variables('location')]",
       "type": "Microsoft.Web/serverfarms",
       "properties": {
-        "name": "[variables('wtpTenantUser')]",
+        "name": "[variables('wtpEventsApp')]",
         "sku": "[variables('webAppSku')]"
       }
     },
     {
       "dependsOn": [
-        "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantUser'))]"
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpEventsApp'))]"
       ],
-      "name": "[variables('wtpTenantUser')]",
+      "name": "[variables('wtpEventsApp')]",
       "apiVersion": "2015-08-01",
       "type": "Microsoft.Web/sites",
       "location": "[variables('location')]",
       "properties": {
-        "name": "[variables('wtpTenantUser')]",
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('wtpTenantUser'))]",
+        "name": "[variables('wtpEventsApp')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('wtpEventsApp'))]",
         "siteConfig": {
           "appSettings": []
         }
@@ -341,20 +340,20 @@
       "resources": [
         {
           "dependsOn": [
-            "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantUser'))]",
-            "[concat('Microsoft.Web/sites/',variables('wtpTenantUser'))]"
+            "[concat('Microsoft.Web/serverfarms/',variables('wtpEventsApp'))]",
+            "[concat('Microsoft.Web/sites/',variables('wtpEventsApp'))]"
           ],
           "name": "MSDeploy",
           "type": "extensions",
           "location": "[variables('location')]",
           "apiVersion": "2015-08-01",
           "properties": {
-            "packageUri": "[variables('wtpTenantUserAppPackageUri')]"
+            "packageUri": "[variables('wtpEventsAppPackageUri')]"
           }
         },
         {
           "dependsOn": [
-            "[concat('Microsoft.Web/sites/',variables('wtpTenantUser'))]",
+            "[concat('Microsoft.Web/sites/',variables('wtpEventsApp'))]",
             "MSDeploy"
           ],
           "apiVersion": "2015-08-01",
@@ -382,18 +381,18 @@
     },
     {
       "dependsOn": [
-        "[concat('Microsoft.Web/serverfarms/',variables('wtpTenantUser'))]",
-        "[concat('Microsoft.Web/sites/',variables('wtpTenantUser'))]"
+        "[concat('Microsoft.Web/serverfarms/',variables('wtpEventsApp'))]",
+        "[concat('Microsoft.Web/sites/',variables('wtpEventsApp'))]"
       ],
       "apiVersion": "2015-11-01",
       "type": "Microsoft.Network/trafficManagerProfiles",
-      "name": "[variables('wtpTenantUser')]",
+      "name": "[variables('wtpEventsApp')]",
       "location": "global",
       "properties": {
         "profileStatus": "Enabled",
         "trafficRoutingMethod": "Priority",
         "dnsConfig": {
-          "relativeName": "[variables('wtpTenantUserTrafficManagerUniqueDnsName')]",
+          "relativeName": "[variables('wtpEventsAppTrafficManagerUniqueDnsName')]",
           "ttl": 30
         },
         "monitorConfig": {
@@ -404,15 +403,15 @@
         "endpoints": [
           {
             "dependsOn": [
-              "[resourceId('Microsoft.Network/trafficManagerProfiles/',variables('wtpTenantUser'))]",
-              "[concat('Microsoft.Web/sites/',variables('wtpTenantUser'))]"
+              "[resourceId('Microsoft.Network/trafficManagerProfiles/',variables('wtpEventsApp'))]",
+              "[concat('Microsoft.Web/sites/',variables('wtpEventsApp'))]"
             ],
             "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
             "location": "global",
-            "name": "[variables('wtpTenantUser')]",
+            "name": "[variables('wtpEventsApp')]",
             "apiVersion": "2015-11-01",
             "properties": {
-              "targetResourceId": "[resourceId('Microsoft.Web/sites/',variables('wtpTenantUser'))]",
+              "targetResourceId": "[resourceId('Microsoft.Web/sites/',variables('wtpEventsApp'))]",
               "endpointStatus": "Enabled"
             }
           }
@@ -423,7 +422,7 @@
   "outputs": {
     "Events_URL": {
       "type": "string",
-      "value": "[concat('http://', reference(resourceId('Microsoft.Network/trafficManagerProfiles', variables('wtpTenantUser'))).dnsconfig.fqdn)]"
+      "value": "[concat('http://', reference(resourceId('Microsoft.Network/trafficManagerProfiles', variables('wtpEventsApp'))).dnsconfig.fqdn)]"
     }
   }
 }
