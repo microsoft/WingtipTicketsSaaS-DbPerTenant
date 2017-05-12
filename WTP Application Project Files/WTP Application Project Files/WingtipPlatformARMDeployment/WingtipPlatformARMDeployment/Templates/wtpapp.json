@@ -39,7 +39,7 @@
     "baseTenantDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtiptenantdb.bacpac",
     "wtpEventsAppTrafficManagerUniqueDnsName": "[concat('events.wtp.',variables('lowerCaseUser'))]",
     "wtpEventsApp": "[concat('eventswtp-',variables('lowerCaseUser'))]",
-    "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages/tenantUserAppPackage.zip"
+    "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages/eventsAppPackage.zip"
   },
   "resources": [
     {
