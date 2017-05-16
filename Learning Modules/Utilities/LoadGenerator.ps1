@@ -83,7 +83,6 @@ $densityLoadFactor = 0.08
 
 $CatalogServerName = $config.CatalogServerNameStem + $WtpUser
 
-
 $jobs = @{}
 
 ## Start job invocation loop
@@ -93,13 +92,24 @@ $start = Get-Date
 $sleepCount = 0
 $sleep = 10
 
-Write-Output "`nStarting job execution.  Load generator will look for new databases every $sleep seconds for $durationMinutes ."
-write-output "`nUse Ctrl-C to stop invoking jobs.  Already started jobs will continue and can be managed:."
- 
-Write-Output "`n  Use Get-Job to view status of all jobs" 
-Write-Output "  Use Receive-Job <job id> -Keep to view output from an individual job" 
-Write-Output "  Use Stop-Job <job id> to stop a job.  Use Stop-Job * to stop all jobs (which can take a minute or more)"
-Write-Output "  Use Remove-Job <job id> to remove a job.  Use Remove-Job * to remove all jobs.  Use -Force to stop and remove.`n"
+$settings = "`nDuration: $DurationMinutes mins, Intensity: $intensity, LongerBursts: $LongerBursts, Unbalanced: $Unbalanced, SingleTenant: $SingleTenant"
+
+if($SingleTenant)
+{
+    if ($SingleTenantDatabaseName -ne "")
+    {
+        $settings += ", Database: $SingleTenantDatabaseName"
+    }
+    $settings += ", DTU: $singleTenantDtu"
+}
+
+Write-Output $settings
+Write-Output "`nInvoking a load generation job for each database. Will check for new databases every $sleep seconds for $durationMinutes minutes."  
+write-output "`nUse Ctrl-C to stop invoking jobs.  Already started jobs can be managed as follows:" 
+Write-Output "  Get-Job to view status of all jobs" 
+Write-Output "  Receive-Job <job id> -Keep to view output from an individual job" 
+Write-Output "  Stop-Job <job id> to stop a job.  Use Stop-Job * to stop all jobs (which can take a minute or more)"
+Write-Output "  Remove-Job <job id> to remove a job.  Use Remove-Job * to remove all jobs.  Use -Force to stop and remove.`n"
 
 while (1 -eq 1)
 {
@@ -361,27 +371,17 @@ while (1 -eq 1)
             -ScriptBlock $scriptBlock `
             -Name $db.DatabaseName `
             -ArgumentList $(`
-            $db.ServerName,$db.DatabaseName,`
-            $TenantAdminUser,$TenantAdminPassword,`
-            $DurationMinutes,$intervalMin,$intervalMax,`
-            $burstMinDuration,$burstMaxDuration,$burstDtu,`
-            $loadFactor,$densityLoadFactor,$poolDbCount)    
+                $db.ServerName,$db.DatabaseName,`
+                $TenantAdminUser,$TenantAdminPassword,`
+                $DurationMinutes,$intervalMin,$intervalMax,`
+                $burstMinDuration,$burstMaxDuration,$burstDtu,`
+                $loadFactor,$densityLoadFactor,$poolDbCount)    
 
         # add job to dictionary of currently running jobs
         $jobs += @{$job.Name = $job}
 
         $outputText = ("Job $($job.Id) $($Job.Name) $outputText")
         write-output $outputText
-    }
-    $settings = "`nSettings: Duration: $DurationMinutes mins, Intensity: $intensity, LongerBursts: $LongerBursts, Unbalanced: $Unbalanced, SingleTenant: $SingleTenant"
-
-    if($SingleTenant)
-    {
-        if ($SingleTenantDatabaseName -ne "")
-        {
-            $settings += ", Database: $SingleTenantDatabaseName"
-        }
-        $settings += ", DTU: $singleTenantDtu"
     }
 
     $now = Get-Date
@@ -393,7 +393,10 @@ while (1 -eq 1)
         exit
     }
 
-    if ($sleepCount -ge 59)
+    $sleepCount ++
+
+    # displays rows of dots to show it's still working. A dot every 10 seconds, a new row every 10 minutes 
+    if ($sleepCount -ge 60)
     {
         write-host "."
         $sleepCount = 0
@@ -404,16 +407,6 @@ while (1 -eq 1)
     }
 
     $sleeping = $true
-    $sleepCount ++
     
     Sleep $sleep
 }
-
-<#
-Write-output "`nAll database jobs started at $(Get-Date)"
-Write-Output $settings
-Write-Output "`nUse Get-Job to view status of all jobs" 
-Write-Output "Use Receive-Job <job id> -Keep to view output from an individual job" 
-Write-Output "Use Stop-Job <job id> to stop a job.  Use Stop-Job * to stop all jobs (which can take a minute or more)"
-Write-Output "Use Remove-Job <job id> to remove a job.  Use Remove-Job * to remove all jobs.  Use -Force to stop and remove."
-#>
