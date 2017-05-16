@@ -8,7 +8,6 @@
 *.sln.docstates
 
 # User-config and library files
-*.psm1
 *.dll
 
 # User-specific files (MonoDevelop/Xamarin Studio)
