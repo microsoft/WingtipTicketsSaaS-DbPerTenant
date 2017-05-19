@@ -29,10 +29,8 @@
     <None Include="Deployment.targets">
       <Visible>False</Visible>
     </None>
-    <None Include="Templates\azuredeploy.json" />
-    <None Include="Templates\azuredeploy.parameters.json" />
-    <None Include="TenantUserAppTemplate\azuredeploy.json" />
-    <None Include="TenantUserAppTemplate\azuredeploy.parameters.json" />
+    <None Include="Templates\wtpapp.json" />
+    <None Include="Templates\wtpapp.parameters.json" />
   </ItemGroup>
   <Target Name="GetReferenceAssemblyPaths" />
 </Project>
