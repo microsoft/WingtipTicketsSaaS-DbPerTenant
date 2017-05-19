@@ -23,8 +23,8 @@ param(
 $user = $user.ToLower() -replace '\s',''
 $path = (Get-Item -Path ".\" -Verbose).FullName + "\Templates"
 $resourceGroupName = "Wingtip-"+$user
-$DeployWingTipSaaSTemplateFile = "$path\azuredeploy.json"
-$DeployWingTipSaaSParameterFile = "$path\azuredeploy.parameters.json"
+$DeployWingTipSaaSTemplateFile = "$path\wtpapp.json"
+$DeployWingTipSaaSParameterFile = "$path\wtpapp.parameters.json"
 
 ## Register needed Azure Resource Providers
 $resourceProviders = @("microsoft.sql", "microsoft.web");
