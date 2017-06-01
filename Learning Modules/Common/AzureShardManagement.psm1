@@ -262,7 +262,7 @@ function Add-Shard
     )
     
     # Add new shard location to shard map
-    $ShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($SqlServerName, $SqlDatabaseName)
+    $ShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($SqlServerName, $SqlDatabaseName, 'tcp', '1433')
 
     # Initialize reference for shard new shard
     [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Shard]$ShardReference = $null
@@ -315,7 +315,7 @@ function Add-RangeMapping
     )
       
     # Add new shard location to range shard map
-    $ShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($SqlServerName, $SqlDatabaseName)
+    $ShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($SqlServerName, $SqlDatabaseName, 'tcp', '1433')
 
     # Check if the range mapping already exists in the shard map manager    
     $InputShard = $rangeShardMap.GetShard($ShardLocation)
@@ -366,7 +366,7 @@ function Set-RangeMapping
     )
 
     # Get the Shard from the shard map
-    $ShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($SqlServerName, $SqlDatabaseName)
+    $ShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($SqlServerName, $SqlDatabaseName, 'tcp', '1433')
     $InputShard = $rangeShardMap.GetShard($ShardLocation)
 
     # Get the RangeMapping from the shard map
@@ -501,7 +501,7 @@ function Add-ListMapping
     )
       
     # Add new shard location to list shard map
-    $ShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($SqlServerName, $SqlDatabaseName)
+    $ShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($SqlServerName, $SqlDatabaseName, 'tcp', '1433')
 
     # Check if the list mapping already exists in the shard map manager    
     $InputShard = $listShardMap.GetShard($ShardLocation)
