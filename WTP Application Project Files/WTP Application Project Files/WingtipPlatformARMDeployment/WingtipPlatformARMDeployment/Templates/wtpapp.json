@@ -304,13 +304,11 @@
     },
     {
       "dependsOn": [
-        "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]",
-        "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]",
-        "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('catalogDatabaseName'))]",
-        "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('baseTenantDB'))]",
-        "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantDogwoodDojo'))]",
-        "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantContosoConcertHall'))]",
-        "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantFabrikamJazzClub'))]"
+        "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('catalogDatabaseName'),'/extensions/Import')]",
+        "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/databases/',variables('baseTenantDB'),'/extensions/Import')]",
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantDogwoodDojo'),'/extensions/Import')]",
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantContosoConcertHall'),'/extensions/Import')]",
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'),'/databases/',variables('tenantFabrikamJazzClub'),'/extensions/Import')]"
       ],
       "name": "[variables('wtpEventsApp')]",
       "apiVersion": "2014-06-01",
@@ -373,7 +371,13 @@
             "LearnHowFooterUrl": "https://aka.ms/sqldbsaastutorial",
             "User": "[variables('lowerCaseUser')]",
             "ASPNETCORE_ENVIRONMENT": "Production",
-            "WEBSITE_NODE_DEFAULT_VERSION": "4.2.3"
+            "WEBSITE_NODE_DEFAULT_VERSION": "4.2.3",
+            "DefaultRequestCulture":"en-US",
+            "SupportedCultures:SupportedCulture:0":"fr-CA",
+            "SupportedCultures:SupportedCulture:1":"fr-FR",
+            "SupportedCultures:SupportedCulture:2":"en-CA",
+            "SupportedCultures:SupportedCulture:3":"en-GB",
+            "SupportedCultures:SupportedCulture:4":"en-US"              
           }
         }
       ]
