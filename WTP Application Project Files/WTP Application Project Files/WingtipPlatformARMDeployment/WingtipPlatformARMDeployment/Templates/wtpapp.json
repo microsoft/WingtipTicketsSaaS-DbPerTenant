@@ -269,8 +269,7 @@
         {
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]",
-            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/firewallrules/AllowAllAzureIps')]",
-            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/firewallrules/Open')]"
+            "[concat('Microsoft.Sql/servers/',variables('catalogServer'),'/firewallrules/AllowAllAzureIps')]"
           ],
           "name": "[variables('baseTenantDB')]",
           "location": "[variables('location')]",

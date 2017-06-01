@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Creates an Operational Analytics database for adhoc query data
+  Creates an Operational Analytics database for tenant query data
 
 .DESCRIPTION
-  Creates the operational analytics database for result sets adhoc queries for Elastic Query. Database is created in the resource group
+  Creates the operational tenant analytics database for result sets queries from Elastic jobs. Database is created in the resource group
   created when the WTP application was deployed.
 
 #>
@@ -25,27 +25,28 @@ Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 $config = Get-Configuration
 
 $catalogServerName = $($config.CatalogServerNameStem) + $WtpUser
-$fullyQualfiedCatalogServerName = $catalogServerName + ".database.windows.net"
+
 $databaseName = $config.TenantAnalyticsDatabaseName
 
 # Check if Analytics database has already been created 
-$TenantAnalyticsDatabaseName = Get-AzureRmSqlDatabase `
+$TenantAnalyticsDatabase = Get-AzureRmSqlDatabase `
                 -ResourceGroupName $WtpResourceGroupName `
                 -ServerName $catalogServerName `
                 -DatabaseName $databaseName `
                 -ErrorAction SilentlyContinue
 
-if($TenantAnalyticsDatabaseName)
+if($TenantAnalyticsDatabase)
 {
-    Write-Output "Tenant Analytics database '$databaseName' already exists."
+    Write-Output "Database '$databaseName' already exists."
     exit
 }
 
-Write-output "Initializing the database '$($config.TenantAnalyticsDatabaseName)'..."
+Write-output "Deploying the database '$databaseName' to server '$catalogServerName' ..."
 
 # Create the tenant analytics database
 New-AzureRmSqlDatabase `
     -ResourceGroupName $WtpResourceGroupName `
     -ServerName $catalogServerName `
     -DatabaseName $databaseName `
-    -RequestedServiceObjectiveName "S0"
+    -RequestedServiceObjectiveName "S0" `
+    > $null

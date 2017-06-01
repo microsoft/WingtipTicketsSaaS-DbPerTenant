@@ -35,15 +35,15 @@ if(!$resourceGroup)
     throw "Resource group '$WtpResourceGroupName' does not exist.  Exiting..."
 }
 
-$catalogServerName = $config.CatalogServerNameStem + $WtpUser
-$fullyQualfiedCatalogServerName = $catalogServerName + ".database.windows.net"
+$jobAccountServerName = $config.jobAccountServerNameStem + $WtpUser
+$fullyQualifiedjobAccountServerName = $jobAccountServerName + ".database.windows.net"
 $databaseName = $config.JobAccountDatabaseName
 
 # Check if the job account already exists and the latest Azure PowerShell SDK has been installed 
 try 
 {
     $jobaccount = Get-AzureRmSqlJobAccount -ResourceGroupName $WtpResourceGroupName `
-        -ServerName $CatalogServerName `
+        -ServerName $jobAccountServerName `
         -JobAccountName $($config.JobAccount) 
 }
 catch 
@@ -61,12 +61,12 @@ $registrationStatus = Get-AzureRmProviderFeature -ProviderName Microsoft.Sql -Fe
 if ($registrationStatus.RegistrationState -eq "NotRegistered")
 {
     Write-Error "Your current subscription is not white-listed for the preview of Elastic jobs. Please contact Microsoft to white-list your subscription."
-    throw
+    exit
 }
 
 # Check the job account database already exists
 $database = Get-AzureRmSqlDatabase -ResourceGroupName $WtpResourceGroupName `
-	-ServerName $catalogServerName `
+    -ServerName $jobAccountServerName `
 	-DatabaseName $($config.JobAccountDatabaseName) `
 	-ErrorAction SilentlyContinue
 
@@ -75,14 +75,35 @@ try
 {
 	if (!$database)
 	{
-		Write-output "Deploying job account database: '$($config.JobAccountDatabaseName)'..."
+		Write-output "Deploying job account database: '$($config.JobAccountDatabaseName)' on server '$fullyQualifiedjobAccountServerName'..."
+        
+        # Create the job account server - continue if it already exists
+
+        New-AzureRmSqlServer `
+            -ResourceGroupName $WtpResourceGroupName `
+            -Location $config.JobAccountDeploymentLocation `
+            -ServerName $jobAccountServerName `
+            -SqlAdministratorCredentials $(New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $config.JobAccountAdminUserName, $(ConvertTo-SecureString -String $config.JobAccountAdminPassword -AsPlainText -Force)) `
+            -ErrorAction SilentlyContinue `
+            > $null
+
+        # Open firewall for job account server
+        New-AzureRmSqlServerFirewallRule `
+            -ResourceGroupName $WtpResourceGroupName `
+            -ServerName $jobAccountServerName `
+            -FirewallRuleName "Open" `
+            -StartIpAddress 0.0.0.0 `
+            -EndIpAddress 255.255.255.255 `
+            -ErrorAction SilentlyContinue `
+            > $null
 		
 		# Create the job account database
 		New-AzureRmSqlDatabase `
 			-ResourceGroupName $WtpResourceGroupName `
-			-ServerName $catalogServerName `
+			-ServerName $jobAccountServerName `
 			-DatabaseName $($config.JobAccountDatabaseName) `
-			-RequestedServiceObjectiveName "S2"	
+			-RequestedServiceObjectiveName "S2" `
+            > $null	
 	}
  }
 catch
@@ -101,10 +122,11 @@ try
 		
 		# Create the job account
 		New-AzureRmSqlJobAccount `
-			-ServerName $CatalogServerName `
+            -ServerName $jobAccountServerName `
 			-JobAccountName $($config.JobAccount) `
 			-DatabaseName $($config.JobAccountDatabaseName) `
-			-ResourceGroupName $($WtpResourceGroupName)
+			-ResourceGroupName $($WtpResourceGroupName) `
+            > $null
 	}
  }
 catch
@@ -120,11 +142,11 @@ $commandText = "
     GO
 
     CREATE DATABASE SCOPED CREDENTIAL [$credentialName]
-        WITH IDENTITY = N'$($config.CatalogAdminUserName)', SECRET = N'$($config.CatalogAdminPassword)';
+        WITH IDENTITY = N'$($config.JobAccountAdminUserName)', SECRET = N'$($config.JobAccountAdminPassword)';
     GO
     
     CREATE DATABASE SCOPED CREDENTIAL [myrefreshcred]
-        WITH IDENTITY = N'$($config.CatalogAdminUserName)', SECRET = N'$($config.CatalogAdminPassword)';
+        WITH IDENTITY = N'$($config.JobAccountAdminUserName)', SECRET = N'$($config.JobAccountAdminPassword)';
     GO
     PRINT N'Database scoped credentials created.';
     "
@@ -134,9 +156,9 @@ $commandText = "
     try
     {    
 		Invoke-Sqlcmd `
-		-ServerInstance $fullyQualfiedCatalogServerName `
-		-Username $config.CatalogAdminUserName `
-		-Password $config.CatalogAdminPassword `
+        -ServerInstance $fullyQualifiedjobAccountServerName `
+		-Username $config.JobAccountAdminUserName `
+        -Password $config.JobAccountAdminPassword `
 		-Database $config.JobAccountDatabaseName `
 		-Query $commandText `
 		-ConnectionTimeout 30 `
@@ -148,9 +170,9 @@ $commandText = "
         #retry once if fails. Query is idempotent.
         Start-Sleep 2
 		Invoke-Sqlcmd `
-		-ServerInstance $fullyQualfiedCatalogServerName `
-		-Username $config.CatalogAdminUserName `
-		-Password $config.CatalogAdminPassword `
+        -ServerInstance $fullyQualifiedjobAccountServerName `
+		-Username $config.JobAccountAdminUserName `
+        -Password $config.JobAccountAdminPassword `
 		-Database $config.JobAccountDatabaseName `
 		-Query $commandText `
 		-ConnectionTimeout 30 `

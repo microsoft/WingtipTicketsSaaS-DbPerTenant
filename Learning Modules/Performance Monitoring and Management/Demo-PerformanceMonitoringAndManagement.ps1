@@ -1,4 +1,4 @@
-﻿# Helper script for demonstrating performance montoring and management tasks.
+﻿# Helper script for demonstrating performance monitoring and management tasks.
 
 # Duration of the load generation sessions. Some activity may continue after this time. 
 $DurationMinutes = 60

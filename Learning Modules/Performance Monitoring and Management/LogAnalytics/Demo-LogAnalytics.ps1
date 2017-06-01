@@ -1,5 +1,5 @@
-﻿# Deploys Log Analytics workspace, enables resource diagnostics on WTP databases and pools
-# and adds Azure SQL Analytics solution to the workspace
+﻿# Deploys a Log Analytics workspace, then enables resource diagnostics on all WTP databases and pools to the workspace
+# then adds Azure SQL Analytics solution to the workspace
 
 Import-Module "$PSScriptRoot\..\..\Common\SubscriptionManagement" -Force
 Import-Module "$PSScriptRoot\..\..\UserConfig"
@@ -7,7 +7,7 @@ Import-Module "$PSScriptRoot\..\..\UserConfig"
 # Get Azure credentials if not already logged on,  Use -Force to select a different subscription 
 Initialize-Subscription -NoEcho
 
-# Get the resource group and user names used when the WTP application was deployed from UserConfig.psm1.  
+# Get the resource group and user names used when the WTP application was deployed  
 $wtpUser = Get-UserConfig
 
 
