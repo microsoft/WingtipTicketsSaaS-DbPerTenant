@@ -29,7 +29,7 @@ $config = Get-Configuration
 
 # get the Azure Context to retrieve subscription ID
 $azureContext = Get-AzureRmContext
-$subscriptionId = $azureContext.Subscription.SubscriptionId
+$subscriptionId = Get-SubscriptionId
 
 ### Default state - enter a valid demo scenaro 
 if ($DemoScenario -eq 0)
@@ -78,8 +78,10 @@ if ($DemoScenario -eq 1)
 ### Display Tenant Id and Subscription Id  
 if ($DemoScenario -eq 2)
 {
-  Write-Output "Tenant ID: $($azureContext.Tenant.TenantId)"
-  Write-Output "Subscription Id: $($azureContext.Subscription.SubscriptionId) "
+  $subscriptionId = Get-SubscriptionId
+  $tenantId = Get-TenantId
+  Write-Output "Tenant ID: $($tenantId)"
+  Write-Output "Subscription Id: $($subscriptionId)"
   
   exit
 }

@@ -7,7 +7,7 @@ $DurationMinutes = 60
 # or if set to empty string ("") a random tenant database will be chosen.
 $SingleTenantDatabaseName = "contosoconcerthall"
 
-$DemoScenario = 0
+$DemoScenario = 1
 <# Select the demo scenario to run 
     Demo    Scenario
       0       None

@@ -126,7 +126,8 @@ if ($batchDatabaseNames.Count -gt 0)
     {
         # Construct the resource id for the 'golden' tenant database on the catalog server
         $AzureContext = Get-AzureRmContext
-        $SourceDatabaseId = "/subscriptions/$($AzureContext.Subscription.SubscriptionId)/resourcegroups/$WtpResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser/databases/$($config.GoldenTenantDatabaseName)"
+        $subscriptionId = Get-SubscriptionId
+        $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$WtpResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser/databases/$($config.GoldenTenantDatabaseName)"
         
         # Use nested ARM templates to create the tenant database by copying the 'golden' database
         $deployment = New-AzureRmResourceGroupDeployment `

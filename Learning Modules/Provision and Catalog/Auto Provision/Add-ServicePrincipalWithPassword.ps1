@@ -31,7 +31,7 @@ Initialize-Subscription
 
 if ($SubscriptionId -eq "") 
 {
-$SubscriptionId = (Get-AzureRmContext).Subscription.SubscriptionId
+$SubscriptionId = Get-SubscriptionId
 }
 else
 {

@@ -20,16 +20,28 @@ function Initialize-Subscription
         {
             # Use previous login credentials if already logged in 
             $AzureContext = Get-AzureRmContext
-            if (!$NoEcho)
-            {            
-                Write-Output "Signed-in as $($AzureContext.Account), Subscription '$($AzureContext.Subscription.SubscriptionId)' '$($AzureContext.Subscription.SubscriptionName)'"
-                Write-Verbose $AzureContext
+            
+            if (!$AzureContext.Account)
+            {
+                # Fall through and require login   
             }
-            return
+            else
+            {             
+                # Don't display subscription details if already logged in
+                if (!$NoEcho)
+                {            
+                    $subscriptionId = Get-SubscriptionId
+                    $subscriptionName = Get-SubscriptionName
+                    Write-Output "Signed-in as $($AzureContext.Account), Subscription '$($subscriptionId)' '$($subscriptionName)'"
+                    Write-Verbose $AzureContext
+                }
+                return
+            }
+            
         }
         catch
         {
-            # Fall through and require login 
+            # Fall through and require login - (Get-AzureRmContext fails with AzureRM modules < 4.0 if there is no logged in acount)
         }         
     }  
     #Login to Azure 
@@ -38,7 +50,7 @@ function Initialize-Subscription
     Write-Output "You are signed-in as: $($Azurecontext.Account)"
 
     # Get subscription list 
-    $subscriptionList = Get-AzureRmSubscription
+    $subscriptionList = Get-SubscriptionList
     if($subscriptionList.Length -lt 1)
     {
         Write-Error "Your Azure account does not have any active subscriptions. Exiting..."
@@ -46,7 +58,7 @@ function Initialize-Subscription
     }
     elseif($subscriptionList.Length -eq 1)
     {
-        Select-AzureRmSubscription -SubscriptionId $subscriptionList[0].SubscriptionId > $null
+        Select-AzureRmSubscription -Id $subscriptionList[0].SubscriptionId > $null
     }
     elseif($subscriptionList.Length -gt 1)
     {
@@ -60,8 +72,8 @@ function Initialize-Subscription
 
         # Prompt for selection 
         Write-Output "Your Azure subcriptions: "
-        $subscriptionList | Format-Table Row,SubscriptionId,SubscriptionName -AutoSize
-            
+        $subscriptionList | Format-Table Row, Id, Name -AutoSize
+                    
         # Select single Azure subscription for session 
         try
         {
@@ -69,12 +81,80 @@ function Initialize-Subscription
 
             $context = Select-AzureRmSubscription -SubscriptionId $subscriptionList[($selectedRow - 1)] -ErrorAction Stop
 
-            Write-Output "Subscription Id '$($context.Subscription.SubscriptionId)' selected."
+            Write-Output "Subscription Id '$($subscriptionList[($selectedRow - 1)])' selected."
         }
         catch
         { 
             Write-Error 'Invalid selection. Exiting...'
             exit 
         }
+    }
+}
+
+function Get-SubscriptionId
+{
+    $Azurecontext = Get-AzureRmContext
+    $AzureModuleVersion = Get-Module AzureRM -list | Select-Object Version 
+
+    # Check PowerShell version to accomodate breaking change in AzureRM modules greater than 4.0
+    if ($AzureModuleVersion.version -gt 4.0.0.0)
+    {
+        return $Azurecontext.Subscription.Id
+    }
+    else
+    {
+        return $Azurecontext.Subscription.SubscriptionId
+    }
+}
+
+function Get-SubscriptionName
+{
+    $Azurecontext = Get-AzureRmContext
+    $AzureModuleVersion = Get-Module AzureRM -list | Select-Object Version 
+
+    # Check PowerShell version to accomodate breaking change in AzureRM modules greater than 4.0
+    if ($AzureModuleVersion.version -gt 4.0.0.0)
+    {
+        return $Azurecontext.Subscription.Name
+    }
+    else
+    {
+        return $Azurecontext.Subscription.SubscriptionName
+    }
+}
+
+function Get-SubscriptionList
+{
+    $AzureModuleVersion = Get-Module AzureRM -list | Select-Object Version 
+
+    # Check PowerShell version to accomodate breaking change in AzureRM modules greater than 4.0
+    if ($AzureModuleVersion.version -gt 4.0.0.0)
+    {
+        return Get-AzureRmSubscription
+    }
+    else
+    {
+        # Add 'id' and 'name' properties to subscription object returned for AzureRM modules less than 4.0
+        $subscriptionObject = Get-AzureRmSubscription
+        $subscriptionObject | Add-Member -MemberType AliasProperty -Name "Id" -Value SubscriptionId
+        $subscriptionObject | Add-Member -MemberType AliasProperty -Name "Name" -Value SubscriptionName 
+        
+        return $subscriptionObject 
+    }   
+}
+
+function Get-TenantId
+{
+    $Azurecontext = Get-AzureRmContext
+    $AzureModuleVersion = Get-Module AzureRM -list | Select-Object Version 
+
+    # Check PowerShell version to accomodate breaking change in AzureRM modules greater than 4.0
+    if ($AzureModuleVersion.version -gt 4.0.0.0)
+    {
+        return $Azurecontext.Tenant.Id
+    }
+    else
+    {
+        return $Azurecontext.Tenant.TenantId
     }
 }
