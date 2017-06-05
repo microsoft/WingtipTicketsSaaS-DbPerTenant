@@ -112,7 +112,7 @@ if(!$workspace)
 
 # Get the current subscription
 $azureContext = Get-AzureRmContext
-$subscriptionId = $azureContext.Subscription.SubscriptionId
+$subscriptionId = Get-SubscriptionId
 
 $WorkspaceId = "/subscriptions/$subscriptionId/resourcegroups/$WtpResourceGroupName/providers/Microsoft.OperationalInsights/workspaces/$workspaceName"
 

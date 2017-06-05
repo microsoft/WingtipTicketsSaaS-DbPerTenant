@@ -7,6 +7,7 @@
 Import-Module $PSScriptRoot\..\WtpConfig -Force
 Import-Module $PSScriptRoot\..\ProvisionConfig -Force
 Import-Module $PSScriptRoot\AzureShardManagement -Force
+Import-Module $PSScriptRoot\SubscriptionManagement -Force
 Import-Module sqlserver -ErrorAction SilentlyContinue
 
 # Stop execution on error
@@ -1108,7 +1109,8 @@ function New-TenantDatabase
 
         # Construct the resource id for the 'golden' tenant database 
         $AzureContext = Get-AzureRmContext
-        $SourceDatabaseId = "/subscriptions/$($AzureContext.Subscription.SubscriptionId)/resourcegroups/$ResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser/databases/$($config.GoldenTenantDatabaseName)"
+        $subscriptionId = Get-SubscriptionId
+        $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$ResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser/databases/$($config.GoldenTenantDatabaseName)"
 
         # Use an ARM template to create the tenant database by copying the 'golden' database
         $deployment = New-AzureRmResourceGroupDeployment `

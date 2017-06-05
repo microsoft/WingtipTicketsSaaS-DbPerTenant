@@ -22,6 +22,7 @@
 $ErrorActionPreference = "Stop"
 
 Import-Module $PSScriptRoot\Common\CatalogAndDatabaseManagement -Force
+Import-Module $PSScriptRoot\Common\SubscriptionManagement -Force
 Import-Module $PSScriptRoot\WtpConfig -Force
 Import-Module $PSScriptRoot\ProvisionConfig -Force
 Import-Module $PSScriptRoot\UserConfig -Force
@@ -264,8 +265,8 @@ function Get-TargetElasticPool{
 ## -----------------------------------------------------------------------------------
 
 # Initialize the resource id of the source 'golden' database used to create new buffer databases
-$AzureContext = Get-AzureRmContext
-$SourceDatabaseId = "/subscriptions/$($AzureContext.Subscription.SubscriptionId)/resourcegroups/$($wtpUser.ResourceGroupName)/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem + $WtpUser.Name)/databases/$($config.GoldenTenantDatabaseName)"
+$subscriptionIdContext = Get-SubscriptionId
+$SourceDatabaseId = "/subscriptions/$($subscriptionIdContext)/resourcegroups/$($wtpUser.ResourceGroupName)/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem + $WtpUser.Name)/databases/$($config.GoldenTenantDatabaseName)"
 
 Write-Output "Checking for buffer database replenishment at $interval second intervals..."
 

@@ -7,6 +7,7 @@
 Import-Module $PSScriptRoot\..\WtpConfig -Force
 Import-Module $PSScriptRoot\..\ProvisionConfig -Force
 Import-Module $PSScriptRoot\AzureShardManagement -Force
+Import-Module $PSScriptRoot\SubscriptionManagement -Force
 Import-Module sqlserver -ErrorAction SilentlyContinue
 
 # Stop execution on error
@@ -173,7 +174,7 @@ function Get-Catalog
 
     if (!$shardmapManager)
     {
-        throw "Failed to initialize shard map manager from '$(config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
+        throw "Failed to initialize shard map manager from '$($config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
     }
 
     # Initialize shard map
@@ -994,7 +995,11 @@ function New-Tenant
         [string]$PoolName,
 
         [Parameter(Mandatory=$false)]
-        [string]$VenueType
+        [string]$VenueType,
+
+        [Parameter(Mandatory=$false)]
+        [string]$PostalCode = "98052"
+
     )
 
     $WtpUser = $WtpUser.ToLower()
@@ -1024,6 +1029,7 @@ function New-Tenant
         -ElasticPoolName $PoolName `
         -TenantName $TenantName `
         -VenueType $VenueType `
+        -PostalCode $PostalCode `
         -WtpUser $WtpUser
 
     # Register the tenant and database in the catalog
@@ -1103,7 +1109,8 @@ function New-TenantDatabase
 
         # Construct the resource id for the 'golden' tenant database 
         $AzureContext = Get-AzureRmContext
-        $SourceDatabaseId = "/subscriptions/$($AzureContext.Subscription.SubscriptionId)/resourcegroups/$ResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser/databases/$($config.GoldenTenantDatabaseName)"
+        $subscriptionId = Get-SubscriptionId
+        $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$ResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser/databases/$($config.GoldenTenantDatabaseName)"
 
         # Use an ARM template to create the tenant database by copying the 'golden' database
         $deployment = New-AzureRmResourceGroupDeployment `
