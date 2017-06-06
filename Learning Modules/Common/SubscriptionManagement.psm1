@@ -94,7 +94,7 @@ function Initialize-Subscription
 function Get-SubscriptionId
 {
     $Azurecontext = Get-AzureRmContext
-    $AzureModuleVersion = Get-Module AzureRM -list
+    $AzureModuleVersion = Get-Module AzureRM.Resources -list
 
     # Check PowerShell version to accomodate breaking change in AzureRM modules greater than 4.0
     if ($AzureModuleVersion.Version.Major -ge 4)
