@@ -1,4 +1,4 @@
-﻿# Invokes load generator script over the tenant databases currently defined in the catalog.  
+﻿# Invokes load generation on the tenant databases currently defined in the catalog.  
  
 # Duration of the load generation session. Some activity may continue after this time. 
 $DurationMinutes = 120
