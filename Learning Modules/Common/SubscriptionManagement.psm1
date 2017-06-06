@@ -79,9 +79,9 @@ function Initialize-Subscription
         {
             [int]$selectedRow = Read-Host "Enter the row number to select the subscription to use" -ErrorAction Stop
 
-            $context = Select-AzureRmSubscription -SubscriptionId $subscriptionList[($selectedRow - 1)] -ErrorAction Stop
+            Select-AzureRmSubscription -SubscriptionId $subscriptionList[($selectedRow - 1)] -ErrorAction Stop > $null
 
-            Write-Output "Subscription Id '$($subscriptionList[($selectedRow - 1)])' selected."
+            Write-Output "Subscription Id '$($subscriptionList[($selectedRow - 1)].Id)' selected."
         }
         catch
         { 
