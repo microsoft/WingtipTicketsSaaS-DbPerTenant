@@ -1,5 +1,6 @@
 ﻿@using System.Security.Policy
 @using Events_Tenant.Common.Models
+@using Events_Tenant.Common.Utilities
 @using Events_TenantUserApp
 @using Microsoft.AspNetCore.Mvc.Localization
 @using Events_TenantUserApp.ViewModels
@@ -20,11 +21,22 @@
 }
 
 @{
+    var urlPath = Context.Request.Path.Value;
+    string[] urlPieces = urlPath.Split(new[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
+    var tenantName = urlPieces[0];
+
+    var tenantConfigs = Context.Session.GetObjectFromJson<List<TenantConfig>>("TenantConfigs");
+    TenantConfig tenantConfig = null;
+    if (tenantConfigs != null && tenantConfigs.Count() > 0)
+    {
+        tenantConfig = tenantConfigs.Where(a => a.TenantName == tenantName).First();
+    }
+
     var users = Context.Session.GetObjectFromJson<List<CustomerModel>>("SessionUsers");
     CustomerModel user = null;
     if (users != null && users.Count() > 0)
     {
-        var usersList = users.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
+        var usersList = users.Where(a => a.TenantName == tenantName);
         if (usersList != null && usersList.Count() > 0)
         {
             user = usersList.Last();
@@ -40,7 +52,7 @@
 <div class="col-xs-12 ">
     <div class="banner">
         <div class="row" style="padding-left:18px">
-            <img src=@Startup.TenantConfig.BlobImagePath class="img-responsive" style="width: 100%">
+            <img src=@tenantConfig.BlobImagePath class="img-responsive" style="width: 100%">
         </div>
         <div class="banner-home-left-fullWidth" style="left:11px; width:98.3%">
             <div class="banner-caption"><span class="banner-splitter">@Model.EventDetails.EventName</span> @Model.EventDetails.Date.ToString("dddd MMM. dd, yyyy")</div>
@@ -65,14 +77,14 @@
 
     <div class="form-group">
         <div class="label-bold col-xs-4">
-            <label>@Localizer["Section and seat price:"]</label>
+            <label style="bottom:-6px; position:relative;">@Localizer["Section and seat price:"]</label>
         </div>
         <div class="col-xs-8">
             <select class="form-control input-box dropdown" id="section" name="section">
 
                 @foreach (var seatSection in Model.SeatSections)
                 {
-                    <option value=@seatSection.SectionId>@seatSection.SectionName @Startup.TenantConfig.Currency @seatSection.StandardPrice.ToString("F")</option>
+                    <option value=@seatSection.SectionId>@seatSection.SectionName @tenantConfig.Currency @seatSection.StandardPrice.ToString("F")</option>
                 }
             </select>
         </div>
@@ -97,7 +109,7 @@
 
     <div class="form-group">
         <div class="label-bold col-xs-4">
-            <label>@Localizer["Quantity:"]</label>
+            <label style="bottom:-6px; position:relative;">@Localizer["Quantity:"]</label>
         </div>
         <div class="col-xs-3">
             <input type="number" min="0" id="quantity" name="quantity" class="form-control" placeholder="0">
@@ -113,7 +125,7 @@
             <label>@Localizer["Total:"]</label>
         </div>
         <div class="label-bold col-xs-3">
-            <label id="total" name="total">@Startup.TenantConfig.Currency<span id="spanTotal1"></span></label>
+            <label id="total" name="total">@tenantConfig.Currency<span id="spanTotal1"></span></label>
         </div>
     </div>
 
@@ -156,7 +168,7 @@
                 <div class="row">
                     <div class="col-xs-8" style="padding-right: 15px;padding-left: 15px;">
                         <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg" />
-                        <h1 class="logo-heading">@Startup.TenantConfig.VenueName</h1>
+                        <h1 class="logo-heading">@tenantConfig.VenueName</h1>
                     </div>
                     <div class="sub-heading2">
                         @Localizer["Purchase tickets"]
@@ -172,13 +184,13 @@
 
                         <ul>
                             <li>Event: @Model.EventDetails.EventName</li>
-                            <li>Venue: @Startup.TenantConfig.VenueName</li>
+                            <li>Venue: @tenantConfig.VenueName</li>
                             <li>Date: @String.Format("{0:D}", Model.EventDetails.Date)</li>
                         </ul>
                         <br />
                         <ul>
                             <li id="liTicketQuantity">@Localizer["Tickets:"] <span id="spanTicketQty"></span></li>
-                            <li id="liPrice">Total Cost: @Startup.TenantConfig.Currency<span id="spanTotal2"></span></li>
+                            <li id="liPrice">Total Cost: @tenantConfig.Currency<span id="spanTotal2"></span></li>
                         </ul>
 
                         <h3>@Localizer["Ticket Delivery"]</h3>
@@ -284,7 +296,7 @@
             var selectedSection = $("#section").val();
             var prices = $("#section option:selected").html();
 
-            var arr = prices.split('@Startup.TenantConfig.Currency');
+            var arr = prices.split('@tenantConfig.Currency');
             var sectionName = arr[0].trim();
 
             var price = Number(prices.replace(/[^0-9\.]+/g,""));
@@ -320,7 +332,7 @@
             var selectedSection = $("#section").val();
             var prices = $("#section option:selected").html();
            
-            var arr = prices.split('@Startup.TenantConfig.Currency');
+            var arr = prices.split('@tenantConfig.Currency');
             var sectionName = arr[0].trim();
 
             var price = Number(prices.replace(/[^0-9\.]+/g, ""));

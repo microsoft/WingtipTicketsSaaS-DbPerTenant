@@ -12,6 +12,8 @@ namespace Events_TenantUserApp
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseIISIntegration()
                 .UseStartup<Startup>()
+                .CaptureStartupErrors(true)
+                .UseSetting("detailedErrors", "true")
                 .Build();
 
             host.Run();
