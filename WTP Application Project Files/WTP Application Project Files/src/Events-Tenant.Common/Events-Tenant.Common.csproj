@@ -112,13 +112,29 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Interfaces\ITenantRepository.cs" />
-    <Compile Include="Interfaces\ICatalogRepository.cs" />
-    <Compile Include="Mapping\Mapper.cs" />
-    <Compile Include="Repositories\TenantRepository.cs" />
-    <Compile Include="Repositories\CatalogRepository.cs" />
-    <Compile Include="Utilities\Utilities.cs" />
-    <Compile Include="Interfaces\IUtilities.cs" />
+    <Compile Include="Core\Interfaces\ICountryRepository.cs" />
+    <Compile Include="Core\Interfaces\ICustomerRepository.cs" />
+    <Compile Include="Core\Interfaces\IEventSectionRepository.cs" />
+    <Compile Include="Core\Interfaces\IEventsRepository.cs" />
+    <Compile Include="Core\Interfaces\ISectionRepository.cs" />
+    <Compile Include="Core\Interfaces\ITenantsRepository.cs" />
+    <Compile Include="Core\Interfaces\ITicketPurchaseRepository.cs" />
+    <Compile Include="Core\Interfaces\ITicketRepository.cs" />
+    <Compile Include="Core\Interfaces\IVenuesRepository.cs" />
+    <Compile Include="Core\Interfaces\IVenueTypesRepository.cs" />
+    <Compile Include="Core\Repositories\BaseRepository.cs" />
+    <Compile Include="Core\Repositories\CountryRepository.cs" />
+    <Compile Include="Core\Repositories\CustomerRepository.cs" />
+    <Compile Include="Core\Repositories\EventSectionRepository.cs" />
+    <Compile Include="Core\Repositories\EventsRepository.cs" />
+    <Compile Include="Core\Repositories\SectionRepository.cs" />
+    <Compile Include="Core\Repositories\TenantsRepository.cs" />
+    <Compile Include="Core\Repositories\TicketPurchaseRepository.cs" />
+    <Compile Include="Core\Repositories\TicketRepository.cs" />
+    <Compile Include="Core\Repositories\VenuesRepository.cs" />
+    <Compile Include="Core\Repositories\VenueTypesRepository.cs" />
+    <Compile Include="Helpers\Helper.cs" />
+    <Compile Include="Helpers\IHelper.cs" />
     <Compile Include="Models\CountryModel.cs" />
     <Compile Include="Models\CustomerModel.cs" />
     <Compile Include="Models\EventModel.cs" />

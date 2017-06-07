@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Events_Tenant.Common.Interfaces;
-using Events_Tenant.Common.Repositories;
+using Events_Tenant.Common.Core.Interfaces;
+using Events_Tenant.Common.Core.Repositories;
 using Events_TenantUserApp.Controllers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -20,8 +20,8 @@ namespace Events_TenantUserApp.Tests
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddTransient<HomeController, HomeController>();
-            services.AddTransient<ICatalogRepository, CatalogRepository>();
-            services.AddTransient<ITenantRepository, TenantRepository>();
+            services.AddTransient<ITenantsRepository, TenantsRepository>();
+            services.AddTransient<IVenueTypesRepository, VenueTypesRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

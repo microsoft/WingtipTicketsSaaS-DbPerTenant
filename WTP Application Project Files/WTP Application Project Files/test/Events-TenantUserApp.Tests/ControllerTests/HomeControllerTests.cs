@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Events_Tenant.Common.Interfaces;
+using Events_Tenant.Common.Core.Interfaces;
+using Events_Tenant.Common.Helpers;
 using Events_Tenant.Common.Models;
 using Events_TenantUserApp.Controllers;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Xunit;
@@ -23,16 +25,18 @@ namespace Events_TenantUserApp.Tests.ControllerTests
     {
         private readonly HomeController _homeController;
 
-        public HomeControllerTests(ILogger<HomeController> logger)
+        public HomeControllerTests()
         {
             // Arrange
-            var mockCatalogRepo = new Mock<ICatalogRepository>();
-            var mockTenantRepo = new Mock<ITenantRepository>();
+            var mockTenantRepo = new Mock<ITenantsRepository>();
+            var mockVenuesRepo = new Mock<IVenuesRepository>();
 
-            mockCatalogRepo.Setup(repo => repo.GetAllTenants()).Returns(GetTenants());
-            mockTenantRepo.Setup(repo => repo.GetVenueDetails(1234646)).Returns(GetVenueDetails());
+            var mockhelper = new Mock<IHelper>();
 
-            _homeController = new HomeController(mockCatalogRepo.Object, mockTenantRepo.Object, logger);
+            mockTenantRepo.Setup(repo => repo.GetAllTenants()).Returns(GetTenants());
+            mockVenuesRepo.Setup(repo => repo.GetVenueDetails("", 1234646)).Returns(GetVenueDetails());
+
+            _homeController = new HomeController(mockTenantRepo.Object, mockVenuesRepo.Object, mockhelper.Object);
         }
 
 
@@ -48,7 +52,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             Assert.Equal("Index", redirectToActionResult.ActionName);
         }
 
-        private async Task<VenueModel> GetVenueDetails()
+        private VenueModel GetVenueDetails()
         {
             return new VenueModel
             {
@@ -61,7 +65,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             };
         }
 
-        private async Task<List<TenantModel>> GetTenants()
+        private List<TenantModel> GetTenants()
         {
             return new List<TenantModel>
             {

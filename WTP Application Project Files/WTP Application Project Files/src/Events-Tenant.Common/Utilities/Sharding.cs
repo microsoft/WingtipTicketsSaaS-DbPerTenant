@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using Events_Tenant.Common.Interfaces;
+using System.Data.SqlClient;
+using Events_Tenant.Common.Core.Interfaces;
+using Events_Tenant.Common.Helpers;
 using Events_TenantUserApp.EF.CatalogDB;
 using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
+using Microsoft.Extensions.Logging;
 
 namespace Events_Tenant.Common.Utilities
 {
@@ -13,10 +14,10 @@ namespace Events_Tenant.Common.Utilities
     public class Sharding
     {
         #region Private declarations
-        private static IUtilities _utilities;
-        private static ICatalogRepository _catalogRepository;
-        private static ITenantRepository _tenantRepository;
+        private static IHelper _helper;
+        private static ITenantsRepository _tenantsRepository;
         #endregion
+
 
         #region Public Properties
 
@@ -32,38 +33,38 @@ namespace Events_Tenant.Common.Utilities
         /// Initializes a new instance of the <see cref="Sharding" /> class.
         /// <para>Bootstrap Elastic Scale by creating a new shard map manager and a shard map on the shard map manager database if necessary.</para>
         /// </summary>
-        /// <param name="catalogDatabase">The catalog database.</param>
-        /// <param name="connectionString">The connection string.</param>
-        /// <param name="catalogRepository">The catalog repository.</param>
-        /// <param name="tenantRepository">The tenant repository.</param>
-        /// <param name="utilities">The utilities class.</param>
-        /// <exception cref="System.ApplicationException">Error in sharding initialisation.</exception>
-        public Sharding(string catalogDatabase, string connectionString, ICatalogRepository catalogRepository, ITenantRepository tenantRepository, IUtilities utilities)
+        /// <param name="catalogConfig">The catalog configuration.</param>
+        /// <param name="databaseConfig">The database configuration.</param>
+        /// <param name="tenantsRepository">The tenants repository.</param>
+        /// <param name="helper">The helper.</param>
+        public Sharding(CatalogConfig catalogConfig, DatabaseConfig databaseConfig, ITenantsRepository tenantsRepository, IHelper helper)
         {
             try
             {
-                _catalogRepository = catalogRepository;
-                _tenantRepository = tenantRepository;
-                _utilities = utilities;
+                _tenantsRepository = tenantsRepository;
+                _helper = helper;
+
+                var smmconnstr = _helper.GetSqlConnectionString(databaseConfig, catalogConfig);
 
                 // Deploy shard map manager
                 // if shard map manager exists, refresh content, else create it, then add content
                 ShardMapManager smm;
                 ShardMapManager =
-                    !ShardMapManagerFactory.TryGetSqlShardMapManager(connectionString,
+                    !ShardMapManagerFactory.TryGetSqlShardMapManager(smmconnstr,
                         ShardMapManagerLoadPolicy.Lazy, out smm)
-                        ? ShardMapManagerFactory.CreateSqlShardMapManager(connectionString)
+                        ? ShardMapManagerFactory.CreateSqlShardMapManager(smmconnstr)
                         : smm;
 
                 // check if shard map exists and if not, create it 
                 ListShardMap<int> sm;
-                ShardMap = !ShardMapManager.TryGetListShardMap(catalogDatabase, out sm)
-                    ? ShardMapManager.CreateListShardMap<int>(catalogDatabase)
+                ShardMap = !ShardMapManager.TryGetListShardMap(catalogConfig.CatalogDatabase, out sm)
+                    ? ShardMapManager.CreateListShardMap<int>(catalogConfig.CatalogDatabase)
                     : sm;
             }
-            catch (Exception exception)
+            catch (Exception ex)
             {
-               Trace.TraceError(exception.Message, "Error in sharding initialisation.");
+                // _logger.LogError(0, ex, "Error in sharding initialisation.");
+                throw new ApplicationException("Error in sharding initialisation.");
             }
 
         }
@@ -78,23 +79,23 @@ namespace Events_Tenant.Common.Utilities
         /// </summary>
         /// <param name="tenantName">Name of the tenant.</param>
         /// <param name="tenantId">The tenant identifier.</param>
-        /// <param name="tenantServer">The tenant server.</param>
-        /// <param name="databaseServerPort">The database server port.</param>
-        /// <param name="servicePlan">The service plan.</param>
-        /// <returns></returns>
-        public static async Task<bool> RegisterNewShard(string tenantName, int tenantId, string tenantServer, int databaseServerPort, string servicePlan)
+        /// <param name="tenantServerConfig">The tenant server configuration.</param>
+        /// <param name="databaseConfig">The database configuration.</param>
+        /// <param name="catalogConfig">The catalog configuration.</param>
+        public static bool RegisterNewShard(string tenantName, int tenantId, TenantServerConfig tenantServerConfig, DatabaseConfig databaseConfig, CatalogConfig catalogConfig)
         {
             try
             {
                 Shard shard;
-                ShardLocation shardLocation = new ShardLocation(tenantServer, tenantName, SqlProtocol.Tcp, databaseServerPort);
+                ShardLocation shardLocation = new ShardLocation(tenantServerConfig.TenantServer, tenantName, databaseConfig.SqlProtocol, databaseConfig.DatabaseServerPort);
 
                 if (!ShardMap.TryGetShard(shardLocation, out shard))
                 {
                     //create shard if it does not exist
                     shard = ShardMap.CreateShard(shardLocation);
                 }
-                
+
+
                 // Register the mapping of the tenant to the shard in the shard map.
                 // After this step, DDR on the shard map can be used
                 PointMapping<int> mapping;
@@ -103,26 +104,24 @@ namespace Events_Tenant.Common.Utilities
                     var pointMapping = ShardMap.CreatePointMapping(tenantId, shard);
 
                     //convert from int to byte[] as tenantId has been set as byte[] in Tenants entity
-                    var key = _utilities.ConvertIntKeyToBytesArray(pointMapping.Value);
-
-                    //get tenant's venue name
-                    var venueDetails = await _tenantRepository.GetVenueDetails(tenantId);
+                    var key = _helper.ConvertIntKeyToBytesArray(pointMapping.Value);
 
                     //add tenant to Tenants table
                     var tenant = new Tenants
                     {
-                        ServicePlan = servicePlan,
+                        ServicePlan = catalogConfig.ServicePlan,
                         TenantId = key,
-                        TenantName = venueDetails.VenueName
+                        TenantName = tenantName
                     };
 
-                    _catalogRepository.Add(tenant);
+                    _tenantsRepository.Add(tenant);
                 }
                 return true;
             }
-            catch (Exception exception)
+            catch (Exception ex)
             {
-                Trace.TraceError(exception.Message, "Error in registering new shard.");
+                // _logger.LogError(0, ex, "Error in registering new shard.");
+                //throw new ApplicationException("Error in registering new shard.");
                 return false;
             }
 

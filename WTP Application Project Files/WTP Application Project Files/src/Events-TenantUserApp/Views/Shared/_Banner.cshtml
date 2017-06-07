@@ -1,36 +1,14 @@
-﻿@using System.Globalization
-@using System.Security.Policy
-@using System.Web.Providers.Entities
-@using Microsoft.AspNetCore.Http.Features
-@using Microsoft.AspNetCore.Mvc.Localization
-@using Events_Tenant.Common.Models
-@using Events_Tenant.Common.Utilities
+﻿@using System.Security.Policy
 @using Events_TenantUserApp
-@using Microsoft.AspNetCore.Hosting.Internal
-@using Microsoft.AspNetCore.Http
-﻿@inject IViewLocalizer Localizer
+@using Microsoft.AspNetCore.Mvc.Localization
 
-
-@{
-    var urlPath = Context.Request.Path.Value;
-    string[] urlPieces = urlPath.Split(new[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
-    var tenantName = urlPieces[0];
-
-    var tenantConfigs = Context.Session.GetObjectFromJson<List<TenantConfig>>("TenantConfigs");
-    TenantConfig tenantConfig = null;
-    if (tenantConfigs != null && tenantConfigs.Count() > 0)
-    {
-        tenantConfig = tenantConfigs.Where(a => a.TenantName == tenantName).First();
-    }
-
-    var blobpath = tenantConfig.BlobImagePath;
-}
+@inject IViewLocalizer Localizer
 
 <div class="row">
     <div class="col-xs-12 ">
         <div class="banner">
             <div class="row cover-2">
-                <img src = @blobpath class="img-responsive" style="width: 100%">
+                <img src=@Startup.TenantConfig.BlobImagePath class="img-responsive" style="width: 100%">
             </div>
             <div class="banner-home-left">
                 <div class="banner-caption">

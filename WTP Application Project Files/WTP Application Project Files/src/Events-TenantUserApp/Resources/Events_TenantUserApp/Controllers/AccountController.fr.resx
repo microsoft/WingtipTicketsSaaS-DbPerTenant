@@ -123,7 +123,7 @@
   <data name="The user does not exist." xml:space="preserve">
     <value>L'utilisateur n'existe pas.</value>
   </data>
-  <data name="User already exists." xml:space="preserve">
-    <value>L'utilisateur existe déjà.</value>
+  <data name="User already exists in session." xml:space="preserve">
+    <value>L'utilisateur existe déjà en session.</value>
   </data>
 </root>

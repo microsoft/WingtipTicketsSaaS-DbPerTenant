@@ -128,12 +128,28 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="UtilitiesTests\UtilitiesTests.cs" />
-    <Compile Include="MockRepositories\MockTenantRepository.cs" />
-    <Compile Include="MockRepositories\MockCatalogRepository.cs" />
+    <Compile Include="HelperTests\HelperTests.cs" />
+    <Compile Include="MockRepositories\MockCountryRepository.cs" />
+    <Compile Include="MockRepositories\MockCustomerRepository.cs" />
+    <Compile Include="MockRepositories\MockEventSectionRepository.cs" />
+    <Compile Include="MockRepositories\MockEventsRepository.cs" />
+    <Compile Include="MockRepositories\MockSectionRepository.cs" />
+    <Compile Include="MockRepositories\MockTenantsRepository.cs" />
+    <Compile Include="MockRepositories\MockTicketPurchaseRepository.cs" />
+    <Compile Include="MockRepositories\MockTicketRepository.cs" />
+    <Compile Include="MockRepositories\MockVenuesRepository.cs" />
+    <Compile Include="MockRepositories\MockVenueTypesRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RepositoriesTests\TenantRepositoryTests.cs" />
-    <Compile Include="RepositoriesTests\CatalogRepositoryTests.cs" />
+    <Compile Include="RepositoriesTests\CountryRepositoryTests.cs" />
+    <Compile Include="RepositoriesTests\CustomerRepositoryTests.cs" />
+    <Compile Include="RepositoriesTests\EventSectionRepositoryTest.cs" />
+    <Compile Include="RepositoriesTests\EventsRepositoryTests.cs" />
+    <Compile Include="RepositoriesTests\SectionRepositoryTests.cs" />
+    <Compile Include="RepositoriesTests\TenantsRepositoryTests.cs" />
+    <Compile Include="RepositoriesTests\TicketPurchaseRepositoryTests.cs" />
+    <Compile Include="RepositoriesTests\TicketRepositoryTests.cs" />
+    <Compile Include="RepositoriesTests\VenuesRepositoryTests.cs" />
+    <Compile Include="RepositoriesTests\VenueTypesRepositoryTests.cs" />
     <Compile Include="ShardingTests\ShardingTests.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Events_Tenant.Common.Interfaces;
+using Events_Tenant.Common.Core.Interfaces;
+using Events_Tenant.Common.Helpers;
 using Events_Tenant.Common.Models;
 using Events_Tenant.Common.Utilities;
 using Events_TenantUserApp.Controllers;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Xunit;
@@ -22,21 +22,27 @@ namespace Events_TenantUserApp.Tests.ControllerTests
     {
         private readonly EventsController _eventsController;
 
-        public EventsControllerTests(IStringLocalizer<BaseController> baseLocalizer, ILogger<EventsController> logger, IConfiguration configuration)
+        public EventsControllerTests(IStringLocalizer<BaseController> baseLocalizer)
         {
-            var mockCatalogRepo = new Mock<ICatalogRepository>();
-            mockCatalogRepo.Setup(repo => repo.GetTenant("testTenant")).Returns(GetTenantModel());
+            var mockTenantsRepo = new Mock<ITenantsRepository>();
+            mockTenantsRepo.Setup(repo => repo.GetTenant("testTenant")).Returns(GetTenantModel());
 
+            var mockHelper = new Mock<IHelper>();
+            mockHelper.Setup(helper => helper.GetBasicSqlConnectionString(null)).Returns("");
+            mockHelper.Setup(helper => helper.PopulateTenantConfigs("", "", new DatabaseConfig(), new TenantConfig())).Returns(GetTenantConfig());
+            var mockVenuesRepo = new Mock<IVenuesRepository>();
+            mockVenuesRepo.Setup(repo => repo.GetVenueDetails("", 12345)).Returns(GetVenue());
 
+            var mockVenueTypesRepo = new Mock<IVenueTypesRepository>();
+            mockVenueTypesRepo.Setup(repo => repo.GetVenueType("Classic", "", 12345)).Returns(GetVenueType());
 
-            var mockUtilities = new Mock<IUtilities>();
-            var mockTenantRepo = new Mock<ITenantRepository>();
-            mockTenantRepo.Setup(repo => repo.GetVenueDetails(12345)).Returns(GetVenue());
-            mockTenantRepo.Setup(repo => repo.GetVenueType("Classic", 12345)).Returns(GetVenueType());
-            mockTenantRepo.Setup(repo => repo.GetAllCountries(12345)).Returns(GetCountries());
-            mockTenantRepo.Setup(repo => repo.GetEventsForTenant(12345)).Returns(GetEvents());
+            var mockCountryRepo = new Mock<ICountryRepository>();
+            mockCountryRepo.Setup(repo => repo.GetAllCountries("", 12345)).Returns(GetCountries());
 
-            _eventsController = new EventsController(mockTenantRepo.Object, mockCatalogRepo.Object, baseLocalizer, logger, configuration);
+            var mockEventsRepo = new Mock<IEventsRepository>();
+            mockEventsRepo.Setup(repo => repo.GetEventsForTenant("", 12345)).Returns(GetEvents());
+
+            _eventsController = new EventsController(mockEventsRepo.Object, baseLocalizer, mockHelper.Object);
 
         }
 
@@ -53,7 +59,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
 
         }
 
-        private async Task<TenantModel> GetTenantModel()
+        private TenantModel GetTenantModel()
         {
             return new TenantModel
             {
@@ -65,7 +71,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             };
         }
 
-        private async Task<VenueModel> GetVenue()
+        private VenueModel GetVenue()
         {
             return new VenueModel
             {
@@ -76,7 +82,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             };
         }
 
-        private async Task<VenueTypeModel> GetVenueType()
+        private VenueTypeModel GetVenueType()
         {
             return new VenueTypeModel
             {
@@ -89,7 +95,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             };
         }
 
-        private async Task<List<CountryModel>> GetCountries()
+        private List<CountryModel> GetCountries()
         {
             return new List<CountryModel>
             {
@@ -108,7 +114,12 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             };
         }
 
-        private async Task<List<EventModel>> GetEvents()
+        private TenantConfig GetTenantConfig()
+        {
+            return new TenantConfig();
+        }
+
+        private List<EventModel> GetEvents()
         {
             return new List<EventModel>
             {

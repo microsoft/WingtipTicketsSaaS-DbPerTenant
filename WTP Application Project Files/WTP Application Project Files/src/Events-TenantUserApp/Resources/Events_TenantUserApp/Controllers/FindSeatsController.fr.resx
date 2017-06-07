@@ -117,13 +117,10 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Enter quantity" xml:space="preserve">
-    <value>Enter quantity</value>
-  </data>
   <data name="Failed to purchase tickets." xml:space="preserve">
     <value>Failed to purchase tickets.</value>
   </data>
   <data name="You have successfully purchased {ticketCount} tickets." xml:space="preserve">
-    <value>You have successfully purchased {ticketCount} ticket(s).</value>
+    <value>You have successfully purchased {ticketCount} tickets.</value>
   </data>
 </root>
