@@ -79,9 +79,9 @@ function Initialize-Subscription
         {
             [int]$selectedRow = Read-Host "Enter the row number to select the subscription to use" -ErrorAction Stop
 
-            $context = Select-AzureRmSubscription -SubscriptionId $subscriptionList[($selectedRow - 1)] -ErrorAction Stop
+            Select-AzureRmSubscription -SubscriptionId $subscriptionList[($selectedRow - 1)] -ErrorAction Stop > $null
 
-            Write-Output "Subscription Id '$($subscriptionList[($selectedRow - 1)])' selected."
+            Write-Output "Subscription Id '$($subscriptionList[($selectedRow - 1)].Id)' selected."
         }
         catch
         { 
@@ -94,10 +94,10 @@ function Initialize-Subscription
 function Get-SubscriptionId
 {
     $Azurecontext = Get-AzureRmContext
-    $AzureModuleVersion = Get-Module AzureRM -list | Select-Object Version 
+    $AzureModuleVersion = Get-Module AzureRM.Resources -list
 
     # Check PowerShell version to accomodate breaking change in AzureRM modules greater than 4.0
-    if ($AzureModuleVersion.version -gt 4.0.0.0)
+    if ($AzureModuleVersion.Version.Major -ge 4)
     {
         return $Azurecontext.Subscription.Id
     }
@@ -110,10 +110,10 @@ function Get-SubscriptionId
 function Get-SubscriptionName
 {
     $Azurecontext = Get-AzureRmContext
-    $AzureModuleVersion = Get-Module AzureRM -list | Select-Object Version 
+    $AzureModuleVersion = Get-Module AzureRM.Resources -list 
 
     # Check PowerShell version to accomodate breaking change in AzureRM modules greater than 4.0
-    if ($AzureModuleVersion.version -gt 4.0.0.0)
+    if ($AzureModuleVersion.Version.Major -ge 4)
     {
         return $Azurecontext.Subscription.Name
     }
@@ -125,10 +125,10 @@ function Get-SubscriptionName
 
 function Get-SubscriptionList
 {
-    $AzureModuleVersion = Get-Module AzureRM -list | Select-Object Version 
+    $AzureModuleVersion = Get-Module AzureRM.Resources -list
 
     # Check PowerShell version to accomodate breaking change in AzureRM modules greater than 4.0
-    if ($AzureModuleVersion.version -gt 4.0.0.0)
+    if ($AzureModuleVersion.Version.Major -ge 4)
     {
         return Get-AzureRmSubscription
     }
@@ -136,8 +136,12 @@ function Get-SubscriptionList
     {
         # Add 'id' and 'name' properties to subscription object returned for AzureRM modules less than 4.0
         $subscriptionObject = Get-AzureRmSubscription
-        $subscriptionObject | Add-Member -MemberType AliasProperty -Name "Id" -Value SubscriptionId
-        $subscriptionObject | Add-Member -MemberType AliasProperty -Name "Name" -Value SubscriptionName 
+        
+        foreach ($subscription in $subscriptionObject)
+        {
+            $subscription | Add-Member -type NoteProperty -name "Id" -Value $($subscription.SubscriptionId)
+            $subscription | Add-Member -type NoteProperty -Name "Name" -Value $($subscription.SubscriptionName) 
+        }
         
         return $subscriptionObject 
     }   
@@ -146,10 +150,10 @@ function Get-SubscriptionList
 function Get-TenantId
 {
     $Azurecontext = Get-AzureRmContext
-    $AzureModuleVersion = Get-Module AzureRM -list | Select-Object Version 
+    $AzureModuleVersion = Get-Module AzureRM.Resources -list 
 
     # Check PowerShell version to accomodate breaking change in AzureRM modules greater than 4.0
-    if ($AzureModuleVersion.version -gt 4.0.0.0)
+    if ($AzureModuleVersion.Version.Major -ge 4)
     {
         return $Azurecontext.Tenant.Id
     }
