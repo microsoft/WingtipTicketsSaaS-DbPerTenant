@@ -43,8 +43,8 @@ if ($DemoScenario -eq 1)
     # set up the server and pool names in which the tenant will be provisioned
     $serverName = $config.TenantServerNameStem + $wtpUser.Name
     $poolName = $config.TenantPoolNameStem + "1"
-    #try
-    #{
+    try
+    {
         New-Tenant `
             -WtpResourceGroupName $wtpUser.ResourceGroupName `
             -WtpUser $wtpUser.Name `
@@ -55,14 +55,13 @@ if ($DemoScenario -eq 1)
             -PostalCode $PostalCode `
             -ErrorAction Stop `
             > $null
-   <#
     }
     catch
     {
         Write-Error $_.Exception.Message
         exit
     }
-    #>
+
     Write-Output "Provisioning complete for tenant '$TenantName'"
 
     # Open the events page for the new venue
