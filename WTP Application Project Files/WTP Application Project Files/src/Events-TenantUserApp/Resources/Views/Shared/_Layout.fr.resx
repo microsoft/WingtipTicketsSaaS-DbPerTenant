@@ -117,13 +117,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Please type your email." xml:space="preserve">
-    <value>Veuillez saisir votre adresse e-mail.</value>
-  </data>
-  <data name="The user does not exist." xml:space="preserve">
-    <value>L'utilisateur n'existe pas.</value>
-  </data>
-  <data name="User already exists." xml:space="preserve">
-    <value>L'utilisateur existe déjà.</value>
+  <data name="Events Hub" xml:space="preserve">
+    <value>Events Hub</value>
   </data>
 </root>

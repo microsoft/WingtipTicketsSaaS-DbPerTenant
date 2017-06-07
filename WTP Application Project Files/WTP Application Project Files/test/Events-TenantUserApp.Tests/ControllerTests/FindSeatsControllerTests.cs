@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Events_Tenant.Common.Core.Interfaces;
-using Events_Tenant.Common.Helpers;
+using System.Threading.Tasks;
+using Events_Tenant.Common.Interfaces;
 using Events_Tenant.Common.Models;
-using Events_Tenant.Common.Utilities;
 using Events_TenantUserApp.Controllers;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Xunit;
@@ -20,31 +21,26 @@ namespace Events_TenantUserApp.Tests.ControllerTests
     {
         private readonly FindSeatsController _findSeatsController;
 
-        public FindSeatsControllerTests(IStringLocalizer<FindSeatsController> localizer, IStringLocalizer<BaseController> baseLocalizer)
+        public FindSeatsControllerTests(IStringLocalizer<FindSeatsController> localizer, IStringLocalizer<BaseController> baseLocalizer, ILogger<FindSeatsController> logger, IConfiguration configuration)
         {
-            var mockEventsRepo = new Mock<IEventsRepository>();
-            mockEventsRepo.Setup(repo => repo.GetEvent(1, "", 12345)).Returns(GetEventModel());
+            var mockTenantRepo = new Mock<ITenantRepository>();
+            var eventSections = GetEventSections();
+            mockTenantRepo.Setup(repo => repo.GetEvent(1, 12345)).Returns(GetEventModel());
+            mockTenantRepo.Setup(repo => repo.GetEventSections(1, 12345)).Returns(eventSections);
 
-            var mockEventSectionRepo = new Mock<IEventSectionRepository>();
-            mockEventSectionRepo.Setup(repo => repo.GetEventSections(1, "", 12345)).Returns(GetEventSections());
+            var mockCatalogRepo = new Mock<ICatalogRepository>();
 
-            var mockSectionRepo = new Mock<ISectionRepository>();
-            var seatSectionIds = GetEventSections().Select(i => i.SectionId).ToList();
-            mockSectionRepo.Setup(r => r.GetSections(seatSectionIds, "", 12345)).Returns(GetSeatSections());
-            mockSectionRepo.Setup(r => r.GetSection(1, "", 12345)).Returns(GetSection());
-                
-            var mockTicketRepo = new Mock<ITicketRepository>();
-            mockTicketRepo.Setup(r => r.GetTicketsSold(1, 1, "", 12345)).Returns(10);
-            mockTicketRepo.Setup(r => r.Add(GetTicketModel(), "", 12345)).Returns(true);
+            var seatSectionIds = eventSections.Result.ToList().Select(i => i.SectionId).ToList();
+            mockTenantRepo.Setup(r => r.GetSections(seatSectionIds, 12345)).Returns(GetSeatSections());
+            mockTenantRepo.Setup(r => r.GetSection(1, 12345)).Returns(GetSection());
+            mockTenantRepo.Setup(r => r.GetTicketsSold(1, 1, 12345)).Returns(GetNumberOfTicketPurchased());
+            mockTenantRepo.Setup(r => r.AddTicket(GetTicketModel(), 12345)).Returns(GetBooleanValue());
+            mockTenantRepo.Setup(r => r.GetNumberOfTicketPurchases(12345)).Returns(GetNumberOfTicketPurchased());
+            mockTenantRepo.Setup(r => r.AddTicketPurchase(GetTicketPurchaseModel(), 12345)).Returns(GetTicketId());
 
-            var mockTicketPurchaseRepo = new Mock<ITicketPurchaseRepository>();
-            mockTicketPurchaseRepo.Setup(r => r.GetNumberOfTicketPurchases("", 12345)).Returns(10);
-            mockTicketPurchaseRepo.Setup(r => r.Add(GetTicketPurchaseModel(), "", 12345)).Returns(11);
+            var mockUtilities = new Mock<IUtilities>();
 
-            var mockhelper = new Mock<IHelper>();
-            mockhelper.Setup(helper => helper.GetBasicSqlConnectionString(new DatabaseConfig())).Returns("");
-
-            _findSeatsController = new FindSeatsController(mockEventSectionRepo.Object, mockSectionRepo.Object, mockEventsRepo.Object, mockTicketRepo.Object, mockTicketPurchaseRepo.Object, mockhelper.Object, localizer, baseLocalizer);
+            _findSeatsController = new FindSeatsController(mockTenantRepo.Object, mockCatalogRepo.Object, localizer, baseLocalizer, logger, configuration);
         }
 
         [Fact]
@@ -90,11 +86,9 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             Assert.NotNull(redirectToActionResult.ControllerName);
             Assert.Equal("Index", redirectToActionResult.ActionName);
             Assert.Equal("Events", redirectToActionResult.ControllerName);
-
         }
 
-
-        private EventModel GetEventModel()
+        private async Task<EventModel> GetEventModel()
         {
             return new EventModel
             {
@@ -104,8 +98,23 @@ namespace Events_TenantUserApp.Tests.ControllerTests
                 SubTitle = "Contoso Chamber Orchestra"
             };
         }
+        
+        private async Task<int> GetTicketId()
+        {
+            return 11;
+        }
 
-        private List<EventSectionModel> GetEventSections()
+        private async Task<bool> GetBooleanValue()
+        {
+            return true;
+        }
+
+        private async Task<int> GetNumberOfTicketPurchased()
+        {
+            return 10;
+        }
+
+        private async Task<List<EventSectionModel>> GetEventSections()
         {
             return new List<EventSectionModel>
             {
@@ -124,7 +133,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             };
         }
 
-        private List<SectionModel> GetSeatSections()
+        private async Task<List<SectionModel>> GetSeatSections()
         {
             return new List<SectionModel>
             {
@@ -147,7 +156,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             };
         }
 
-        private SectionModel GetSection()
+        private async Task<SectionModel> GetSection()
         {
             return new SectionModel
             {

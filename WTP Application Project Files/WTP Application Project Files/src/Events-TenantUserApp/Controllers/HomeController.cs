@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
-using Events_Tenant.Common.Core.Interfaces;
-using Events_Tenant.Common.Helpers;
+﻿using System;
+using System.Threading.Tasks;
+using Events_Tenant.Common.Interfaces;
 using Events_Tenant.Common.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Events_TenantUserApp.Controllers
 {
@@ -10,9 +11,9 @@ namespace Events_TenantUserApp.Controllers
     {
         #region Fields
 
-        private readonly ITenantsRepository _tenantsRepository;
-        private readonly IVenuesRepository _venuesRepository;
-        private readonly string _connectionString;
+        private readonly ICatalogRepository _catalogRepository;
+        private readonly ITenantRepository _tenantRepository;
+        private readonly ILogger _logger;
 
         #endregion
 
@@ -21,14 +22,14 @@ namespace Events_TenantUserApp.Controllers
         /// <summary>
         /// Initializes a new instance of the <see cref="HomeController" /> class.
         /// </summary>
-        /// <param name="tenantsRepository">The tenants repository.</param>
-        /// <param name="venuesRepository">The venues repository.</param>
-        /// <param name="helper">The helper class</param>
-        public HomeController(ITenantsRepository tenantsRepository, IVenuesRepository venuesRepository, IHelper helper)
+        /// <param name="catalogRepository">The tenants repository.</param>
+        /// <param name="tenantRepository">The venues repository.</param>
+        /// <param name="logger">The logger.</param>
+        public HomeController(ICatalogRepository catalogRepository, ITenantRepository tenantRepository, ILogger<HomeController> logger)
         {
-            _tenantsRepository = tenantsRepository;
-            _venuesRepository = venuesRepository;
-            _connectionString = helper.GetBasicSqlConnectionString(Startup.DatabaseConfig);
+            _catalogRepository = catalogRepository;
+            _tenantRepository = tenantRepository;
+            _logger = logger;
         }
 
         #endregion
@@ -39,19 +40,35 @@ namespace Events_TenantUserApp.Controllers
         /// Will display the Events Hub page
         /// </summary>
         /// <returns></returns>
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var tenantsModel = _tenantsRepository.GetAllTenants();
-
-            //get the venue name for each tenant
-            foreach (var tenant in tenantsModel)
+            try
             {
-                VenueModel venue = _venuesRepository.GetVenueDetails(_connectionString, tenant.TenantId);
-                tenant.VenueName = venue.VenueName;
-                tenant.TenantName = venue.DatabaseName;
+                var tenantsModel = await _catalogRepository.GetAllTenants();
+
+                if (tenantsModel != null)
+                {
+                    //get the venue name for each tenant
+                    foreach (var tenant in tenantsModel)
+                    {
+                        VenueModel venue = await _tenantRepository.GetVenueDetails(tenant.TenantId);
+
+                        if (venue != null)
+                        {
+                            tenant.VenueName = venue.VenueName;
+                            tenant.TenantName = venue.DatabaseName;
+                        }
+                    }
+
+                    return View(tenantsModel);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(0, ex, "Error in getting all tenants in Events Hub");
             }
 
-            return View(tenantsModel);
+            return View("Error");
         }
 
         public IActionResult Error()
