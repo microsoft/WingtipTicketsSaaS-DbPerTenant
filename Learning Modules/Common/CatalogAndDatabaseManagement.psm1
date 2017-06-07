@@ -775,8 +775,7 @@ function Initialize-TenantDatabase
         -Password $config.TenantAdminPassword `
         -Database $DatabaseName `
         -Query $commandText `
-        -ConnectionTimeout 30 `
-        -QueryTimeout 30 `
+
 }
 
 
@@ -1011,7 +1010,7 @@ function New-Tenant
     # Validate tenant name
     $TenantName = $TenantName.Trim()
     Test-LegalName $TenantName > $null
-    Test-LegalVenueTypeName $VenueType > $null
+    Test-ValidVenueType $VenueType -Catalog $catalog > $null
 
     # Compute the tenant key from the tenant name, key to be used to register the tenant in the catalog 
     $tenantKey = Get-TenantKey -TenantName $TenantName 
@@ -1787,9 +1786,9 @@ function Test-LegalName
         {
             if ($_ -match '^[A-Za-z0-9][A-Za-z0-9 \-_]*[^\s+]$') 
             {
-                $True
+                $true
             } 
-            Else 
+            else 
             {
                 throw "'$_' is not an allowed name.  Use a-z, A-Z, 0-9, ' ', '-', or '_'.  Must start with a letter or number and have no trailing spaces."
             }
@@ -1813,9 +1812,9 @@ function Test-LegalNameFragment
         {
             if ($_ -match '^[A-Za-z0-9 \-_][A-Za-z0-9 \-_]*$') 
             {
-                return $True
+                return $true
             } 
-            Else 
+            else 
             {
                 throw "'$_' is invalid.  Names can only include a-z, A-Z, 0-9, space, hyphen or underscore."
             }
@@ -1838,9 +1837,9 @@ function Test-LegalVenueTypeName
         {
             if ($_ -match '^[A-Za-z][A-Za-z]*$') 
             {
-                return $True
+                return $true
             } 
-            Else 
+            else 
             {
                 throw "'$_' is invalid.  Venue type names can only include a-z, A-Z."
             }
@@ -1853,24 +1852,13 @@ function Test-LegalVenueTypeName
 
 <#
 .SYNOPSIS
-    Validates a venue type name contains only legal characters
+    Validates that a venue type is a supported venue type (validated against the  
+    golden tenant database on the catalog server)
 #>
 function Test-ValidVenueType
 {
     param(
         [parameter(Mandatory=$true)]
-        [ValidateScript(
-        {
-            if ($_ -match '^[A-Za-z][A-Za-z]*$') 
-            {
-                return $True
-            } 
-            Else 
-            {
-                throw "'$_' is invalid.  Venue type names can only include a-z, A-Z."
-            }
-         }
-         )]
         [string]$VenueType,
 
         [parameter(Mandatory=$true)]
@@ -1878,22 +1866,21 @@ function Test-ValidVenueType
     )
     $config = Get-Configuration
 
-    #$language = (Get-Culture).Name
-    $language = "en-us"
-
     $commandText = "
         SELECT Count(VenueType) AS Count FROM [dbo].[VenueTypes]
         WHERE VenueType = '$VenueType'"
 
     $results = Invoke-SqlAzureWithRetry `
                     -ServerInstance $Catalog.FullyQualifiedServerName `
-                    -Username $config.TenantAdminuserName `
-                    -Password $config.TenantAdminPassword `
-                    -Database $Catalog.Database.DatabaseName `
+                    -Username $config.CatalogAdminuserName `
+                    -Password $config.CatalogAdminPassword `
+                    -Database $config.GoldenTenantDatabaseName `
                     -Query $commandText
 
     if($results.Count -ne 1)
     {
-        throw "Error: '$VenueType' is not a recognized venue type."
+        throw "Error: '$VenueType' is not a supported venue type."
     }
+
+    return $true
 }
