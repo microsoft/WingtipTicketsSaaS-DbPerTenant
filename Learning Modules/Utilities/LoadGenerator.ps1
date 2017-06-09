@@ -210,12 +210,14 @@ while (1 -eq 1)
     # Set the end time for all jobs
     $endTime = [DateTime]::Now.AddMinutes($DurationMinutes)
 
+    $scriptPath= $PSScriptRoot
+
     # Script block for job that executes the load generation stored procedure on each database 
     $scriptBlock = `
         {
             param($server,$dbName,$AdminUser,$AdminPassword,$DurationMinutes,$intervalMin,$intervalMax,$burstMinDuration,$burstMaxDuration,$baseDtu,$loadFactor,$densityLoadFactor,$poolDbCount)
 
-            import-module sqlserver
+            Import-Module "$using:scriptPath\..\Common\CatalogAndDatabaseManagement" -Force
 
             Write-Output ("Database " + $dbName + "/" + $server + " Load factor: " + $loadFactor + " Density weighting: " + ($densityLoadFactor*$poolDbCount)) 
 
@@ -264,12 +266,11 @@ while (1 -eq 1)
                 $sqlScript = "EXEC sp_CpuLoadGenerator @duration_seconds = " + $burstDuration + ", @dtu_to_simulate = " + $burstDtu               
                 try
                 {
-                    Invoke-Sqlcmd -ServerInstance $server `
+                    Invoke-SqlAzureWithRetry -ServerInstance $server `
                         -Database $dbName `
                         -Username $AdminUser `
                         -Password $AdminPassword `
                         -Query $sqlscript `
-                        -ConnectionTimeout 30 `
                         -QueryTimeout 36000         
                 }
                 catch
