@@ -117,13 +117,13 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Please type your email." xml:space="preserve">
-    <value>Veuillez saisir votre adresse e-mail.</value>
+  <data name="Error." xml:space="preserve">
+    <value>Erreur.</value>
   </data>
-  <data name="The user does not exist." xml:space="preserve">
-    <value>L'utilisateur n'existe pas.</value>
+  <data name="Please verify the spelling and/or verify the venue has been registered." xml:space="preserve">
+    <value>Vérifiez l'orthographe et / ou vérifiez que le lieu a été enregistré.</value>
   </data>
-  <data name="User already exists." xml:space="preserve">
-    <value>L'utilisateur existe déjà.</value>
+  <data name="The following venue was not found:" xml:space="preserve">
+    <value>Le lieu suivant n'a pas été trouvé:</value>
   </data>
 </root>

@@ -58,7 +58,7 @@ function Initialize-Subscription
     }
     elseif($subscriptionList.Length -eq 1)
     {
-        Select-AzureRmSubscription -Id $subscriptionList[0].SubscriptionId > $null
+        Select-AzureRmSubscription -SubscriptionId $subscriptionList[0].Id > $null
     }
     elseif($subscriptionList.Length -gt 1)
     {

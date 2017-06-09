@@ -1,15 +1,8 @@
-﻿@using System.Globalization
-@using System.Security.Policy
-@using System.Web.Providers.Entities
-@using Microsoft.AspNetCore.Http.Features
-@using Microsoft.AspNetCore.Mvc.Localization
-@using Events_Tenant.Common.Models
+﻿@using System.Security.Policy
 @using Events_Tenant.Common.Utilities
 @using Events_TenantUserApp
-@using Microsoft.AspNetCore.Hosting.Internal
-@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.Mvc.Localization
 ﻿@inject IViewLocalizer Localizer
-
 
 @{
     var urlPath = Context.Request.Path.Value;
@@ -30,16 +23,14 @@
     <div class="col-xs-12 ">
         <div class="banner">
             <div class="row cover-2">
-                <img src = @blobpath class="img-responsive" style="width: 100%">
+                <img src=@blobpath class="img-responsive" style="width: 100%">
             </div>
-            <div class="banner-home-left">
+            <div class="banner-home-left" style="width: 97.4%">
                 <div class="banner-caption">
-                    <span class="banner-splitter">@Localizer["Next"]</span> @Model.EventName
+                    <span>@Localizer["No Events Available"]</span>
                 </div>
             </div>
-            <div class="banner-home-right">
-                <a href="@Url.Action("FindSeats", "FindSeats", new { eventId = @Model.EventId })">@Localizer["Tickets"]<span class="pull-right">></span></a>
-            </div>
+           
         </div>
     </div>
 </div>

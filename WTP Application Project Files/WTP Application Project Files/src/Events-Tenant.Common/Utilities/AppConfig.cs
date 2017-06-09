@@ -12,7 +12,6 @@ namespace Events_Tenant.Common.Utilities
         public string DatabaseUser { get; set; }
         public string DatabasePassword { get; set; }
         public int DatabaseServerPort { get; set; }
-        //public string SqlProtocol { get; set; }
         public int ConnectionTimeOut { get; set; }
         public string LearnHowFooterUrl { get; set; }
         public SqlProtocol SqlProtocol { get; set; }
@@ -54,7 +53,6 @@ namespace Events_Tenant.Common.Utilities
         public string VenueName { get; set; }
         public string EventTypeNamePlural { get; set; }
         public string BlobImagePath { get; set; }
-        public string BlobPath { get; set; }
         public string TenantName { get; set; }
         public string Currency { get; set; }
         public string TenantCulture { get; set; }
