@@ -24,7 +24,11 @@
         CustomerModel user = null;
         if (users!= null && users.Count() > 0)
         {
-            var usersList = users.Where(a => a.TenantName == Startup.TenantConfig.TenantName);
+            var urlPath = Context.Request.Path.Value;
+            string[] urlPieces = urlPath.Split(new[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
+            var tenantName = urlPieces[0];
+
+            var usersList = users.Where(a => a.TenantName == tenantName);
             if (usersList != null && usersList.Count() > 0)
             {
                 user = usersList.Last();

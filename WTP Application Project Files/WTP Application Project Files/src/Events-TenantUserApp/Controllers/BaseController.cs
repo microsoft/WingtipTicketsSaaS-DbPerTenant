@@ -1,12 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
+using Events_Tenant.Common.Interfaces;
 using Events_Tenant.Common.Utilities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
-using System.Linq;
-using Events_Tenant.Common.Helpers;
 
 namespace Events_TenantUserApp.Controllers
 {
@@ -14,17 +16,16 @@ namespace Events_TenantUserApp.Controllers
     {
         #region Fields
         private readonly IStringLocalizer<BaseController> _localizer;
-        private readonly IHelper _helper;
+        private readonly ITenantRepository _tenantRepository;
+        private readonly IConfiguration _configuration;
         #endregion
 
         #region Constructors
-        public BaseController(IStringLocalizer<BaseController> localizer, IHelper helper) 
+        public BaseController(IStringLocalizer<BaseController> localizer, ITenantRepository tenantRepository, IConfiguration configuration) 
         {
             _localizer = localizer;
-            _helper = helper;
-
-            Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture(Startup.TenantConfig.TenantCulture);
-            Thread.CurrentThread.CurrentUICulture = new CultureInfo(Startup.TenantConfig.TenantCulture);
+            _tenantRepository = tenantRepository;
+            _configuration = configuration;
         }
 
         #endregion
@@ -41,21 +42,114 @@ namespace Events_TenantUserApp.Controllers
             }
         }
 
-        protected void SetTenantConfig(string tenant)
+        protected void SetTenantConfig(int tenantId, string tenantIdInString)
         {
             var host = HttpContext.Request.Host.ToString();
-            Startup.TenantConfig = _helper.PopulateTenantConfigs(tenant, host, Startup.DatabaseConfig, Startup.TenantConfig);
 
-            //localisation per venue's language
-            var culture = Startup.TenantConfig.TenantCulture;
-            if (!string.IsNullOrEmpty(culture))
+            var tenantConfig = PopulateTenantConfigs(tenantId, tenantIdInString, host);
+
+            if (tenantConfig != null)
             {
-                Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture(culture);
-                Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
+                var tenantConfigs = HttpContext.Session.GetObjectFromJson<List<TenantConfig>>("TenantConfigs");
+                if (tenantConfigs == null)
+                {
+                    tenantConfigs = new List<TenantConfig>
+                    {
+                        tenantConfig
+                    };
+                    HttpContext.Session.SetObjectAsJson("TenantConfigs", tenantConfigs);
+                }
+                else
+                {
+                    var tenantsInfo = tenantConfigs.Where(i => i.TenantId == tenantId);
+
+                    if (!tenantsInfo.Any())
+                    {
+                        tenantConfigs.Add(tenantConfig);
+                        HttpContext.Session.SetObjectAsJson("TenantConfigs", tenantConfigs);
+                    }
+                    else
+                    {
+                        for (var i = 0; i < tenantConfigs.Count; i++)
+                        {
+                            if (tenantConfigs[i].TenantId == tenantId)
+                            {
+                                tenantConfigs[i] = tenantConfig;
+                                HttpContext.Session.SetObjectAsJson("TenantConfigs", tenantConfigs);
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                //localisation per venue's language
+                Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture(tenantConfig.TenantCulture);
+                Thread.CurrentThread.CurrentUICulture = new CultureInfo(tenantConfig.TenantCulture);
             }
         }
 
         #endregion
+
+        /// <summary>
+        /// Populates the tenant configs.
+        /// </summary>
+        /// <param name="tenantId">The tenant identifier.</param>
+        /// <param name="tenantIdInString">The tenant identifier in string.</param>
+        /// <param name="host">The host.</param>
+        /// <returns></returns>
+        private TenantConfig PopulateTenantConfigs(int tenantId, string tenantIdInString, string host)
+        {
+            try
+            {
+                //get blobPath
+                var blobPath = _configuration["BlobPath"];
+                var defaultCulture = _configuration["DefaultRequestCulture"];
+
+                //get user from url
+                string user;
+                if (host.Contains("localhost"))
+                {
+                    user = "testuser";
+                }
+                else
+                {
+                    string[] hostpieces = host.Split(new[] {"."}, StringSplitOptions.RemoveEmptyEntries);
+                    user = hostpieces[2];
+                }
+
+                //get the venue details and populate in config settings
+                var venueDetails = (_tenantRepository.GetVenueDetails(tenantId)).Result;
+                var venueTypeDetails =
+                    (_tenantRepository.GetVenueType(venueDetails.VenueType, tenantId)).Result;
+                var countries = (_tenantRepository.GetAllCountries(tenantId)).Result;
+
+                //get country language from db 
+                var country = (_tenantRepository.GetCountry(venueDetails.CountryCode, tenantId)).Result;
+                RegionInfo regionalInfo = new RegionInfo(country.Language);
+
+                return new TenantConfig
+                {
+                    VenueName = venueDetails.VenueName,
+                    BlobImagePath = blobPath + venueTypeDetails.VenueType + "-user.jpg",
+                    EventTypeNamePlural = venueTypeDetails.EventTypeShortNamePlural.ToUpper(),
+                    TenantId = tenantId,
+                    TenantName = venueDetails.DatabaseName,
+                    Currency = regionalInfo.CurrencySymbol,
+                    TenantCulture =
+                        (!string.IsNullOrEmpty(venueTypeDetails.Language)
+                            ? venueTypeDetails.Language
+                            : defaultCulture),
+                    TenantCountries = countries,
+                    TenantIdInString = tenantIdInString,
+                    User = user
+                };
+            }
+            catch (Exception exception)
+            {
+                Trace.TraceError(exception.Message, "Error in populating tenant config.");
+            }
+            return null;
+        }
 
     }
 }

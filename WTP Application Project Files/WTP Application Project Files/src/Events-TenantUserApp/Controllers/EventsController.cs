@@ -1,48 +1,60 @@
-﻿using Events_Tenant.Common.Core.Interfaces;
-using Events_Tenant.Common.Helpers;
+﻿using System;
+using System.Threading.Tasks;
+using Events_Tenant.Common.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 
 namespace Events_TenantUserApp.Controllers
 {
     public class EventsController : BaseController
     {
         #region Fields
-        private readonly IEventsRepository _eventsRepository;
-        private readonly IHelper _helper;
-        private static readonly object Lock = new object();
+        private readonly ITenantRepository _tenantRepository;
+        private readonly ICatalogRepository _catalogRepository;
+        private readonly ILogger _logger;
 
         #endregion
 
         #region Constructors
 
-        public EventsController(IEventsRepository eventsRepository, IStringLocalizer<BaseController> baseLocalizer, IHelper helper) : base(baseLocalizer, helper)
+        public EventsController(ITenantRepository tenantRepository, ICatalogRepository catalogRepository, IStringLocalizer<BaseController> baseLocalizer, ILogger<EventsController> logger, IConfiguration configuration) : base(baseLocalizer, tenantRepository, configuration)
         {
-            _eventsRepository = eventsRepository;
-            _helper = helper;
+            _logger = logger;
+            _tenantRepository = tenantRepository;
+            _catalogRepository = catalogRepository;
         }
 
         #endregion
 
 
         [Route("{tenant}")]
-        public ActionResult Index(string tenant)
+        public async Task<ActionResult> Index(string tenant)
         {
-            lock (Lock)
+            try
             {
-                var connectionString = _helper.GetBasicSqlConnectionString(Startup.DatabaseConfig);
                 if (!string.IsNullOrEmpty(tenant))
                 {
-                    SetTenantConfig(tenant);
+                    var tenantDetails = await _catalogRepository.GetTenant(tenant);
+                    if (tenantDetails != null)
+                    {
+                        SetTenantConfig(tenantDetails.TenantId, tenantDetails.TenantIdInString);
 
-                    var events = _eventsRepository.GetEventsForTenant(connectionString, Startup.TenantConfig.TenantId);
-
-                    return View(events);
+                        var events = await _tenantRepository.GetEventsForTenant(tenantDetails.TenantId);
+                        return View(events);
+                    }
+                    else
+                    {
+                        return View("TenantError", tenant);
+                    }
                 }
-
-                return View("Error");
-
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(0, ex, "Get events failed for tenant {tenant}", tenant);
+            }
+            return View("Error");
         }
     }
 }

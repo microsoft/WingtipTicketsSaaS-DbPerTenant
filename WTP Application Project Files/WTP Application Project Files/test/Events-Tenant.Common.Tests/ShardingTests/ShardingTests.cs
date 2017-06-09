@@ -1,15 +1,10 @@
-﻿using System;
-using Events_Tenant.Common.Core.Interfaces;
-using Events_Tenant.Common.Helpers;
+﻿using System.Data.SqlClient;
+using Events_Tenant.Common.Interfaces;
 using Events_Tenant.Common.Utilities;
+using Events_TenantUserApp.EF.CatalogDB;
+using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using System.Data.SqlClient;
-using System.Security.Cryptography;
-using System.Text;
-using Events_TenantUserApp.EF.CatalogDB;
-using Microsoft.Azure.SqlDatabase.ElasticScale;
-using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
 
 namespace Events_Tenant.Common.Tests.ShardingTests
 {
@@ -20,17 +15,16 @@ namespace Events_Tenant.Common.Tests.ShardingTests
 
         internal const string ShardMapManagerTestConnectionString = "Data Source=localhost;Integrated Security=True;";
 
-        private const string ShardMapManagerConnString =
-            "Data Source=localhost;Initial Catalog=ShardMapManager;Integrated Security=SSPI;";
-
         private const string CreateDatabaseQuery =
             "IF EXISTS (SELECT name FROM sys.databases WHERE name = N'TestTenant') BEGIN DROP DATABASE [TestTenant] END CREATE DATABASE [TestTenant]";
 
         private CatalogConfig _catalogConfig;
         private DatabaseConfig _databaseConfig;
+        private string _connectionString;
 
-        private Mock<ITenantsRepository> _mockTenantsRepo;
-        private Mock<IHelper> _mockHelper;
+        private Mock<ICatalogRepository> _mockCatalogRepo;
+        private Mock<ITenantRepository> _mockTenantRepo;
+        private Mock<IUtilities> _mockUtilities;
 
         #endregion
 
@@ -62,12 +56,14 @@ namespace Events_Tenant.Common.Tests.ShardingTests
                 TenantId = new byte[0]
             };
 
+            _connectionString = "Data Source=localhost;Initial Catalog=ShardMapManager;Integrated Security=SSPI;";
 
-            _mockTenantsRepo = new Mock<ITenantsRepository>();
-            _mockTenantsRepo.Setup(repo => repo.Add(tenant));
+            _mockCatalogRepo = new Mock<ICatalogRepository>();
+            _mockCatalogRepo.Setup(repo => repo.Add(tenant));
 
-            _mockHelper = new Mock<IHelper>();
-            _mockHelper.Setup(helper => helper.GetSqlConnectionString(_databaseConfig, _catalogConfig)).Returns(ShardMapManagerConnString);
+            _mockTenantRepo = new Mock<ITenantRepository>();
+
+            _mockUtilities = new Mock<IUtilities>();
 
             #region Create tenant database on localhost
 
@@ -92,28 +88,22 @@ namespace Events_Tenant.Common.Tests.ShardingTests
         [TestMethod]
         public void ShardingTest()
         {
-            var sharding = new Sharding(_catalogConfig, _databaseConfig, _mockTenantsRepo.Object, _mockHelper.Object);
+            var sharding = new Sharding(_catalogConfig.CatalogDatabase, _connectionString, _mockCatalogRepo.Object, _mockTenantRepo.Object, _mockUtilities.Object);
 
             Assert.IsNotNull(sharding);
             Assert.IsNotNull(sharding.ShardMapManager);
         }
 
         [TestMethod]
-        public void RegisterShardTest()
+        public async void RegisterShardTest()
         {
-            TenantServerConfig tenantServerConfig = new TenantServerConfig
-            {
-                TenantServer = "localhost"
-            };
-
             _databaseConfig = new DatabaseConfig
             {
                 SqlProtocol = SqlProtocol.Default
             };
-            _mockHelper.Setup(helper => helper.GetSqlConnectionString(_databaseConfig, _catalogConfig)).Returns(ShardMapManagerConnString);
 
-            var sharding = new Sharding(_catalogConfig, _databaseConfig, _mockTenantsRepo.Object, _mockHelper.Object);
-            var result = Sharding.RegisterNewShard("TestTenant", 397858529, tenantServerConfig, _databaseConfig, _catalogConfig);
+            var sharding = new Sharding(_catalogConfig.CatalogDatabase, _connectionString, _mockCatalogRepo.Object, _mockTenantRepo.Object, _mockUtilities.Object);
+            var result = await Sharding.RegisterNewShard("TestTenant", 397858529, "localhost", _databaseConfig.DatabaseServerPort, _catalogConfig.ServicePlan);
 
             Assert.IsTrue(result);
         }

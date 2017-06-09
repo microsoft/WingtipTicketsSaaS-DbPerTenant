@@ -1,22 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Globalization;
 using System.Linq;
-using Events_Tenant.Common.Core.Interfaces;
-using Events_Tenant.Common.Core.Repositories;
-using Events_Tenant.Common.Helpers;
-using Events_Tenant.Common.Models;
+using Events_Tenant.Common.Interfaces;
+using Events_Tenant.Common.Repositories;
 using Events_Tenant.Common.Utilities;
 using Events_TenantUserApp.EF.CatalogDB;
+using Events_TenantUserApp.ViewModels;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
 
 namespace Events_TenantUserApp
 {
@@ -26,15 +26,15 @@ namespace Events_TenantUserApp
     public class Startup
     {
         #region Private fields
-        private IHelper _helper;
-        private ITenantsRepository _tenantsRepository; 
+        private IUtilities _utilities;
+        private ICatalogRepository _catalogRepository;
+        private ITenantRepository _tenantRepository;
         #endregion
 
         #region Public Properties
         public static DatabaseConfig DatabaseConfig { get; set; }
         public static CatalogConfig CatalogConfig { get; set; }
         public static TenantServerConfig TenantServerConfig { get; set; }
-        public static TenantConfig TenantConfig { get; set; }
         public IConfigurationRoot Configuration { get; }
 
         #endregion
@@ -85,28 +85,17 @@ namespace Events_TenantUserApp
             services.AddDbContext<CatalogDbContext>(options => options.UseSqlServer(GetCatalogConnectionString(CatalogConfig, DatabaseConfig)));
 
             //Add Application services
-            services.AddTransient<ITenantsRepository, TenantsRepository>();
-            services.AddTransient<ITicketRepository, TicketRepository>();
-            services.AddTransient<ICountryRepository, CountryRepository>();
-            services.AddTransient<IVenuesRepository, VenuesRepository>();
-            services.AddTransient<IVenueTypesRepository, VenueTypesRepository>();
+            services.AddTransient<ICatalogRepository, CatalogRepository>();
+            services.AddTransient<ITenantRepository, TenantRepository>();
+            services.AddSingleton<ITenantRepository>(p => new TenantRepository(GetBasicSqlConnectionString()));
+            services.AddSingleton<IConfiguration>(Configuration);
 
-            //create instance of helper class
-            services.AddTransient<IHelper, Helper>();
+            //create instance of utilities class
+            services.AddTransient<IUtilities, Utilities>();
             var provider = services.BuildServiceProvider();
-            _helper = provider.GetService<IHelper>();
-
-            services.AddTransient<IEventsRepository, EventsRepository>();
-            services.AddTransient<ICustomerRepository, CustomerRepository>();
-            services.AddTransient<IEventSectionRepository, EventSectionRepository>();
-            services.AddTransient<ISectionRepository, SectionRepository>();
-            services.AddTransient<ITicketPurchaseRepository, TicketPurchaseRepository>();
-
-            _tenantsRepository = provider.GetService<ITenantsRepository>();
-
-            //shard management
-            InitialiseShardMapManager();
-            _helper.RegisterTenantShard(TenantServerConfig, DatabaseConfig, CatalogConfig, TenantServerConfig.ResetEventDates);
+            _utilities = provider.GetService<IUtilities>();
+            _catalogRepository = provider.GetService<ICatalogRepository>();
+            _tenantRepository = provider.GetService<ITenantRepository>();
         }
 
         /// <summary>
@@ -135,18 +124,30 @@ namespace Events_TenantUserApp
             #region Localisation settings
 
             //get the list of supported cultures from the appsettings.json
-            var allSupportedCultures = Configuration.GetSection("SupportedCultures").Get<List<string>>();
+            var allSupportedCultures = Configuration.GetSection("SupportedCultures").Get<SupportedCultures>();
+            var defaultCulture = Configuration["DefaultRequestCulture"];
 
-            List<CultureInfo> supportedCultures = allSupportedCultures.Select(t => new CultureInfo(t)).ToList();
-
-            app.UseRequestLocalization(new RequestLocalizationOptions
+            if (allSupportedCultures != null && defaultCulture != null)
             {
-                DefaultRequestCulture = new RequestCulture(Configuration["DefaultRequestCulture"]),
-                //get the default culture from appsettings.json
-                SupportedCultures = supportedCultures, // UI strings that we have localized.
-                SupportedUICultures = supportedCultures,
-                RequestCultureProviders = new List<IRequestCultureProvider>()
-            });
+                List<CultureInfo> supportedCultures = allSupportedCultures.SupportedCulture.Select(t => new CultureInfo(t)).ToList();
+
+                app.UseRequestLocalization(new RequestLocalizationOptions
+                {
+                    DefaultRequestCulture = new RequestCulture(defaultCulture),
+                    //get the default culture from appsettings.json
+                    SupportedCultures = supportedCultures, // UI strings that we have localized.
+                    SupportedUICultures = supportedCultures,
+                    RequestCultureProviders = new List<IRequestCultureProvider>()
+                });
+            }
+            else
+            {
+                app.UseRequestLocalization(new RequestLocalizationOptions
+                {
+                    DefaultRequestCulture = new RequestCulture("en-US"),
+                    RequestCultureProviders = new List<IRequestCultureProvider>()
+                });
+            }
 
             #endregion
 
@@ -179,6 +180,10 @@ namespace Events_TenantUserApp
                     template: "{tenant}/{controller=FindSeats}/{action=Index}/{id?}");
 
             });
+
+            //shard management
+            InitialiseShardMapManager();
+            _utilities.RegisterTenantShard(TenantServerConfig, DatabaseConfig, CatalogConfig, TenantServerConfig.ResetEventDates);
         }
 
         #endregion
@@ -224,12 +229,6 @@ namespace Events_TenantUserApp
                 TenantServer = Configuration["TenantServer"] + ".database.windows.net",
                 ResetEventDates = Convert.ToBoolean(Configuration["ResetEventDates"])
             };
-
-            TenantConfig = new TenantConfig
-            {
-                BlobPath = Configuration["BlobPath"],
-                TenantCulture = Configuration["DefaultRequestCulture"]
-            };
         }
 
 
@@ -239,9 +238,32 @@ namespace Events_TenantUserApp
         /// </summary>
         private void InitialiseShardMapManager()
         {
-            var sharding = new Sharding(CatalogConfig, DatabaseConfig, _tenantsRepository, _helper);
+            var basicConnectionString = GetBasicSqlConnectionString();
+            SqlConnectionStringBuilder connectionString = new SqlConnectionStringBuilder(basicConnectionString)
+            {
+                DataSource = DatabaseConfig.SqlProtocol + ":" + CatalogConfig.CatalogServer + "," + DatabaseConfig.DatabaseServerPort,
+                InitialCatalog = CatalogConfig.CatalogDatabase
+            };
+
+            var sharding = new Sharding(CatalogConfig.CatalogDatabase, connectionString.ConnectionString, _catalogRepository, _tenantRepository, _utilities);
         }
 
+        /// <summary>
+        /// Gets the basic SQL connection string.
+        /// </summary>
+        /// <returns></returns>
+        private string GetBasicSqlConnectionString()
+        {
+            var connStrBldr = new SqlConnectionStringBuilder
+            {
+                UserID = DatabaseConfig.DatabaseUser,
+                Password = DatabaseConfig.DatabasePassword,
+                ApplicationName = "EntityFramework",
+                ConnectTimeout = DatabaseConfig.ConnectionTimeOut
+            };
+
+            return connStrBldr.ConnectionString;
+        }
         #endregion
 
     }

@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Events_Tenant.Common.Core.Interfaces;
-using Events_Tenant.Common.Helpers;
+﻿using System.Threading.Tasks;
+using Events_Tenant.Common.Interfaces;
 using Events_Tenant.Common.Models;
 using Events_TenantUserApp.Controllers;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Xunit;
@@ -19,17 +16,19 @@ namespace Events_TenantUserApp.Tests.ControllerTests
     [TestClass]
     public class AccountControllerTests
     {
-        private AccountController _accountController;
+        private readonly AccountController _accountController;
 
-        public AccountControllerTests(IStringLocalizer<AccountController> localizer, IStringLocalizer<BaseController> baseLocalizer)
+        public AccountControllerTests(IStringLocalizer<AccountController> localizer, IStringLocalizer<BaseController> baseLocalizer, ILogger<AccountController> logger, IConfiguration configuration)
         {
-            var mockCustomerRepo = new Mock<ICustomerRepository>();
-            mockCustomerRepo.Setup(repo => repo.GetCustomer("test@email.com", "", 123456)).Returns(GetCustomer());
-            mockCustomerRepo.Setup(repo => repo.Add(GetCustomer(), "", 123456)).Returns(1);
+            var mockTenantRepo = new Mock<ITenantRepository>();
+            mockTenantRepo.Setup(repo => repo.GetCustomer("test@email.com", 123456)).Returns(GetCustomerAsync());
+            mockTenantRepo.Setup(repo => repo.AddCustomer(GetCustomer(), 123456)).Returns(GetCustomerId());
 
-            var mockhelper = new Mock<IHelper>();
+            var mockCatalogRepo = new Mock<ICatalogRepository>();
 
-            _accountController = new AccountController(localizer, baseLocalizer, mockCustomerRepo.Object, mockhelper.Object);
+            var mockUtilities = new Mock<IUtilities>();
+
+            _accountController = new AccountController(localizer, baseLocalizer, mockTenantRepo.Object, mockCatalogRepo.Object, logger, configuration);
 
         }
 
@@ -80,9 +79,21 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             };
         }
 
-        private CustomerModel GetNullCustomer()
+        private async Task<int> GetCustomerId()
         {
-            return null;
+            return 1;
         }
+        private async Task<CustomerModel> GetCustomerAsync()
+        {
+            return new CustomerModel
+            {
+                CountryCode = "USA",
+                PostalCode = "123",
+                Email = "test@gmail.com",
+                FirstName = "customer1",
+                LastName = "lastName"
+            };
+        }
+
     }
 }
