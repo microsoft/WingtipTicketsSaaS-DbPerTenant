@@ -2,7 +2,7 @@
 -- Create job to perform an online reindex after loading new reference data
 EXEC jobs.sp_add_job
 @job_name='Online Reindex PK__VenueTyp__265E44FD7FD4C885',
-@description='Deploy new reference data',
+@description='Online Reindex of VenueType',
 @enabled=1,
 @schedule_interval_type='Weeks',
 @schedule_interval_count=1,
