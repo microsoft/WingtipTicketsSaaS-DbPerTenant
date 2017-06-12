@@ -9,7 +9,7 @@ SET @WtpUser = '<user>';
 EXEC [jobs].sp_add_target_group @target_group_name = 'DemoServerGroup'
 
 -- Add a server target member, includes all databases in tenant server
-SET @server1 = 'customers1-' + @WtpUser + '.database.windows.net'
+SET @server1 = 'tenants1-' + @WtpUser + '.database.windows.net'
 
 EXEC [jobs].sp_add_target_group_member
 @target_group_name =  'DemoServerGroup',
