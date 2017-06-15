@@ -12,12 +12,12 @@ WITH IDENTITY = N'developer', SECRET = N'P@ssword1';
 GO
 
 -- Add catalog database as external data source using credential created above
--- **NOTE:** MODIFY WTPUSER VARIABLE BELOW WITH YOUR USER ID
+-- **NOTE:** MODIFY <USER> VARIABLE BELOW
 CREATE EXTERNAL DATA SOURCE [WtpTenantDBs]
 WITH
 (
 	TYPE = SHARD_MAP_MANAGER,
-	LOCATION = N'catalog-<WTPUSER>.database.windows.net', -- << MODIFY <WTPUSER> variable with your user id from Wingtip deployment
+	LOCATION = N'catalog-<USER>.database.windows.net', -- << MODIFY <USER> variable with your user id from Wingtip deployment
 	DATABASE_NAME = 'tenantcatalog',
 	SHARD_MAP_NAME = 'tenantcatalog',
 	CREDENTIAL = [AdhocQueryDBCred]
