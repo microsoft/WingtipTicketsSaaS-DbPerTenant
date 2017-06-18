@@ -386,7 +386,7 @@ while (1 -eq 1)
     }
 
     $now = Get-Date
-    $runtime = ($now - $start).Minutes
+    $runtime = ($now - $start).TotalMinutes
 
     if ($runtime -ge $DurationMinutes)
     {
