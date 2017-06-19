@@ -1,33 +1,34 @@
--- *******************************************************
--- SETUP Adhoc Analytics Infrastructure
--- *******************************************************
+-- ********************************************************************************************
+-- SETUP Adhoc analytics database with external data source and tables needed for Elastic Query 
+-- *********************************************************************************************
 
--- Check to make sure query is run on adhoc analytics database
-IF ((SELECT DB_NAME()) != 'adhocanalytics')
-	THROW 51000, 'Run the initialization script on the adhocanalytics database.', 1;
-GO
-	 
 -- Create encryption key that will encrypt database logins
-CREATE MASTER KEY;
+IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE symmetric_key_id = 101)
+	CREATE MASTER KEY;
 GO
 
 -- Create login credential for catalog database
-CREATE DATABASE SCOPED CREDENTIAL [AdhocQueryDBCred]
-WITH IDENTITY = N'developer', SECRET = N'P@ssword1';
+--DROP DATABASE SCOPED CREDENTIAL AdhocQueryDBCred
+IF NOT EXISTS (SELECT * FROM sys.database_scoped_credentials WHERE name = 'AdhocQueryDBCred')
+	CREATE DATABASE SCOPED CREDENTIAL [AdhocQueryDBCred] WITH IDENTITY = N'developer', SECRET = N'P@ssword1';
 GO
 
 -- Add catalog database as external data source using credential created above
--- **NOTE:** MODIFY <USER> VARIABLE BELOW
-CREATE EXTERNAL DATA SOURCE [WtpTenantDBs]
-WITH
-(
-	TYPE = SHARD_MAP_MANAGER,
-	LOCATION = <catalog-<USER>.database.windows.net>, -- << MODIFY <USER> variable with your user id from Wingtip deployment. Input should be of the form 'catalog-user1.database.windows.net'
-	DATABASE_NAME = 'tenantcatalog',
-	SHARD_MAP_NAME = 'tenantcatalog',
-	CREDENTIAL = [AdhocQueryDBCred]
-);
-GO
+IF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'WtpTenantDBs')
+BEGIN
+	DECLARE @catalogServerName nvarchar(128) = (SELECT @@servername + '.database.windows.net');
+	DECLARE @createExternalSource nvarchar(500) =
+	N'CREATE EXTERNAL DATA SOURCE [WtpTenantDBs]
+	WITH
+	(
+		TYPE = SHARD_MAP_MANAGER,
+		LOCATION = ''' + @catalogServerName + ''',
+		DATABASE_NAME = ''tenantcatalog'',
+		SHARD_MAP_NAME = ''tenantcatalog'',
+		CREDENTIAL = [AdhocQueryDBCred]
+	);'
+	EXEC(@createExternalSource)
+END
 
 -- Add tenant tables that will be used for querying data across all tenants
 
@@ -121,6 +122,7 @@ WITH
 );
 GO
 
+DROP TABLE IF EXISTS dbo.VenueTypes
 CREATE TABLE [dbo].[VenueTypes]
 (
     [VenueType] CHAR(30) NOT NULL,
@@ -156,10 +158,10 @@ VALUES
     ('opera','Opera','Opera','Opera','Operas','en-us');      
 GO
 
-PRINT N'Update complete.';
-GO
-
 --- Verify that the external data source and tables exist in the adhoc analytics database
 select * from sys.external_data_sources;
 select * from sys.external_tables;
+GO
+
+PRINT N'Initialization complete.';
 GO
