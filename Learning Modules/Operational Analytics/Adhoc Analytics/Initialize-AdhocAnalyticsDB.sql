@@ -8,7 +8,6 @@ IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE symmetric_key_id = 101)
 GO
 
 -- Create login credential for catalog database
---DROP DATABASE SCOPED CREDENTIAL AdhocQueryDBCred
 IF NOT EXISTS (SELECT * FROM sys.database_scoped_credentials WHERE name = 'AdhocQueryDBCred')
 	CREATE DATABASE SCOPED CREDENTIAL [AdhocQueryDBCred] WITH IDENTITY = N'developer', SECRET = N'P@ssword1';
 GO
