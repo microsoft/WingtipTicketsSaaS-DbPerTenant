@@ -7,7 +7,7 @@ IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE symmetric_key_id = 101)
 	CREATE MASTER KEY;
 GO
 
--- Create login credential for catalog database
+-- Create login credential, used to access the catalog and remote databases
 IF NOT EXISTS (SELECT * FROM sys.database_scoped_credentials WHERE name = 'AdhocQueryDBCred')
 	CREATE DATABASE SCOPED CREDENTIAL [AdhocQueryDBCred] WITH IDENTITY = N'developer', SECRET = N'P@ssword1';
 GO
@@ -46,7 +46,7 @@ CREATE EXTERNAL TABLE [dbo].[VenueEvents]
 WITH
 (
     DATA_SOURCE = [WtpTenantDBs],
-    DISTRIBUTION = ROUND_ROBIN
+    DISTRIBUTION = SHARDED(VenueId)
 );
 GO
 
@@ -68,7 +68,7 @@ CREATE EXTERNAL TABLE [dbo].[VenueTicketPurchases]
 WITH
 (
 	DATA_SOURCE = [WtpTenantDBs],
-	DISTRIBUTION = ROUND_ROBIN
+	DISTRIBUTION = SHARDED(VenueId)
 );
 GO
 
@@ -92,7 +92,7 @@ CREATE EXTERNAL TABLE [dbo].[VenueTickets]
 WITH
 (
 	DATA_SOURCE = [WtpTenantDBs],
-	DISTRIBUTION = ROUND_ROBIN
+	DISTRIBUTION = SHARDED(VenueId)
 );
 GO
     
@@ -117,7 +117,7 @@ CREATE EXTERNAL TABLE [dbo].[Venues]
 WITH
 (
 	DATA_SOURCE = [WtpTenantDBs],
-	DISTRIBUTION = ROUND_ROBIN
+	DISTRIBUTION = SHARDED(VenueId)
 );
 GO
 
