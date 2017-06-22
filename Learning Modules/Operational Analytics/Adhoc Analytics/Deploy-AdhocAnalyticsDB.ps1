@@ -44,7 +44,7 @@ $catalogServerName = $config.CatalogServerNameStem + $WtpUser
 $fullyQualfiedCatalogServerName = $catalogServerName + ".database.windows.net"
 $databaseName = $config.AdhocAnalyticsDatabaseName
 
-# Check if Analytics database has already been created 
+# Check if Ad-hoc Analytics database already exists 
 $adHocAnalyticsDB = Get-AzureRmSqlDatabase `
                 -ResourceGroupName $WtpResourceGroupName `
                 -ServerName $catalogServerName `
@@ -59,10 +59,12 @@ if($adHocAnalyticsDB)
 
 Write-output "Deploying Ad-hoc Analytics database '$databaseName' on catalog server '$catalogServerName'..."
 
-# Deploy database for operational analytics 
+# Deploy adhoc analytics database 
 New-AzureRmSqlDatabase `
         -ResourceGroupName $WtpResourceGroupName `
         -ServerName $catalogServerName `
         -DatabaseName $databaseName `
         -RequestedServiceObjectiveName $config.AdhocAnalyticsDatabaseServiceObjective `
         > $null
+
+Write-output "Ad-hoc Analytics database '$databaseName' deployed on catalog server '$catalogServerName'..."

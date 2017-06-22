@@ -108,7 +108,7 @@ CREATE EXTERNAL TABLE [dbo].[Venues]
     [VenueId] INT NOT NULL,
     [VenueName] NVARCHAR (50) NOT NULL,
     [VenueType] CHAR (30) NOT NULL,
-    [AdminEmail] NCHAR (30) NOT NULL,
+    [AdminEmail] VARCHAR (50) NOT NULL,
     [PostalCode] CHAR (10) NULL,
     [CountryCode] CHAR (3) NOT NULL,
     [Server] NVARCHAR(128) NOT NULL,
