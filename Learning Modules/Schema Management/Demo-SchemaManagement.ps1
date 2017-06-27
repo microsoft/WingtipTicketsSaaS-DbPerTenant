@@ -11,12 +11,12 @@ $wtpUser = Get-UserConfig
 
 # Before provisioning any tenants ensure the catalog is initialized using  http://demo.wtp.<user>.traffcimanager.net > Setup
 
-# Provision a job account database and job account
+# Provisions a job account database and job account
 & $PSScriptRoot\Deploy-JobAccount.ps1 `
     -WtpResourceGroupname $WtpUser.ResourceGroupName `
     -WtpUser $WtpUser.Name
     
-# Provision the adhoc analytics database
+# Provisions the adhoc analytics database if not already deployed
 & "$PSScriptRoot\..\Operational Analytics\Adhoc Analytics\Deploy-AdhocAnalyticsDB.ps1" `
     -WtpResourceGroupname $WtpUser.ResourceGroupName `
     -WtpUser $WtpUser.Name

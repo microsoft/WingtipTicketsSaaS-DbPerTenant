@@ -1,17 +1,18 @@
---- Verify that the external data source and tables exist in the adhoc analytics database
-select * from sys.external_data_sources;
-select * from sys.external_tables;
-
-GO
-
 -- *******************************************************
 -- SAMPLE QUERIES
 -- *******************************************************
 
--- Which venues are currently registered on the Wingtip platform?
-SELECT	VenueName,
-		VenueType
-FROM	dbo.Venues
+-- Which venues are currently registered?
+  SELECT * FROM dbo.Venues 
+
+GO
+
+-- And what is their venue type? 
+  SELECT VenueName, 
+         VenueTypeName,
+         EventTypeName 
+  FROM   dbo.Venues 
+         INNER JOIN dbo.VenueTypes ON Venues.VenueType = VenueTypes.VenueType
 
 GO
 
