@@ -7,8 +7,8 @@
 function Get-UserConfig {
 
     $userConfig = @{`
-        ResourceGroupName = "<resourcegroup>"    # the resource group used when the WTP application was deployed. CASE SENSITIVE
-        Name =              "<user>"             # the User name entered when the WTP application was deployed  
+        ResourceGroupName = "<resourcegroup>"     # the resource group used when the WTP application was deployed. CASE SENSITIVE
+        Name =              $("<user>".ToLower()) # the User name entered when the WTP application was deployed  
     }
 
 
