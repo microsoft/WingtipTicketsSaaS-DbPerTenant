@@ -8,9 +8,9 @@ $DurationMinutes = 60
 # This specifies a tenant database to be overloaded in scenario 1. If set to "" a random tenant database is chosen.
 $SingleTenantDatabaseName = "fabrikamjazzclub"
 
-# In scenario 1, try entering 'jazz' when prompted to quickly locate Fabrikam Jazz Club. 
+# In scenario 2, try entering 'jazz' when prompted to quickly locate Fabrikam Jazz Club. 
 
-$DemoScenario = 1
+$DemoScenario = 0
 <# Select the demo scenario to run
     Demo    Scenario
       0       None
