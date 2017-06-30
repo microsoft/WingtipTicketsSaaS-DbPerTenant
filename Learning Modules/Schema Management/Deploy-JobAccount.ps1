@@ -35,75 +35,95 @@ if(!$resourceGroup)
     throw "Resource group '$WtpResourceGroupName' does not exist.  Exiting..."
 }
 
-$jobAccountServerName = $config.jobAccountServerNameStem + $WtpUser
-$fullyQualifiedjobAccountServerName = $jobAccountServerName + ".database.windows.net"
-$databaseName = $config.JobAccountDatabaseName
+# Job account database is deployed to the catalog server with other singleton management databases in the Wingtip SaaS app 
+$catalogServerName = $config.catalogServerNameStem + $WtpUser
+$fullyQualifiedCatalogServerName = $catalogServerName + ".database.windows.net"
 
-# Check if the job account already exists and the latest Azure PowerShell SDK has been installed 
-try 
-{
-    $jobaccount = Get-AzureRmSqlJobAccount -ResourceGroupName $WtpResourceGroupName `
-        -ServerName $jobAccountServerName `
-        -JobAccountName $($config.JobAccount) 
-}
-catch 
-{
-    if ($_.Exception.Message -like "*'Get-AzureRmSqlJobAccount' is not recognized*")
-    {
-        Write-Error "'Get-AzureRmSqlJobAccount' not found. Download and install the Azure PowerShell SDK that includes support for Elastic Jobs: 
-        https://github.com/jaredmoo/azure-powershell/releases"
-    }
-}
+$jobAccountDatabaseName = $config.JobAccountDatabaseName
 
 # Check if current Azure subscription is signed up for Preview of Elastic jobs 
 $registrationStatus = Get-AzureRmProviderFeature -ProviderName Microsoft.Sql -FeatureName sqldb-JobAccounts
 
-if ($registrationStatus.RegistrationState -eq "NotRegistered")
+if ($registrationStatus.RegistrationState -ne "Registered")
 {
     Write-Error "Your current subscription is not white-listed for the preview of Elastic jobs. Please contact Microsoft to white-list your subscription."
     exit
 }
 
-# Check the job account database already exists
-$database = Get-AzureRmSqlDatabase -ResourceGroupName $WtpResourceGroupName `
-    -ServerName $jobAccountServerName `
-	-DatabaseName $($config.JobAccountDatabaseName) `
+# Check if the job account exists and a version of Azure PowerShell SDK containing the Elastic Jobs cmdlets is installed 
+try 
+{
+    $jobaccount = Get-AzureRmSqlJobAccount `
+        -ResourceGroupName $WtpResourceGroupName `
+        -ServerName $catalogServerName `
+        -JobAccountName $($config.JobAccount) 
+
+    if ($jobAccount)
+    {
+        Write-output "Job account already exists"
+        exit
+    }
+}
+catch 
+{
+    if ($_.Exception.Message -like "*'Get-AzureRmSqlJobAccount' is not recognized*")
+    {
+        Write-Error "'Get-AzureRmSqlJobAccount' not found. Download and install the Azure PowerShell SDK that includes support for Elastic Jobs: https://github.com/jaredmoo/azure-powershell/releases"
+        exit
+    }
+}
+
+
+# Check if the job account database exists
+$database = Get-AzureRmSqlDatabase `
+    -ResourceGroupName $WtpResourceGroupName `
+    -ServerName $catalogServerName `
+	-DatabaseName $jobAccountDatabaseName `
 	-ErrorAction SilentlyContinue
 
-# Create the job account database if it doesn't already exist
+# Create the job account database if it doesn't exist
 try
 {
 	if (!$database)
 	{
-		Write-output "Deploying job account database: '$($config.JobAccountDatabaseName)' on server '$fullyQualifiedjobAccountServerName'..."
+		Write-output "Deploying job account database on server '$catalogServerName'..."
         
-        # Create the job account server - continue if it already exists
-
-        New-AzureRmSqlServer `
-            -ResourceGroupName $WtpResourceGroupName `
-            -Location $config.JobAccountDeploymentLocation `
-            -ServerName $jobAccountServerName `
-            -SqlAdministratorCredentials $(New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $config.JobAccountAdminUserName, $(ConvertTo-SecureString -String $config.JobAccountAdminPassword -AsPlainText -Force)) `
-            -ErrorAction SilentlyContinue `
-            > $null
-
-        # Open firewall for job account server
-        New-AzureRmSqlServerFirewallRule `
-            -ResourceGroupName $WtpResourceGroupName `
-            -ServerName $jobAccountServerName `
-            -FirewallRuleName "Open" `
-            -StartIpAddress 0.0.0.0 `
-            -EndIpAddress 255.255.255.255 `
-            -ErrorAction SilentlyContinue `
-            > $null
-		
 		# Create the job account database
 		New-AzureRmSqlDatabase `
 			-ResourceGroupName $WtpResourceGroupName `
-			-ServerName $jobAccountServerName `
-			-DatabaseName $($config.JobAccountDatabaseName) `
-			-RequestedServiceObjectiveName "S2" `
+			-ServerName $catalogServerName `
+			-DatabaseName $jobAccountDatabaseName `
+			-RequestedServiceObjectiveName $($config.JobAccountDatabaseServiceObjective) `
             > $null	
+
+        # initialize the job account database credentials
+        $credentialName = $config.JobAccountCredentialName
+        $commandText = "
+            CREATE MASTER KEY;
+            GO
+
+            CREATE DATABASE SCOPED CREDENTIAL [$credentialName]
+                WITH IDENTITY = N'$($config.CatalogAdminUserName)', SECRET = N'$($config.CatalogAdminPassword)';
+            GO
+    
+            CREATE DATABASE SCOPED CREDENTIAL [myrefreshcred]
+                WITH IDENTITY = N'$($config.CatalogAdminUserName)', SECRET = N'$($config.CatalogAdminPassword)';
+            GO
+            PRINT N'Database scoped credentials created.';
+            "
+
+        Write-output "Initializing database scoped credentials in database '$jobAccountDatabaseName' ..."
+	  
+	    Invoke-SqlcmdWithRetry `
+        -ServerInstance $fullyQualifiedCatalogServerName `
+	    -Username $config.CatalogAdminUserName `
+        -Password $config.CatalogAdminPassword `
+	    -Database $jobAccountDatabaseName `
+	    -Query $commandText `
+	    -ConnectionTimeout 30 `
+	    -QueryTimeout 30 `
+        > $null  
+
 	}
  }
 catch
@@ -113,21 +133,18 @@ catch
 	throw
 }
 
-# Create the job account if it doesn't already exist
+# Create the job account
 try
 {
-	if (!$jobaccount)
-	{
-		Write-output "Deploying job account: '$($config.JobAccount)'..."
+	Write-output "Deploying job account ..."
 		
-		# Create the job account
-		New-AzureRmSqlJobAccount `
-            -ServerName $jobAccountServerName `
-			-JobAccountName $($config.JobAccount) `
-			-DatabaseName $($config.JobAccountDatabaseName) `
-			-ResourceGroupName $($WtpResourceGroupName) `
-            > $null
-	}
+	# Create the job account
+	New-AzureRmSqlJobAccount `
+        -ServerName $catalogServerName `
+		-JobAccountName $($config.JobAccount) `
+		-DatabaseName $jobAccountDatabaseName `
+		-ResourceGroupName $WtpResourceGroupName `
+        > $null	
  }
 catch
 {
@@ -135,50 +152,5 @@ catch
 	Write-Error "An error occured deploying the job account"
 	throw
 }
-
-$credentialName = $config.JobAccountCredentialName
-$commandText = "
-    CREATE MASTER KEY;
-    GO
-
-    CREATE DATABASE SCOPED CREDENTIAL [$credentialName]
-        WITH IDENTITY = N'$($config.JobAccountAdminUserName)', SECRET = N'$($config.JobAccountAdminPassword)';
-    GO
-    
-    CREATE DATABASE SCOPED CREDENTIAL [myrefreshcred]
-        WITH IDENTITY = N'$($config.JobAccountAdminUserName)', SECRET = N'$($config.JobAccountAdminPassword)';
-    GO
-    PRINT N'Database scoped credentials created.';
-    "
-
-    Write-output "Initializing database scoped credentials in '$($config.JobAccountDatabaseName)'..."
 	
-    try
-    {    
-		Invoke-Sqlcmd `
-        -ServerInstance $fullyQualifiedjobAccountServerName `
-		-Username $config.JobAccountAdminUserName `
-        -Password $config.JobAccountAdminPassword `
-		-Database $config.JobAccountDatabaseName `
-		-Query $commandText `
-		-ConnectionTimeout 30 `
-		-QueryTimeout 30 `
-		-EncryptConnection
-    }
-    catch
-    {
-        #retry once if fails. Query is idempotent.
-        Start-Sleep 2
-		Invoke-Sqlcmd `
-        -ServerInstance $fullyQualifiedjobAccountServerName `
-		-Username $config.JobAccountAdminUserName `
-        -Password $config.JobAccountAdminPassword `
-		-Database $config.JobAccountDatabaseName `
-		-Query $commandText `
-		-ConnectionTimeout 30 `
-		-QueryTimeout 30 `
-		-EncryptConnection
-    }
-	
-Write-Output "Deployment of job account database '$($config.JobAccountDatabaseName)' and job account '$($config.JobAccount)' are complete."
-
+Write-Output "Deployment of job account database and job account is complete."

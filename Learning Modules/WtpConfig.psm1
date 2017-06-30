@@ -35,12 +35,9 @@ function Get-Configuration
         CatalogManagementAppWorkerSize = 0
         ServicePrincipalPassword = "P@ssword1"
         JobAccount = "jobaccount"
-        JobAccountServerNameStem = "wingtipjobaccount-"
         JobAccountDatabaseName = "jobaccount"
+        JobAccountDatabaseServiceObjective = "S2"
         JobAccountCredentialName = "mydemocred"
-        JobAccountDeploymentLocation = "westcentralus"
-        JobAccountAdminUserName = "developer"
-        JobAccountAdminPassword = "P@ssword1"
         TenantAnalyticsDatabaseName = "tenantanalytics"
         TenantAnalyticsCSDatabaseName = "tenantanalytics-cs"
         TenantAnalyticsDWDatabaseName = "tenantanalytics-dw"
