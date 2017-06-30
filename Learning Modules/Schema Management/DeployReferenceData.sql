@@ -1,4 +1,4 @@
--- Connect to and run against the jobaccount database in the catalog-<User> server
+-- Connect to and run against the jobaccount database in the catalog-<user> server
 -- Replace <user> below with the User value used when the sample app was deployed
 DECLARE @WtpUser nvarchar(50);
 DECLARE @server1 nvarchar(50);
