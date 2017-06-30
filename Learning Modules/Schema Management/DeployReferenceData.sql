@@ -3,7 +3,7 @@
 DECLARE @WtpUser nvarchar(50);
 DECLARE @server1 nvarchar(50);
 DECLARE @server2 nvarchar(50);
-SET @WtpUser = '<user>';
+SET @WtpUser = 'bg1';
 
 -- Add a target group containing server(s)
 EXEC [jobs].sp_add_target_group @target_group_name = 'DemoServerGroup'
@@ -38,7 +38,7 @@ EXEC [jobs].sp_add_target_group_member
 -- Add a job to deploy new reference data
 EXEC jobs.sp_add_job
 @job_name='Reference Data Deployment',
-@description='Deploy new reference data',
+@description='Deploy new VenueTypes reference data',
 @enabled=1,
 @schedule_interval_type='Once'
 GO
@@ -93,10 +93,30 @@ WAITFOR DELAY '00:00:10'
 --View parent execution status
 SELECT * FROM [jobs].[job_executions] 
 WHERE job_name = 'Reference Data Deployment' and step_id IS NULL
+ORDER BY end_time DESC
 
 --View all execution status
 SELECT * FROM [jobs].[job_executions] 
 WHERE job_name = 'Reference Data Deployment'
+ORDER BY end_time DESC
+
+-- View summary of job and step execution status
+SELECT 
+    MIN(create_time) AS StartTime,
+    MAX(end_time) AS EndTime, 
+    (CASE WHEN step_id IS NULL THEN 'Job' ELSE 'Step' END) AS [Job/Step],
+    SUM(CASE WHEN lifecycle = 'Created' THEN 1 ELSE 0 END) AS Created,
+    SUM(CASE WHEN lifecycle = 'InProgress' THEN 1 ELSE 0 END) AS InProgress, 
+    SUM(CASE WHEN lifecycle like 'Waiting*' THEN 1 ELSE 0 END) AS Waiting,      
+    SUM(CASE WHEN lifecycle = 'Succeeded' THEN 1 ELSE 0 END) AS Succeeded,
+    SUM(CASE WHEN lifecycle = 'Failed' THEN 1 ELSE 0 END) AS Failed
+    FROM [jobs].[job_executions] 
+WHERE job_name = 'Reference Data Deployment' AND (target_group_name IS NULL)
+GROUP BY job_execution_id, step_id
+ORDER BY EndTime DESC
+
+--Manually run the job (again)
+--EXEC [jobs].[sp_start_job] 'Reference Data Deployment' 
 
 --Stop the job execution, requires active job_execution_id from [jobs].[job_executions] view
 --EXEC [jobs].[sp_stop_job] '9B0FB896-CA10-44B0-8D9E-51149D925DB2'
