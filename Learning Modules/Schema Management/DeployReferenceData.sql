@@ -1,5 +1,5 @@
--- Connect to and run against the jobaccount database in catalog-<WtpUser> server
--- Replace <WtpUser> below with your user name
+-- Connect to and run against the jobaccount database in the catalog-<User> server
+-- Replace <user> below with the User value used when the sample app was deployed
 DECLARE @WtpUser nvarchar(50);
 DECLARE @server1 nvarchar(50);
 DECLARE @server2 nvarchar(50);
@@ -9,7 +9,7 @@ SET @WtpUser = '<user>';
 EXEC [jobs].sp_add_target_group @target_group_name = 'DemoServerGroup'
 
 -- Add a server target member, includes all databases in tenant server
-SET @server1 = 'customers1-' + @WtpUser + '.database.windows.net'
+SET @server1 = 'tenants1-' + @WtpUser + '.database.windows.net'
 
 EXEC [jobs].sp_add_target_group_member
 @target_group_name =  'DemoServerGroup',
@@ -26,7 +26,7 @@ EXEC [jobs].sp_add_target_group_member
 @membership_type = 'Include',
 @target_type = 'SqlDatabase',
 @server_name=@server2,
-@database_name='baseTenantDB'
+@database_name='basetenantdb'
 
 EXEC [jobs].sp_add_target_group_member
 @target_group_name =  'DemoServerGroup',
