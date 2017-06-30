@@ -29,7 +29,8 @@ BEGIN
 	EXEC(@createExternalSource)
 END
 
--- Add tenant tables that will be used for querying data across all tenants
+-- Add external tables that will be used for querying data across all tenants.  
+-- These reference views in the tenant databases that project a unique VenueId column
 
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER OFF;
@@ -121,6 +122,8 @@ WITH
 );
 GO
 
+-- Create local venuetypes table that will store the types of venues available on the Wingtips tickets platform
+
 DROP TABLE IF EXISTS dbo.VenueTypes
 CREATE TABLE [dbo].[VenueTypes]
 (
@@ -134,15 +137,13 @@ CREATE TABLE [dbo].[VenueTypes]
 )
 GO
 
--- Create local venuetypes table that will store the types of venues available on the Wingtips tickets platform
-
 CREATE UNIQUE INDEX IX_VENUETYPES_VENUETYPE ON [dbo].[VenueTypes] ([VenueType])
 GO
 
 CREATE UNIQUE INDEX IX_VENUETYPES_VENUETYPENAME_LANGUAGE ON [dbo].[VenueTypes] ([VenueTypeName], [Language])
 GO
 
--- Extend the set of VenueTypes using an idempotent MERGE script
+-- Add the set of VenueTypes using an idempotent MERGE script
 --
 MERGE INTO [dbo].[VenueTypes] AS [target]
 USING (VALUES

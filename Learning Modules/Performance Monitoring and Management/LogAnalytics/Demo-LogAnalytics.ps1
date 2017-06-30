@@ -2,7 +2,7 @@
 # then adds Azure SQL Analytics solution to the workspace
 
 Import-Module "$PSScriptRoot\..\..\Common\SubscriptionManagement" -Force
-Import-Module "$PSScriptRoot\..\..\UserConfig"
+Import-Module "$PSScriptRoot\..\..\UserConfig" -Force
 
 # Get Azure credentials if not already logged on,  Use -Force to select a different subscription 
 Initialize-Subscription -NoEcho

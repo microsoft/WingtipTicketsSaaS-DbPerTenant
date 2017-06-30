@@ -122,7 +122,9 @@ $resourceTypes = ("Microsoft.Sql/servers/elasticpools","Microsoft.Sql/servers/da
 # Enable diagnostic logging for all resources of each type in the WTP resource group 
 foreach($resourceType in $resourceTypes)
 {
-    $resources = Get-AzureRmResource -ResourceGroupName $WtpResourceGroupName -ResourceType $resourceType 
+
+    $resources = @()
+    $resources += Get-AzureRmResource -ResourceGroupName $WtpResourceGroupName -ResourceType $resourceType 
     
     if ($resources)
     {
