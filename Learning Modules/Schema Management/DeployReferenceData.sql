@@ -3,7 +3,7 @@
 DECLARE @WtpUser nvarchar(50);
 DECLARE @server1 nvarchar(50);
 DECLARE @server2 nvarchar(50);
-SET @WtpUser = 'bg1';
+SET @WtpUser = '<user>';
 
 -- Add a target group containing server(s)
 EXEC [jobs].sp_add_target_group @target_group_name = 'DemoServerGroup'
