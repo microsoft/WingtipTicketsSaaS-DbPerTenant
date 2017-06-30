@@ -5,21 +5,23 @@
     Deploys an database for Ad-hoc query analytics
 
  .DESCRIPTION
-    Deploys an an Operational Analytics database into which results from ad-hoc and scheduled queries for the 
-    WTP applications will be collected .
+    Deploys the Adhoc Analytics database to be used with Elastic Query for distributing queries across tenant databases.
 
  .PARAMETER WtpResourceGroupName
-    The name of the resource group in which the WTP application is deployed.
+    The name of the resource group in which the Wingtip SaaS application is deployed.
 
  .PARAMETER WtpUser
-    # The 'User' value entered during the deployment of the WTP application.
+    # The 'User' value entered during the deployment of the Wingtip SaaS application.
 #>
 param(
-    [Parameter(Mandatory=$True)]
+    [Parameter(Mandatory=$true)]
     [string] $WtpResourceGroupName,
 
-    [Parameter(Mandatory=$True)]
-    [string] $WtpUser
+    [Parameter(Mandatory=$true)]
+    [string] $WtpUser,
+
+    [Parameter(Mandatory=$false)]
+    [switch] $DeploySchema
  )
 
 $ErrorActionPreference = "Stop" 
@@ -41,30 +43,51 @@ if(!$resourceGroup)
 }
 
 $catalogServerName = $config.CatalogServerNameStem + $WtpUser
-$fullyQualfiedCatalogServerName = $catalogServerName + ".database.windows.net"
-$databaseName = $config.AdhocAnalyticsDatabaseName
+$fullyQualifiedCatalogServerName = $catalogServerName + ".database.windows.net"
+$AdhocAnalyticsDatabaseName = $config.AdhocAnalyticsDatabaseName
 
 # Check if Ad-hoc Analytics database already exists 
 $adHocAnalyticsDB = Get-AzureRmSqlDatabase `
                 -ResourceGroupName $WtpResourceGroupName `
                 -ServerName $catalogServerName `
-                -DatabaseName $databaseName `
+                -DatabaseName $AdhocAnalyticsDatabaseName `
                 -ErrorAction SilentlyContinue
 
 if($adHocAnalyticsDB)
 {
-    Write-Output "Ad-hoc Analytics database '$databaseName' already exists."
+    Write-Output "Ad-hoc Analytics database '$AdhocAnalyticsDatabaseName' already exists."
+
+    # it is assumed that if the database is present it is initialized, so script exits at this point 
     exit
 }
 
-Write-output "Deploying Ad-hoc Analytics database '$databaseName' on catalog server '$catalogServerName'..."
+Write-output "Deploying database '$AdhocAnalyticsDatabaseName' on server '$catalogServerName'..."
 
 # Deploy adhoc analytics database 
 New-AzureRmSqlDatabase `
         -ResourceGroupName $WtpResourceGroupName `
         -ServerName $catalogServerName `
-        -DatabaseName $databaseName `
+        -DatabaseName $AdhocAnalyticsDatabaseName `
         -RequestedServiceObjectiveName $config.AdhocAnalyticsDatabaseServiceObjective `
         > $null
 
-Write-output "Ad-hoc Analytics database '$databaseName' deployed on catalog server '$catalogServerName'..."
+# if schema deployment is requested... 
+if($DeploySchema.IsPresent)
+{
+    $commandText = [IO.File]::ReadAllText("$PSScriptRoot\Initialize-AdhocAnalyticsDb.sql")
+
+    Write-output "Initializing database schema..."
+	  
+	Invoke-SqlcmdWithRetry `
+    -ServerInstance $fullyQualifiedCatalogServerName `
+	-Username $config.CatalogAdminUserName `
+    -Password $config.CatalogAdminPassword `
+	-Database $AdhocAnalyticsDatabaseName `
+	-Query $commandText `
+	-ConnectionTimeout 30 `
+	-QueryTimeout 30 `
+    > $null
+
+}
+
+Write-output "Database '$AdhocAnalyticsDatabaseName' deployed on server '$catalogServerName'."
