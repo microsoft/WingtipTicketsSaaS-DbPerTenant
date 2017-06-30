@@ -7,7 +7,9 @@ The basic application, which includes three pre-defined databases for three venu
 
 NOTE: if you install the application you will be charged for the Azure resources created.  Actual costs incurred are based on your subscription offer type but are nominal if the application is not scaled up unreasonably and is deleted promptly after you have finished exploring the tutorials.
 
-More information about the sample app and the associated tutorials are here: [https://aka.ms/sqldbsaastutorial](https://aka.ms/sqldbsaastutorial)
+More information about the sample app and the associated tutorials is here: [https://aka.ms/sqldbsaastutorial](https://aka.ms/sqldbsaastutorial)
+
+Also available in the Documentation folder in this repo is an **overview presentation** that provides background, explores alternative database models for multi-tenant apps, and walks through several of the SaaS patterns at a high level. There is also a demo script for you can use with the presentation to give others a guided tour of the app and several of the patterns.
 
 To deploy the app to Azure, click the link below.  Deploy the app in a new resource group, and provide a short *user* value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
 
