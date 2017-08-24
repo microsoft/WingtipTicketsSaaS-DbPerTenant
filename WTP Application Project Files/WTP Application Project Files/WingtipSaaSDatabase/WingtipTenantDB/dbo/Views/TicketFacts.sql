@@ -1,8 +1,8 @@
 ﻿    CREATE VIEW [dbo].[TicketFacts] AS
     SELECT  v.VenueId, v.VenueName, v.VenueType,v.VenuePostalCode, v.VenueCapacity,
-            tp.TicketPurchaseId, tp.PurchaseDate, tp.PurchaseTotal,
+            tp.TicketPurchaseId, tp.PurchaseDate, tp.PurchaseTotal, tp.RowVersion,
             t.RowNumber, t.SeatNumber, 
-            c.CustomerId, c.PostalCode AS CustomerPostalCode, c.CountryCode, 
+            c.CustomerId, c.PostalCode AS CustomerPostalCode, c.CountryCode, Convert(int, HASHBYTES('md5',c.Email)) AS CustomerEmailId, 
             e.EventId, e.EventName, e.Subtitle AS EventSubtitle, e.Date AS EventDate
     FROM    (
               SELECT  (SELECT TOP 1 VenueId FROM [dbo].[Venues]) AS VenueId,
