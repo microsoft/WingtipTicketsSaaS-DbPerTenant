@@ -177,7 +177,7 @@ INSERT INTO [dbo].[EventSections]
 ;
 
 
--- Fabrikam Jazz Club (VenueId=3)
+-- Fabrikam Jazz Club
 -- Sections
 SET IDENTITY_INSERT [dbo].[Sections] ON
 INSERT INTO [dbo].[Sections]
