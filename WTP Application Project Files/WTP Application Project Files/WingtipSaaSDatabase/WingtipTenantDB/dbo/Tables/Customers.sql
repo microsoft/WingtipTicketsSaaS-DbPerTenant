@@ -5,7 +5,8 @@
     [Email]             VARCHAR (128)      NOT NULL,
     [Password]          NVARCHAR (30)      NULL,
     [PostalCode]        NVARCHAR(20) NULL, 
-    [CountryCode]         CHAR(3) NOT NULL,
+    [CountryCode]       CHAR(3) NOT NULL,
+    [RowVersion]        ROWVERSION NOT NULL, 
     PRIMARY KEY CLUSTERED ([CustomerId] ASC), 
     CONSTRAINT [AK_Email] UNIQUE (Email),
     CONSTRAINT [FK_Customers_Countries] FOREIGN KEY ([CountryCode]) REFERENCES [Countries]([CountryCode])

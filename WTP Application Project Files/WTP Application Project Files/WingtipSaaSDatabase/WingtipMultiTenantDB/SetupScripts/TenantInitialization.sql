@@ -13,9 +13,12 @@ DELETE FROM [dbo].[Events]
 DELETE FROM [dbo].[Sections]
 DELETE FROM [dbo].[Venues]
 
-DECLARE @ContosoId INT = Convert(int, HASHBYTES('md5','contosoconcerthall'))
-DECLARE @DogwoodId INT = Convert(int, HASHBYTES('md5','dogwooddojo'))
-DECLARE @FabrikamId INT = Convert(int, HASHBYTES('md5','fabrikamjazzclub'))
+-- Ids pre-computed as md5 hash of UTF8 encoding of the normalized tenant name, converted to Int 
+-- These are the id values that will be used by the client application and PowerShell scripts to 
+-- retrieve tenant-specific data.   
+DECLARE @ContosoId INT = 1976168774
+DECLARE @DogwoodId INT = -1368421345
+DECLARE @FabrikamId INT = 1536234342
 
 -- Venue
 INSERT INTO [dbo].[Venues]
