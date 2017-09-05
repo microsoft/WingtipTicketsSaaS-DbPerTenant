@@ -730,6 +730,9 @@ function Initialize-TenantDatabase
         [string]$DatabaseName,
 
         [parameter(Mandatory=$true)]
+        [int]$TenantKey,
+
+        [parameter(Mandatory=$true)]
         [string]$TenantName,
 
         [parameter(Mandatory=$false)]
@@ -763,9 +766,9 @@ function Initialize-TenantDatabase
     $commandText = "
         DELETE FROM Venue
         INSERT INTO Venue
-            (VenueName, VenueType, AdminEmail, PostalCode, CountryCode, Lock  )
+            (VenueId, VenueName, VenueType, AdminEmail, PostalCode, CountryCode, Lock  )
         VALUES
-            ('$TenantName', '$VenueType','$VenueAdminEmail', '$PostalCode', '$CountryCode', 'X');
+            ($TenantKey,'$TenantName', '$VenueType','$VenueAdminEmail', '$PostalCode', '$CountryCode', 'X');
         -- reset event dates for initial default events (these exist and this reset of their dates is done for demo purposes only) 
         EXEC sp_ResetEventDates;"
 
@@ -1026,6 +1029,7 @@ function New-Tenant
         -ResourceGroupName $WtpResourceGroupName `
         -ServerName $ServerName `
         -ElasticPoolName $PoolName `
+        -TenantKey $tenantKey `
         -TenantName $TenantName `
         -VenueType $VenueType `
         -PostalCode $PostalCode `
@@ -1033,8 +1037,8 @@ function New-Tenant
 
     # Register the tenant and database in the catalog
     Add-TenantDatabaseToCatalog -Catalog $catalog `
-        -TenantName $TenantName `
         -TenantKey $tenantKey `
+        -TenantName $TenantName `
         -TenantDatabase $tenantDatabase `
 
     return $tenantKey
@@ -1043,7 +1047,7 @@ function New-Tenant
 
 <#
 .SYNOPSIS
-    Creates a tenant database using an ARM template and updates the Venue information with the default VenueType.
+    Creates a tenant database using an ARM template and adds the Venue information.
 #>
 function New-TenantDatabase
 {
@@ -1056,6 +1060,9 @@ function New-TenantDatabase
 
         [parameter(Mandatory=$true)]
         [string]$ElasticPoolName,
+
+        [parameter(Mandatory=$true)]
+        [int]$TenantKey,
 
         [parameter(Mandatory=$true)]
         [string]$TenantName,
@@ -1102,7 +1109,7 @@ function New-TenantDatabase
     # create the tenant database
     try
     {
-        # Deployment in WTP is by copying a 'golden' tenant database on the catalog server.  
+        # A tenant is provisioned by copying a 'golden' tenant database from the catalog server.  
         # An alternative approach could be to deploy an empty database and then import a bacpac into it to initialize it, or to 
         # defer initialization until the tenant is allocated to the database.
 
@@ -1134,6 +1141,7 @@ function New-TenantDatabase
     Initialize-TenantDatabase `
         -ServerName $ServerName `
         -DatabaseName $normalizedTenantName `
+        -TenantKey $TenantKey `
         -TenantName $TenantName `
         -VenueType $VenueType `
         -PostalCode $PostalCode `

@@ -162,15 +162,16 @@ foreach($tenant in $allNewTenants)
         -ServerName $serverName `
         -DatabaseName $tenant.NormalizedName
 
+    $tenantKey = Get-TenantKey -TenantName $tenant.Name
+
     # Initialize the venue information in the tenant database and reset the default event dates
     Initialize-TenantDatabase `
         -ServerName $serverName `
         -DatabaseName $tenant.NormalizedName `
+        -TenantKey $tenantKey `
         -TenantName $tenant.Name `
         -VenueType $tenant.VenueType `
         -PostalCode $tenant.PostalCode
-
-    $tenantKey = Get-TenantKey -TenantName $tenant.Name
 
     # Register the tenant to database mapping in the catalog
     Add-TenantDatabaseToCatalog -Catalog $catalog `
