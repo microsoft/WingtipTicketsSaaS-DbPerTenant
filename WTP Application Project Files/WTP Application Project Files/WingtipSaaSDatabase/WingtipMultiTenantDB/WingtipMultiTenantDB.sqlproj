@@ -80,6 +80,7 @@
     <Build Include="dbo\Tables\VenueTypes.sql" />
     <Build Include="dbo\Views\EventsWithNoTickets.sql" />
     <Build Include="dbo\Views\TicketFacts.sql" />
+    <Build Include="dbo\StoredProcedures\sp_InitializeVenue.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="SetupScripts\PostDeployment.sql" />
