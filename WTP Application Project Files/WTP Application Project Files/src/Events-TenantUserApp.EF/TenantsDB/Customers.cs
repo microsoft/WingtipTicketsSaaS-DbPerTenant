@@ -16,6 +16,7 @@ namespace Events_TenantUserApp.EF.TenantsDB
         public string Password { get; set; }
         public string PostalCode { get; set; }
         public string CountryCode { get; set; }
+        public byte[] RowVersion { get; set; }
 
         public virtual ICollection<TicketPurchases> TicketPurchases { get; set; }
         public virtual Countries CountryCodeNavigation { get; set; }

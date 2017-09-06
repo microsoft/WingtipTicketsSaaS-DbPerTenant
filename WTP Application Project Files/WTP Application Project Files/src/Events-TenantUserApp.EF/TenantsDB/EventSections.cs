@@ -12,6 +12,7 @@ namespace Events_TenantUserApp.EF.TenantsDB
         public int EventId { get; set; }
         public int SectionId { get; set; }
         public decimal Price { get; set; }
+        public byte[] RowVersion { get; set; }
 
         public virtual ICollection<Tickets> Tickets { get; set; }
         public virtual Events Event { get; set; }
