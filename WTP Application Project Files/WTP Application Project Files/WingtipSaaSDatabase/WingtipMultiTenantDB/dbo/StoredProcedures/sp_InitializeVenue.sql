@@ -1,9 +1,22 @@
 ﻿CREATE PROCEDURE [dbo].[sp_InitializeVenue]
-    @VenueId  INT NOT NULL,
-    @VenueName NVARCHAR(128) NOT NULL,
+    @VenueId  INT,
+    @VenueName NVARCHAR(128),
     @VenueType NVARCHAR(30) = 'multipurpose',
     @CountryCode CHAR(3) = 'USA'
 AS
+    IF @VenueId IS NULL
+    BEGIN
+        RAISERROR ('Error. @VenueId must be specified', 11, 1)
+        RETURN 1
+    END
+
+    IF @VenueName IS NULL
+    BEGIN
+        RAISERROR ('Error. @VenueName must be specified', 11, 1)
+        RETURN 1
+    END
+
+
     -- Insert Venue
     INSERT INTO [dbo].Venues
         ([VenueId],[VenueName],[VenueType],[AdminEmail],[CountryCode])         

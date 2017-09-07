@@ -87,5 +87,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="SetupScripts\TenantInitialization.sql" />
+    <None Include="WingtipMultiTenantDB.publish.xml" />
   </ItemGroup>
 </Project>
