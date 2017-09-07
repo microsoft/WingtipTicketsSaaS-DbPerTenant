@@ -13,11 +13,16 @@ DELETE FROM [dbo].[Events]
 DELETE FROM [dbo].[Sections]
 DELETE FROM [dbo].[Venue]
 
+-- Ids pre-computed as md5 hash of UTF8 encoding of the normalized tenant name, converted to Int 
+-- These are the id values that will be used by the client application and PowerShell scripts to 
+-- retrieve tenant-specific data.   
+DECLARE @ContosoId INT = 1976168774
+
 -- Venue
 INSERT INTO [dbo].[Venue]
-   ([VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode],[Lock])
+   ([VenueId],[VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode],[Lock])
      VALUES
-           ('Contoso Concert Hall','classicalmusic','admin@contosoconcerthall.com',NULL,'98052','USA','X')
+           (@ContosoId,'Contoso Concert Hall','classicalmusic','admin@contosoconcerthall.com',NULL,'98052','USA','X')
 GO
 
 -- Sections
