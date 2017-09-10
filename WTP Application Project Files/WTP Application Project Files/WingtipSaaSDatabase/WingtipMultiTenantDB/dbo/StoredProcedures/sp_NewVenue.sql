@@ -1,7 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[sp_InitializeVenue]
+﻿-- Creates a new Venue plus a default sections and events 
+
+CREATE PROCEDURE [dbo].[sp_NewVenue]
     @VenueId  INT,
     @VenueName NVARCHAR(128),
     @VenueType NVARCHAR(30) = 'multipurpose',
+    @PostalCode NVARCHAR(20) = '98052',
     @CountryCode CHAR(3) = 'USA'
 AS
     IF @VenueId IS NULL
@@ -19,9 +22,9 @@ AS
 
     -- Insert Venue
     INSERT INTO [dbo].Venues
-        ([VenueId],[VenueName],[VenueType],[AdminEmail],[CountryCode])         
+        ([VenueId],[VenueName],[VenueType],[AdminEmail],[CountryCode], [PostalCode])         
     VALUES
-        (@VenueId, @VenueName,@VenueType,'admin@email.com',@CountryCode)
+        (@VenueId, @VenueName,@VenueType,'admin@email.com',@CountryCode, @PostalCode)
 
     -- Insert default Sections
     SET IDENTITY_INSERT [dbo].[Sections] ON;
