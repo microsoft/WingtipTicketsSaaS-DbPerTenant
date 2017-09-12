@@ -95,6 +95,8 @@ namespace Events_TenantUserApp.EF.TenantsDB
 
                 entity.Property(e => e.PostalCode).HasColumnType("char(10)");
 
+                entity.Property(e => e.RowVersion).ValueGeneratedOnAddOrUpdate();
+
                 entity.HasOne(d => d.CountryCodeNavigation)
                     .WithMany(p => p.Customers)
                     .HasForeignKey(d => d.CountryCode)
@@ -161,6 +163,8 @@ namespace Events_TenantUserApp.EF.TenantsDB
                 entity.Property(e => e.PurchaseDate).HasColumnType("datetime");
 
                 entity.Property(e => e.PurchaseTotal).HasColumnType("money");
+
+                entity.Property(e => e.RowVersion).ValueGeneratedOnAddOrUpdate();
 
                 entity.HasOne(d => d.Customer)
                     .WithMany(p => p.TicketPurchases)

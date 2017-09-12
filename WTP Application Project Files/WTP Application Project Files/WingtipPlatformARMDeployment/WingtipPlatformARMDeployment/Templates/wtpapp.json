@@ -32,14 +32,14 @@
     "tenantFabrikamJazzClub": "fabrikamjazzclub",
     "tenantDogwoodDojo": "dogwooddojo",
     "tenantServer": "[concat(variables('tenantservername'),'-',variables('lowerCaseUser'))]",
-    "tenantContosoConcertHallStorageUri": "[concat('https://azuresaasdemo.blob.core.windows.net/bacpacs/',variables('tenantContosoConcertHall'),'.bacpac')]",
-    "tenantFabrikamJazzClubStorageUri": "[concat('https://azuresaasdemo.blob.core.windows.net/bacpacs/',variables('tenantFabrikamJazzClub'),'.bacpac')]",
-    "tenantDogwoodDojoStorageUri": "[concat('https://azuresaasdemo.blob.core.windows.net/bacpacs/',variables('tenantDogwoodDojo'),'.bacpac')]",
-    "catalogDatabaseStorageUri": "https://azuresaasdemo.blob.core.windows.net/bacpacs/wingtipcatalogdb.bacpac",
-    "baseTenantDatabaseStorageUri": "https://azuresaasdemo.blob.core.windows.net/bacpacs/wingtiptenantdb.bacpac",
+    "tenantContosoConcertHallStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs/',variables('tenantContosoConcertHall'),'.bacpac')]",
+    "tenantFabrikamJazzClubStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs/',variables('tenantFabrikamJazzClub'),'.bacpac')]",
+    "tenantDogwoodDojoStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs/',variables('tenantDogwoodDojo'),'.bacpac')]",
+    "catalogDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtipcatalogdb.bacpac",
+    "baseTenantDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtiptenantdb.bacpac",
     "wtpEventsAppTrafficManagerUniqueDnsName": "[concat('events.wtp.',variables('lowerCaseUser'))]",
     "wtpEventsApp": "[concat('eventswtp-',variables('lowerCaseUser'))]",
-    "wtpEventsAppPackageUri": "https://azuresaasdemo.blob.core.windows.net/packages/eventsAppPackage.zip"
+    "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages/eventsAppPackage.zip"
   },
   "resources": [
     {
@@ -357,7 +357,7 @@
           "type": "config",
           "name": "appsettings",
           "properties": {
-          "BlobPath": "https://wingtipsaas.blob.core.windows.net/images/",
+            "BlobPath": "https://wingtipsaas.blob.core.windows.net/images/",
             "ConnectionTimeOut": "30",
             "CatalogDatabase": "[variables('catalogDatabaseName')]",
             "CatalogServer": "[variables('catalogServer')]",
@@ -372,12 +372,12 @@
             "User": "[variables('lowerCaseUser')]",
             "ASPNETCORE_ENVIRONMENT": "Production",
             "WEBSITE_NODE_DEFAULT_VERSION": "4.2.3",
-            "DefaultRequestCulture":"en-US",
-            "SupportedCultures:SupportedCulture:0":"fr-CA",
-            "SupportedCultures:SupportedCulture:1":"fr-FR",
-            "SupportedCultures:SupportedCulture:2":"en-CA",
-            "SupportedCultures:SupportedCulture:3":"en-GB",
-            "SupportedCultures:SupportedCulture:4":"en-US"              
+            "DefaultRequestCulture": "en-US",
+            "SupportedCultures:SupportedCulture:0": "fr-CA",
+            "SupportedCultures:SupportedCulture:1": "fr-FR",
+            "SupportedCultures:SupportedCulture:2": "en-CA",
+            "SupportedCultures:SupportedCulture:3": "en-GB",
+            "SupportedCultures:SupportedCulture:4": "en-US"
           }
         }
       ]
