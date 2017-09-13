@@ -11,7 +11,3 @@
 )
 
 GO
-
-CREATE INDEX [IX_TicketPurchases_CustomerId] ON [dbo].[TicketPurchases] (CustomerId)
-
-GO

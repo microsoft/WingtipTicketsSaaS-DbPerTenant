@@ -12,9 +12,3 @@
     CONSTRAINT [PK_Venues] PRIMARY KEY ([VenueId])
 );
 GO
-
-CREATE INDEX IX_Venues_VenueType ON [dbo].[Venues] ([VenueType])
-GO
-
-CREATE INDEX IX_Venues_CountryCode ON [dbo].[Venues] ([CountryCode])
-GO
