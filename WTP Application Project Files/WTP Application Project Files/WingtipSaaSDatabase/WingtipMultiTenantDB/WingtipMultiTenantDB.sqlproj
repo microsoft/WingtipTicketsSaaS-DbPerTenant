@@ -81,6 +81,7 @@
     <Build Include="dbo\Views\EventsWithNoTickets.sql" />
     <Build Include="dbo\Views\TicketFacts.sql" />
     <Build Include="dbo\StoredProcedures\sp_NewVenue.sql" />
+    <Build Include="dbo\StoredProcedures\sp_DeleteVenue.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="SetupScripts\PostDeployment.sql" />
