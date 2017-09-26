@@ -46,7 +46,7 @@
       "name": "[variables('tenantServer')]",
       "location": "[variables('location')]",
       "type": "Microsoft.Sql/servers",
-      "apiVersion": "2014-04-01-preview",
+      "apiVersion": "2015-05-01-preview",
       "properties": {
         "version": "12.0",
         "administratorLogin": "[variables('administratorLogin')]",
@@ -200,7 +200,7 @@
       "name": "[variables('catalogServer')]",
       "location": "[variables('location')]",
       "type": "Microsoft.Sql/servers",
-      "apiVersion": "2014-04-01-preview",
+      "apiVersion": "2015-05-01-preview",
       "properties": {
         "version": "12.0",
         "administratorLogin": "[variables('administratorLogin')]",
