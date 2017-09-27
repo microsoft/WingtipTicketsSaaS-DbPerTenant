@@ -206,10 +206,11 @@ namespace Events_Tenant.Common.Repositories
             using (var context = CreateContext(tenantId))
             {
                 //get database name
-                string databaseName;
+                string databaseName,databaseServerName;
                 using (SqlConnection sqlConn = Sharding.ShardMap.OpenConnectionForKey(tenantId, _connectionString))
                 {
                     databaseName = sqlConn.Database;
+                    databaseServerName = sqlConn.DataSource.Split(':').Last().Split(',').First();
                 }
 
                 var venue = await context.Venue.FirstOrDefaultAsync();
@@ -218,6 +219,7 @@ namespace Events_Tenant.Common.Repositories
                 {
                     var venueModel = venue.ToVenueModel();
                     venueModel.DatabaseName = databaseName;
+                    venueModel.DatabaseServerName = databaseServerName;
                     return venueModel;
                 }
                 return null;
