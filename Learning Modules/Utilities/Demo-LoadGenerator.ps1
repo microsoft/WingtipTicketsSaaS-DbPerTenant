@@ -7,6 +7,9 @@ $DurationMinutes = 120
 # If set to "" a random tenant database is chosen.
 $SingleTenantDatabaseName = "contosoconcerthall"
 
+# If true, generator will run once. If false will keep looking for additional tenants and apply load to them 
+$OneTime = $false
+
 $DemoScenario = 1
 <# Select the demo scenario to run 
     Demo    Scenario
@@ -51,7 +54,8 @@ if ($DemoScenario -eq 1)
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -Wtpuser $wtpUser.Name `
         -Intensity $Intensity `
-        -DurationMinutes $DurationMinutes
+        -DurationMinutes $DurationMinutes `
+        -OneTime $OneTime
                  
     exit
 }
