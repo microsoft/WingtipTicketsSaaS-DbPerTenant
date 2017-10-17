@@ -3,7 +3,7 @@
 -- *******************************************************
 
 -- Which venues are currently registered?
-  SELECT * FROM dbo.Venues 
+  SELECT VenueName FROM dbo.Venues 
 
 GO
 
@@ -54,7 +54,7 @@ EXEC sp_execute_remote
 
 GO
 
--- What are the top 10 grossing events across all venues on the WTP platform
+-- What are the top 10 grossing events across all venues on the Wingtip SaaS platform
 SELECT	TOP (10)
 		VenueName,
 		EventName,
@@ -70,3 +70,5 @@ GROUP	BY VenueName, Subtitle, EventName, (CAST(VenueEvents.Date AS DATE))
 ORDER	BY SUM(PurchaseTotal) DESC
 
 GO
+
+--select 1
