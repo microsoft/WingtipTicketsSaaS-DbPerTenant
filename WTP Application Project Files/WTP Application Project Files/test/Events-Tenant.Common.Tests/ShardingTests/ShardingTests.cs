@@ -31,7 +31,6 @@ namespace Events_Tenant.Common.Tests.ShardingTests
 
         #endregion
 
-
         [TestInitialize]
         public void Setup()
         {
@@ -112,7 +111,7 @@ namespace Events_Tenant.Common.Tests.ShardingTests
             };
 
             var sharding = new Sharding(_catalogConfig.CatalogDatabase, _connectionString, _mockCatalogRepo, _mockTenantRepo, _mockUtilities.Object);
-            var result = await Sharding.RegisterNewShard("Test Tenant 1", 1368421345, TestServer, _databaseConfig.DatabaseServerPort, _catalogConfig.ServicePlan);
+            var result = await Sharding.RegisterNewShard("TestTenant", 1368421345, TestServer, _databaseConfig.DatabaseServerPort, _catalogConfig.ServicePlan);
 
             Assert.IsTrue(result);
         }

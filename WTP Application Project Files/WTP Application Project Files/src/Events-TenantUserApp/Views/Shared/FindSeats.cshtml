@@ -136,8 +136,8 @@
 <div class="col-md-3">
 </div>
 <div>
-   @if (user != null)
-   {
+    @if (user != null)
+    {
         <button id="purchaseTicket" type="button" class="btn btn-themed pull-right" data-toggle="modal" data-target=".modal-tickets" data-backdrop="static" style="margin-right: 10px;">
             @Localizer["Purchase tickets"]
         </button>
@@ -275,7 +275,8 @@
         $("#purchaseTicket").attr('disabled','disabled');
 
         $("#quantity").keyup(function() {
-            if(($(this).val() != '') && ($(this).val() != '0')) {
+            if(($(this).val() != '') && (parseInt($(this).val(), 10) != '0')
+                && (parseInt($("#quantity").val(), 10) <= parseInt($("#seatsAvailable")[0].innerText, 10))) {
                 $("#purchaseTicket").removeAttr('disabled');
             }
             else {
@@ -284,7 +285,8 @@
         });
 
         $("#quantity").click(function() {
-            if(($(this).val() != '') && ($(this).val() != '0')) {
+            if(($(this).val() != '') && (parseInt($(this).val(), 10) != '0')
+                && (parseInt($("#quantity").val(), 10) <= parseInt($("#seatsAvailable")[0].innerText, 10))) {
                 $("#purchaseTicket").removeAttr('disabled');
             }
             else {
@@ -321,7 +323,7 @@
                     $("#seatsAvailable").html(data);
                 },
                 error: function() {
-                    alert("error");
+                    showAlert('Error',"@Localizer["Technical issues, please try again later!"].Value")
                 }
             });
         });
@@ -331,27 +333,27 @@
 
             var selectedSection = $("#section").val();
             var prices = $("#section option:selected").html();
-           
+
             var arr = prices.split('@tenantConfig.Currency');
             var sectionName = arr[0].trim();
 
             var price = Number(prices.replace(/[^0-9\.]+/g, ""));
             var quantity = parseInt($("#quantity").val(), 10);
             var availableSeats = parseInt($("#seatsAvailable")[0].innerText, 10);
-            if (quantity > availableSeats) {
-                @*alert(@Localizer["The quantity is invalid."]);*@
-                alert("The quantity is invalid.");
+            if (isNaN(quantity) || (quantity > availableSeats) || quantity == 0) {
+                showAlert('Error',"@Localizer["The quantity is invalid."].Value");
+                $("#purchaseTicket").attr('disabled', 'disabled');
+                var totalPrice = "0.00";
             } else {
-                var total = (price * quantity).toString();
-                var totalPrice = total;
-
-                $("#spanTotal1").html(totalPrice);
-                $("#spanTotal2").html(totalPrice);
-                $("#spanTicketQty").html(quantity + " " + sectionName);
-                $("#sectionId").val(selectedSection);
-                $("#ticketPrice").val(total);
-                $("#ticketCount").val(quantity);
+                var totalPrice = (price * quantity).toString();
             }
+
+            $("#spanTotal1").html(totalPrice);
+            $("#spanTotal2").html(totalPrice);
+            $("#spanTicketQty").html(quantity + " " + sectionName);
+            $("#sectionId").val(selectedSection);
+            $("#ticketPrice").val(total);
+            $("#ticketCount").val(quantity);
         });
 
 
@@ -359,7 +361,7 @@
         // Listen for input event on numInput.
         number.onkeydown = function(e) {
             if(!((e.keyCode > 95 && e.keyCode < 106)
-              || (e.keyCode > 47 && e.keyCode < 58) 
+              || (e.keyCode > 47 && e.keyCode < 58)
               || e.keyCode == 8)) {
                 return false;
             }

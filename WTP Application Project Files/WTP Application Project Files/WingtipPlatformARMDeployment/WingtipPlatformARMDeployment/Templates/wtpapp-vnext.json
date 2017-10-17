@@ -369,7 +369,6 @@
             "SqlProtocol": "tcp",
             "TenantServer": "[variables('tenantServer')]",
             "LearnHowFooterUrl": "https://aka.ms/sqldbsaastutorial",
-            "User": "[variables('lowerCaseUser')]",
             "ASPNETCORE_ENVIRONMENT": "Production",
             "WEBSITE_NODE_DEFAULT_VERSION": "4.2.3",
             "DefaultRequestCulture":"en-US",
