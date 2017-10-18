@@ -129,6 +129,5 @@ namespace Events_Tenant.Common.Utilities
         }
 
         #endregion
-
     }
 }

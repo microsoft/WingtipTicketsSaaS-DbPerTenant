@@ -77,8 +77,8 @@ namespace Events_TenantUserApp.Controllers
                             {
                                 tenantConfigs[i] = tenantConfig;
                                 HttpContext.Session.SetObjectAsJson("TenantConfigs", tenantConfigs);
+                                break;
                             }
-                            break;
                         }
                     }
                 }
