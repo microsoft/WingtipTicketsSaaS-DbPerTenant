@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Events_Tenant.Common.Interfaces;
-using Events_Tenant.Common.Models;
-using Events_Tenant.Common.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Events_Tenant.Common.Tests.UtilitiesTests
 {

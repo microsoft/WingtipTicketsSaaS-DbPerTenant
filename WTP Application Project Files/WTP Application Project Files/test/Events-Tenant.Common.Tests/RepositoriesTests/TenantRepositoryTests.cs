@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Events_Tenant.Common.Interfaces;
 using Events_Tenant.Common.Models;
 using Events_Tenant.Common.Tests.MockRepositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
 
 namespace Events_Tenant.Common.Tests.RepositoriesTests
 {
@@ -87,7 +87,6 @@ namespace Events_Tenant.Common.Tests.RepositoriesTests
             Assert.AreEqual(1, result[2].EventId);
             Assert.AreEqual(60, result[2].Price);
         }
-
 
         [TestMethod]
         public async Task GetEventsForTenantTest()

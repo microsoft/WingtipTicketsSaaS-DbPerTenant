@@ -5,11 +5,11 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Events_Tenant.Common.Interfaces;
+using Events_Tenant.Common.Models;
 using Events_Tenant.Common.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
-using Events_Tenant.Common.Models;
 
 namespace Events_TenantUserApp.Controllers
 {
@@ -113,7 +113,6 @@ namespace Events_TenantUserApp.Controllers
             }
             return ticketsModel;
         }
-
 
         #endregion
 

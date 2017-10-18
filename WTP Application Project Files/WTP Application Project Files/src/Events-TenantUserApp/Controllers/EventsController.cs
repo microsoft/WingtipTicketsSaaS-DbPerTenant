@@ -28,7 +28,6 @@ namespace Events_TenantUserApp.Controllers
 
         #endregion
 
-
         [Route("{tenant}")]
         public async Task<ActionResult> Index(string tenant)
         {

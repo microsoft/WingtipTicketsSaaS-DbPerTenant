@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Events_Tenant.Common.Interfaces;
 using Events_Tenant.Common.Models;
-using Events_Tenant.Common.Utilities;
 using Events_TenantUserApp.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -26,8 +25,6 @@ namespace Events_TenantUserApp.Tests.ControllerTests
         {
             var mockCatalogRepo = new Mock<ICatalogRepository>();
             mockCatalogRepo.Setup(repo => repo.GetTenant("testTenant")).Returns(GetTenantModel());
-
-
 
             var mockUtilities = new Mock<IUtilities>();
             var mockTenantRepo = new Mock<ITenantRepository>();

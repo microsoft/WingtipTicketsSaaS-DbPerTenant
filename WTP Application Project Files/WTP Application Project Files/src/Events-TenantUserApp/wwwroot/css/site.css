@@ -10,11 +10,9 @@
     font-style: normal;
 }
 
-
 /* ========================================================================================== */
 /* HTML ELEMENTS */
 /* ========================================================================================== */
-
 
 .table-bordered {
     border: 1px solid #999;
@@ -27,7 +25,6 @@
     background-color: #999;
 }
 
-
 table {
     border-collapse: collapse;
     border-spacing: 0;
@@ -35,7 +32,6 @@ table {
     font-family: "Segoe UI", Frutiger, "Frutiger Linotype", "Dejavu Sans", "Helvetica Neue", Arial, sans-serif;
     background-color: #ececec;
 }
-
 
 tbody {
     display: table-row-group;
@@ -65,7 +61,6 @@ tr {
     clear: both !important;
     color: #fff;
 }
-
 
 .page-heading {
     width: inherit;
@@ -303,8 +298,6 @@ iframe {
 /* MENU */
 /* ========================================================================================== */
 
-
-
 .menu-bar-default {
     background: transparent;
     border: none;
@@ -396,7 +389,6 @@ a:hover {
     text-decoration: none;
     color: #e77a39;
 }
-
 
 .nav-menu-dropdown-item {
     margin-left: 10px;
@@ -507,7 +499,6 @@ a:hover {
     left: 22px;
     opacity: 1;
 }
-
 
 h1, .h1, h2, .h2, h3, .h3 {
     margin-top: 20px;
@@ -638,7 +629,6 @@ h1, .h1, h2, .h2, h3, .h3 {
     min-height: 1px;
     padding-left: 8px;
 }
-
 
 .col-custom {
     position: relative;
@@ -858,7 +848,6 @@ select::-ms-expand {
     width: 100%;
 }
 
-
 /* Chrome,Safari4+ */
 /*::-webkit-scrollbar {
     overflow-y: auto;
@@ -978,7 +967,6 @@ select::-ms-expand {
 ::-o-scrollbar-button:vertical:decrement {
      background-image: url('/../images/up.png');
 }*/
-
 
 /*.flexcroll {
     overflow-y: auto;

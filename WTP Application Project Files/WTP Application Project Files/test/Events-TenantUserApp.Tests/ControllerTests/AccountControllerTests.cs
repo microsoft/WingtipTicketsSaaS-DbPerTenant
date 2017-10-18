@@ -69,7 +69,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
 
         private CustomerModel GetCustomer()
         {
-           return new CustomerModel
+            return new CustomerModel
             {
                 CountryCode = "USA",
                 PostalCode = "123",

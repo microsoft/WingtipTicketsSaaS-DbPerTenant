@@ -1,12 +1,12 @@
 ﻿using System.Data.SqlClient;
+using System.Threading.Tasks;
 using Events_Tenant.Common.Interfaces;
+using Events_Tenant.Common.Tests.MockRepositories;
 using Events_Tenant.Common.Utilities;
 using Events_TenantUserApp.EF.CatalogDB;
 using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using System.Threading.Tasks;
-using Events_Tenant.Common.Tests.MockRepositories;
 
 namespace Events_Tenant.Common.Tests.ShardingTests
 {

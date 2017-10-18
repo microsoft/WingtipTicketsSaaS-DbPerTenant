@@ -236,7 +236,6 @@ namespace Events_TenantUserApp
             }
         }
 
-
         /// <summary>
         /// Initialises the shard map manager and shard map 
         /// <para>Also does all tasks related to sharding</para>
