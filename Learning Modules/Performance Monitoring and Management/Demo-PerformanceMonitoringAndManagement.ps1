@@ -12,9 +12,9 @@ $DemoScenario = 1
     Demo    Scenario
       0       None
       1       Provision a batch of tenants (do this before any of the load generation scenarios)
-      2       Generate normal intensity load (approx 40 DTU) 
+      2       Generate normal intensity load (approx 30 DTU) 
       3       Generate load with longer and more frequent bursts per database
-      4       Generate load with higher DTU bursts per database (approx 80 DTU)  
+      4       Generate load with higher DTU bursts per database (approx 70 DTU)  
       5       Generate a normal load plus a high load on a single tenant (approx 95 DTU) 
       6       Generate unbalanced load across multiple pools  
 #>
@@ -61,7 +61,7 @@ if ($DemoScenario -eq 2)
     Remove-Job * -Force
 
     # Intensity of load, roughly approximates to average eDTU loading on the getpool 
-    $Intensity = 40   
+    $Intensity = 30   
 
     # start a new set of load generation jobs for the current databases with the load configuration above
     & $PSScriptRoot\..\Utilities\LoadGenerator.ps1 `
@@ -81,7 +81,7 @@ if ($DemoScenario -eq 3)
     Remove-Job * -Force
 
     # Intensity of load, roughly approximates to average eDTU loading on the getpool 
-    $Intensity = 40
+    $Intensity = 30
 
     # start a new set of load generation jobs for the current databases with the load configuration above
     & $PSScriptRoot\..\Utilities\LoadGenerator.ps1 `
@@ -102,7 +102,7 @@ if ($DemoScenario -eq 4)
     Remove-Job * -Force
 
     # Intensity of load, roughly approximates to average eDTU loading on the getpool 
-    $Intensity = 80   
+    $Intensity = 70   
 
     # start a new set of load generation jobs for the current databases with the load configuration above
     & $PSScriptRoot\..\Utilities\LoadGenerator.ps1 `
@@ -122,7 +122,7 @@ if ($DemoScenario -eq 5)
     Remove-Job * -Force
 
     # Intensity of normal load, roughly approximates to average eDTU loading on the getpool 
-    $Intensity = 40   
+    $Intensity = 30   
 
     # Intensity of high load on single tenant
     $SingleTenantDtu = 95
@@ -148,7 +148,7 @@ if ($DemoScenario -eq 6)
     Remove-Job * -Force
 
     # Intensity of load, roughly approximates to average eDTU loading on the getpool 
-    $Intensity = 40
+    $Intensity = 30
 
     # start a new set of load generation jobs for the current databases with the load configuration above
     & $PSScriptRoot\..\Utilities\LoadGenerator.ps1 `

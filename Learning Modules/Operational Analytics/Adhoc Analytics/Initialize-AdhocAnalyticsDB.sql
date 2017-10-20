@@ -36,19 +36,22 @@ SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER OFF;
 GO
 
-CREATE EXTERNAL TABLE [dbo].[VenueEvents]
-(
-    [VenueId] INT NOT NULL,
-    [EventId] INT NOT NULL,
-    [EventName] NVARCHAR (50) NOT NULL,
-    [Subtitle] NVARCHAR (50) NULL,
-    [Date] DATETIME NOT NULL
-)
-WITH
-(
-    DATA_SOURCE = [WtpTenantDBs],
-    DISTRIBUTION = SHARDED(VenueId)
-);
+IF NOT EXISTS (SELECT * FROM sys.external_tables WHERE name = 'VenueEvents')
+BEGIN
+    CREATE EXTERNAL TABLE [dbo].[VenueEvents]
+    (
+        [VenueId] INT NOT NULL,
+        [EventId] INT NOT NULL,
+        [EventName] NVARCHAR (50) NOT NULL,
+        [Subtitle] NVARCHAR (50) NULL,
+        [Date] DATETIME NOT NULL
+    )
+    WITH
+    (
+        DATA_SOURCE = [WtpTenantDBs],
+        DISTRIBUTION = SHARDED(VenueId)
+    );
+END
 GO
 
 SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
@@ -58,19 +61,22 @@ SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER OFF;
 GO
 
-CREATE EXTERNAL TABLE [dbo].[VenueTicketPurchases]
-(
-    [VenueId] INT NOT NULL,
-    [TicketPurchaseId] INT NOT NULL,
-    [PurchaseDate] DATETIME NOT NULL,
-    [PurchaseTotal] MONEY NOT NULL,
-    [CustomerId] INT NOT NULL
-)
-WITH
-(
-	DATA_SOURCE = [WtpTenantDBs],
-	DISTRIBUTION = SHARDED(VenueId)
-);
+IF NOT EXISTS (SELECT * FROM sys.external_tables WHERE name = 'VenueTicketPurchases')
+BEGIN
+    CREATE EXTERNAL TABLE [dbo].[VenueTicketPurchases]
+    (
+        [VenueId] INT NOT NULL,
+        [TicketPurchaseId] INT NOT NULL,
+        [PurchaseDate] DATETIME NOT NULL,
+        [PurchaseTotal] MONEY NOT NULL,
+        [CustomerId] INT NOT NULL
+    )
+    WITH
+    (
+	    DATA_SOURCE = [WtpTenantDBs],
+	    DISTRIBUTION = SHARDED(VenueId)
+    );
+END
 GO
 
 SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
@@ -80,21 +86,24 @@ SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER OFF;
 GO
 
-CREATE EXTERNAL TABLE [dbo].[VenueTickets]
-(
-    [VenueId] INT NOT NULL,
-    [TicketId] INT NOT NULL,
-    [RowNumber] INT NOT NULL,
-    [SeatNumber] INT NOT NULL,
-    [EventId] INT NOT NULL,
-    [SectionId] INT NOT NULL,
-    [TicketPurchaseId] INT NOT NULL
-)
-WITH
-(
-	DATA_SOURCE = [WtpTenantDBs],
-	DISTRIBUTION = SHARDED(VenueId)
-);
+IF NOT EXISTS (SELECT * FROM sys.external_tables WHERE name = 'VenueTickets')
+BEGIN
+    CREATE EXTERNAL TABLE [dbo].[VenueTickets]
+    (
+        [VenueId] INT NOT NULL,
+        [TicketId] INT NOT NULL,
+        [RowNumber] INT NOT NULL,
+        [SeatNumber] INT NOT NULL,
+        [EventId] INT NOT NULL,
+        [SectionId] INT NOT NULL,
+        [TicketPurchaseId] INT NOT NULL
+    )
+    WITH
+    (
+	    DATA_SOURCE = [WtpTenantDBs],
+	    DISTRIBUTION = SHARDED(VenueId)
+    );
+END
 GO
     
 SET ANSI_NULLS, QUOTED_IDENTIFIER ON;
@@ -103,23 +112,26 @@ GO
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER OFF;
 GO
-    
-CREATE EXTERNAL TABLE [dbo].[Venues]
-(
-    [VenueId] INT NOT NULL,
-    [VenueName] NVARCHAR (50) NOT NULL,
-    [VenueType] CHAR (30) NOT NULL,
-    [AdminEmail] VARCHAR (50) NOT NULL,
-    [PostalCode] CHAR (10) NULL,
-    [CountryCode] CHAR (3) NOT NULL,
-    [Server] NVARCHAR(128) NOT NULL,
-    [DatabaseName] NVARCHAR(128) NOT NULL
-)
-WITH
-(
-	DATA_SOURCE = [WtpTenantDBs],
-	DISTRIBUTION = SHARDED(VenueId)
-);
+
+IF NOT EXISTS (SELECT * FROM sys.external_tables WHERE name = 'Venues')
+BEGIN    
+    CREATE EXTERNAL TABLE [dbo].[Venues]
+    (
+        [VenueId] INT NOT NULL,
+        [VenueName] NVARCHAR (50) NOT NULL,
+        [VenueType] CHAR (30) NOT NULL,
+        [AdminEmail] VARCHAR (50) NOT NULL,
+        [PostalCode] CHAR (10) NULL,
+        [CountryCode] CHAR (3) NOT NULL,
+        [Server] NVARCHAR(128) NOT NULL,
+        [DatabaseName] NVARCHAR(128) NOT NULL
+    )
+    WITH
+    (
+	    DATA_SOURCE = [WtpTenantDBs],
+	    DISTRIBUTION = SHARDED(VenueId)
+    );
+END
 GO
 
 -- Create local venuetypes table that will store the types of venues available on the Wingtips tickets platform
