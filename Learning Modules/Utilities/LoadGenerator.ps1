@@ -28,7 +28,10 @@ Param(
     # If singleTenant is enabled, identifes the tenant database.  If not specified a random tenant database is chosen
     [string]$SingleTenantDatabaseName = "",
 
-    [switch]$LongerBursts
+    [switch]$LongerBursts,
+    
+    # if OneTime switch is used then jobs are submitted and the script stops, othewise it continues to poll for new tenants 
+    [bool]$OneTime = $false
 )
 
 ## Configuration
@@ -79,7 +82,7 @@ $intenseLoadFactor = 15.00
 # density load factor, decreases the database load for pools with more dbs, allowing more realistic demos with pools with small populations
 # impacts interval between bursts [interval = interval + (interval * densityLoadFactor * pool.dbcount)]
 # 0 removes the effect, 0.1 will double the typical interval for 10 dbs  
-$densityLoadFactor = 0.08
+$densityLoadFactor = 0.1
 
 $CatalogServerName = $config.CatalogServerNameStem + $WtpUser
 
@@ -388,7 +391,7 @@ while (1 -eq 1)
     $now = Get-Date
     $runtime = ($now - $start).TotalMinutes
 
-    if ($runtime -ge $DurationMinutes)
+    if ($runtime -ge $DurationMinutes -or $OneTime)
     {
         Write-Output "`n`nLoad generation session stopping after $runtime minutes"
         exit

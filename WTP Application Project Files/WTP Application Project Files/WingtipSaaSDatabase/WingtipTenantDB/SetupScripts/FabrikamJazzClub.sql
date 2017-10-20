@@ -14,11 +14,16 @@ DELETE FROM [dbo].[Sections]
 DELETE FROM [dbo].[Venue]
 GO
 
+-- Ids pre-computed as md5 hash of UTF8 encoding of the normalized tenant name, converted to Int 
+-- These are the id values that will be used by the client application and PowerShell scripts to 
+-- retrieve tenant-specific data.   
+DECLARE @FabrikamId INT = 1536234342
+
 -- Venue
 INSERT INTO [dbo].[Venue]
-   ([VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode],[Lock])
+   ([VenueId],[VenueName],[VenueType],[AdminEmail],[AdminPassword],[PostalCode],[CountryCode],[Lock])
      VALUES
-           ('Fabrikam Jazz Club','jazz','admin@fabrikamjazzclub.com',NULL,'98052','USA','X')
+           (@FabrikamId, 'Fabrikam Jazz Club','jazz','admin@fabrikamjazzclub.com',NULL,'98052','USA','X')
 GO
 
 -- Sections
