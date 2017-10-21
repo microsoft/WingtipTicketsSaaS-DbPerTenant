@@ -8,9 +8,9 @@ namespace Events_TenantUserApp.EF.CatalogDB
         public virtual DbSet<Tenants> Tenants { get; set; }
 
         public CatalogDbContext(DbContextOptions<CatalogDbContext> options) :
-            base(options)
+          base(options)
         {
-            
+
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -18,7 +18,7 @@ namespace Events_TenantUserApp.EF.CatalogDB
             modelBuilder.Entity<Tenants>(entity =>
             {
                 entity.HasKey(e => e.TenantId)
-                    .HasName("PK__Tenants__2E9B47E14F398EA5");
+                    .HasName("PK__Tenants__2E9B47E15565CFCB");
 
                 entity.HasIndex(e => e.TenantName)
                     .HasName("IX_Tenants_TenantName");
@@ -27,7 +27,7 @@ namespace Events_TenantUserApp.EF.CatalogDB
 
                 entity.Property(e => e.ServicePlan)
                     .IsRequired()
-                    .HasColumnType("char(10)")
+                    .HasMaxLength(30)
                     .HasDefaultValueSql("'standard'");
 
                 entity.Property(e => e.TenantName)

@@ -5,6 +5,8 @@ using Events_TenantUserApp.EF.CatalogDB;
 using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using System.Threading.Tasks;
+using Events_Tenant.Common.Tests.MockRepositories;
 
 namespace Events_Tenant.Common.Tests.ShardingTests
 {
@@ -13,17 +15,18 @@ namespace Events_Tenant.Common.Tests.ShardingTests
     {
         #region Private fields
 
-        internal const string ShardMapManagerTestConnectionString = "Data Source=localhost;Integrated Security=True;";
+        internal const string TestServer = @"localhost";
+        internal const string ShardMapManagerTestConnectionString = "Data Source=" + TestServer + ";Integrated Security=True;";
 
-        private const string CreateDatabaseQuery =
-            "IF EXISTS (SELECT name FROM sys.databases WHERE name = N'TestTenant') BEGIN DROP DATABASE [TestTenant] END CREATE DATABASE [TestTenant]";
+        private const string CreateDatabaseQueryFormat =
+            "IF EXISTS (SELECT name FROM sys.databases WHERE name = N'{0}') BEGIN DROP DATABASE [{0}] END CREATE DATABASE [{0}]";
 
         private CatalogConfig _catalogConfig;
         private DatabaseConfig _databaseConfig;
         private string _connectionString;
 
-        private Mock<ICatalogRepository> _mockCatalogRepo;
-        private Mock<ITenantRepository> _mockTenantRepo;
+        private MockCatalogRepository _mockCatalogRepo;
+        private MockTenantRepository _mockTenantRepo;
         private Mock<IUtilities> _mockUtilities;
 
         #endregion
@@ -36,7 +39,7 @@ namespace Events_Tenant.Common.Tests.ShardingTests
             {
                 ServicePlan = "Standard",
                 CatalogDatabase = "ShardMapManager",
-                CatalogServer = "localhost"
+                CatalogServer = TestServer
             };
 
             _databaseConfig = new DatabaseConfig
@@ -56,16 +59,16 @@ namespace Events_Tenant.Common.Tests.ShardingTests
                 TenantId = new byte[0]
             };
 
-            _connectionString = "Data Source=localhost;Initial Catalog=ShardMapManager;Integrated Security=SSPI;";
+            _connectionString = string.Format("{0}Initial Catalog={1};", ShardMapManagerTestConnectionString, _catalogConfig.CatalogDatabase);
 
-            _mockCatalogRepo = new Mock<ICatalogRepository>();
-            _mockCatalogRepo.Setup(repo => repo.Add(tenant));
+            _mockCatalogRepo = new MockCatalogRepository();
+            _mockCatalogRepo.Add(tenant);
 
-            _mockTenantRepo = new Mock<ITenantRepository>();
+            _mockTenantRepo = new MockTenantRepository();
 
             _mockUtilities = new Mock<IUtilities>();
 
-            #region Create tenant database on localhost
+            #region Create databases on localhost
 
             // Clear all connection pools.
             SqlConnection.ClearAllPools();
@@ -75,38 +78,43 @@ namespace Events_Tenant.Common.Tests.ShardingTests
                 conn.Open();
 
                 // Create ShardMapManager database
-                using (SqlCommand cmd = new SqlCommand(CreateDatabaseQuery, conn))
+                using (SqlCommand cmd = new SqlCommand(string.Format(CreateDatabaseQueryFormat, _catalogConfig.CatalogDatabase), conn))
                 {
                     cmd.ExecuteNonQuery();
                 }
+
+                // Create Tenant database
+                using (SqlCommand cmd = new SqlCommand(string.Format(CreateDatabaseQueryFormat, tenant.TenantName), conn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+
             }
             #endregion
 
         }
 
-
         [TestMethod]
         public void ShardingTest()
         {
-            var sharding = new Sharding(_catalogConfig.CatalogDatabase, _connectionString, _mockCatalogRepo.Object, _mockTenantRepo.Object, _mockUtilities.Object);
+            var sharding = new Sharding(_catalogConfig.CatalogDatabase, _connectionString, _mockCatalogRepo, _mockTenantRepo, _mockUtilities.Object);
 
             Assert.IsNotNull(sharding);
             Assert.IsNotNull(sharding.ShardMapManager);
         }
 
         [TestMethod]
-        public async void RegisterShardTest()
+        public async Task RegisterShardTest()
         {
             _databaseConfig = new DatabaseConfig
             {
                 SqlProtocol = SqlProtocol.Default
             };
 
-            var sharding = new Sharding(_catalogConfig.CatalogDatabase, _connectionString, _mockCatalogRepo.Object, _mockTenantRepo.Object, _mockUtilities.Object);
-            var result = await Sharding.RegisterNewShard("TestTenant", 397858529, "localhost", _databaseConfig.DatabaseServerPort, _catalogConfig.ServicePlan);
+            var sharding = new Sharding(_catalogConfig.CatalogDatabase, _connectionString, _mockCatalogRepo, _mockTenantRepo, _mockUtilities.Object);
+            var result = await Sharding.RegisterNewShard("Test Tenant 1", 1368421345, TestServer, _databaseConfig.DatabaseServerPort, _catalogConfig.ServicePlan);
 
             Assert.IsTrue(result);
         }
-       
     }
 }

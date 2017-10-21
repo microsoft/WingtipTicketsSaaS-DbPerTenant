@@ -147,8 +147,8 @@
                         <div class="copyright col-xs-12 text-left" style="margin-right: 10px;">
                             <p>
                                 @Localizer["Running on Azure SQL Database."] &copy; @DateTime.Now.Year @Localizer["Microsoft"]<br />
-                                @Localizer["server:"] @Startup.TenantServerConfig.TenantServer <br />
-                                @Localizer["database:"] @tenantConfig.TenantName &nbsp; &nbsp; &nbsp; @Localizer["tenant id:"] @tenantConfig.TenantIdInString
+                                @Localizer["server:"] @tenantConfig.DatabaseServerName <br />
+                                @Localizer["database:"] @tenantConfig.DatabaseName &nbsp; &nbsp; &nbsp; @Localizer["tenant id:"] @tenantConfig.TenantIdInString
                             </p>
                         </div>
                     </div>

@@ -129,6 +129,8 @@ namespace Events_TenantUserApp.Controllers
 
                 return new TenantConfig
                 {
+                    DatabaseName = venueDetails.DatabaseName,
+                    DatabaseServerName = venueDetails.DatabaseServerName,
                     VenueName = venueDetails.VenueName,
                     BlobImagePath = blobPath + venueTypeDetails.VenueType + "-user.jpg",
                     EventTypeNamePlural = venueTypeDetails.EventTypeShortNamePlural.ToUpper(),
