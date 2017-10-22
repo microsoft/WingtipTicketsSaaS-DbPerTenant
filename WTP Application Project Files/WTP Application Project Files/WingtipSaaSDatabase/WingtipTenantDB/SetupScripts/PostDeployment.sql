@@ -34,10 +34,15 @@ VALUES
     ('opera','Opera Venue','Opera','Opera','Operas','en-us');      
 GO
 
+-- Ids pre-computed as md5 hash of UTF8 encoding of the normalized tenant name, converted to Int 
+-- These are the id values that will be used by the client application and PowerShell scripts to 
+-- retrieve tenant-specific data.   
+DECLARE @VenueId INT = -1209177223
+
 INSERT INTO [dbo].Venue
-    ([VenueName],[VenueType],[AdminEmail],[CountryCode],[Lock])         
+    ([VenueId], [VenueName],[VenueType],[AdminEmail],[CountryCode],[Lock])         
 VALUES
-    ('Venue Name','multipurpose','admin@email.com','USA','X')
+    (@VenueId,'Venue Name','multipurpose','admin@email.com','USA','X')
 GO
 
 

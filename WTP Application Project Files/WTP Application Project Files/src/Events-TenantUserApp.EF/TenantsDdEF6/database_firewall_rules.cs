@@ -1,10 +1,8 @@
 namespace Events_TenantUserApp.EF.TenantsDdEF6
 {
     using System;
-    using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
-    using System.Data.Entity.Spatial;
 
     [Table("sys.database_firewall_rules")]
     public partial class database_firewall_rules

@@ -38,7 +38,7 @@ if ($DemoScenario -eq 0)
 }
 
 
-### Generate a high intensity load (approx 95 DTU) on a single tenant plas a normal intensity load (40 DTU) on all other tenants
+### Generate a high intensity load (approx 95 DTU) on a single tenant plas a normal intensity load (30 DTU) on all other tenants
 if ($DemoScenario -eq 1)
 {       
     # First, stop and remove any prior running jobs
@@ -46,7 +46,7 @@ if ($DemoScenario -eq 1)
     Remove-Job * -Force
 
     # Intensity of normal load, roughly approximates to average eDTU loading on the pool 
-    $Intensity = 40   
+    $Intensity = 30   
 
     # start a new set of load generation jobs for the current databases with the load configuration above
     & $PSScriptRoot\..\Utilities\LoadGenerator.ps1 `

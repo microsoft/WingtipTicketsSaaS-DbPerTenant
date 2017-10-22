@@ -1,5 +1,4 @@
-﻿using System;
-using System.Data.SqlClient;
+﻿using System.Data.SqlClient;
 using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -41,7 +40,6 @@ namespace Events_TenantUserApp.EF.TenantsDB
 
             return options;
         }
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -94,6 +92,8 @@ namespace Events_TenantUserApp.EF.TenantsDB
                 entity.Property(e => e.Password).HasMaxLength(30);
 
                 entity.Property(e => e.PostalCode).HasColumnType("char(10)");
+
+                entity.Property(e => e.RowVersion).ValueGeneratedOnAddOrUpdate();
 
                 entity.HasOne(d => d.CountryCodeNavigation)
                     .WithMany(p => p.Customers)
@@ -161,6 +161,8 @@ namespace Events_TenantUserApp.EF.TenantsDB
                 entity.Property(e => e.PurchaseDate).HasColumnType("datetime");
 
                 entity.Property(e => e.PurchaseTotal).HasColumnType("money");
+
+                entity.Property(e => e.RowVersion).ValueGeneratedOnAddOrUpdate();
 
                 entity.HasOne(d => d.Customer)
                     .WithMany(p => p.TicketPurchases)

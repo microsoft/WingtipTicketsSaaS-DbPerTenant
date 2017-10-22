@@ -30,15 +30,15 @@
     </div>
 </div>
 
-<div class="bodycontainer" style="min-height: 90%; height: 100%; width: 102%;margin-left: -8px">
-        @RenderBody()
+<div class="bodycontainer" style="min-height: 90%; width: 102%;margin-left: -8px">
+    @RenderBody()
 </div>
 
 <footer class="footer" style="width: 102%; margin-left: -8px">
 
     <div class="row">
         <div class="col-xs-1" style="padding-left: 30px">
-            <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg"/>
+            <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg" />
         </div>
         <div class="col-xs-5" style="padding-left: 30px">
             <div class="logo-heading2" style="padding-right: 0.8%"><span>@Localizer["Wingtip Tickets Platform"]</span></div>
@@ -54,9 +54,9 @@
 
             <div class="copyright">
                 <div class="p-copyright">
-                    @Localizer["Running on Azure SQL Database."] &copy; @DateTime.Now.Year @Localizer["Microsoft"]<br/>
-                    @Localizer["server:"] @Startup.CatalogConfig.CatalogServer <br/>
-                    @Localizer["database:"] @Startup.CatalogConfig.CatalogDatabase<br/>
+                    @Localizer["Running on Azure SQL Database."] &copy; @DateTime.Now.Year @Localizer["Microsoft"]<br />
+                    @Localizer["server:"] @Startup.CatalogConfig.CatalogServer <br />
+                    @Localizer["database:"] @Startup.CatalogConfig.CatalogDatabase<br />
                 </div>
             </div>
 

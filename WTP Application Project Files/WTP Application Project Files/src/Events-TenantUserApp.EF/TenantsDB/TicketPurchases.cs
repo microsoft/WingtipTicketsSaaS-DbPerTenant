@@ -14,6 +14,7 @@ namespace Events_TenantUserApp.EF.TenantsDB
         public DateTime PurchaseDate { get; set; }
         public decimal PurchaseTotal { get; set; }
         public int CustomerId { get; set; }
+        public byte[] RowVersion { get; set; }
 
         public virtual ICollection<Tickets> Tickets { get; set; }
         public virtual Customers Customer { get; set; }

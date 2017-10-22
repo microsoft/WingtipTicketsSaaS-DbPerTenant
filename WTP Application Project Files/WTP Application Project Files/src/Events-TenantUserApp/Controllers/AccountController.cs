@@ -31,7 +31,7 @@ namespace Events_TenantUserApp.Controllers
             _localizer = localizer;
             _tenantRepository = tenantRepository;
             _catalogRepository = catalogRepository;
-             _logger = logger;
+            _logger = logger;
         }
 
         #endregion
@@ -91,6 +91,7 @@ namespace Events_TenantUserApp.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(0, ex, "Login failed for tenant {tenant}", tenant);
+                return View("TenantError", tenant);
             }
             return Redirect(Request.Headers["Referer"].ToString());
         }
@@ -110,8 +111,9 @@ namespace Events_TenantUserApp.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(0, ex, "Log out failed for tenant {tenant}", tenant);
+                return View("TenantError", tenant);
             }
-            return RedirectToAction("Index", "Events", new {tenant});
+            return RedirectToAction("Index", "Events", new { tenant });
         }
 
         [HttpPost]
@@ -165,9 +167,10 @@ namespace Events_TenantUserApp.Controllers
                     return View("TenantError", tenant);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(0, ex, "Registration failed for tenant {tenant}", tenant);
+                return View("TenantError", tenant);
             }
             return Redirect(Request.Headers["Referer"].ToString());
         }

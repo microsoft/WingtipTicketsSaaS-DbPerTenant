@@ -45,7 +45,7 @@ namespace Events_Tenant.Common.Repositories
         {
             using (var context = CreateContext(tenantId))
             {
-                var country = await context.Countries.Where(x => x.CountryCode == countryCode).FirstOrDefaultAsync();
+                var country = await context.Countries.FirstOrDefaultAsync(x => x.CountryCode == countryCode);
                 return country?.ToCountryModel();
             }
         }
@@ -71,7 +71,7 @@ namespace Events_Tenant.Common.Repositories
         {
             using (var context = CreateContext(tenantId))
             {
-                var customer = await context.Customers.Where(i => i.Email == email).FirstOrDefaultAsync();
+                var customer = await context.Customers.FirstOrDefaultAsync(i => i.Email == email);
 
                 return customer?.ToCustomerModel();
             }
@@ -110,7 +110,7 @@ namespace Events_Tenant.Common.Repositories
         {
             using (var context = CreateContext(tenantId))
             {
-                var eventModel = await context.Events.Where(i => i.EventId == eventId).FirstOrDefaultAsync();
+                var eventModel = await context.Events.FirstOrDefaultAsync(i => i.EventId == eventId);
 
                 return eventModel?.ToEventModel();
             }
@@ -134,7 +134,7 @@ namespace Events_Tenant.Common.Repositories
         {
             using (var context = CreateContext(tenantId))
             {
-                var section = await context.Sections.Where(i => i.SectionId == sectionId).FirstOrDefaultAsync();
+                var section = await context.Sections.FirstOrDefaultAsync(i => i.SectionId == sectionId);
 
                 return section?.ToSectionModel();
             }
@@ -157,28 +157,18 @@ namespace Events_Tenant.Common.Repositories
             }
         }
 
-        public async Task<int> GetNumberOfTicketPurchases(int tenantId)
-        {
-            using (var context = CreateContext(tenantId))
-            {
-                var ticketPurchases = await context.TicketPurchases.ToListAsync();
-                if (ticketPurchases.Any())
-                {
-                    return ticketPurchases.Count();
-                }
-            }
-            return 0;
-        }
-
         #endregion
 
         #region Tickets
 
-        public async Task<bool> AddTicket(TicketModel ticketModel, int tenantId)
+        public async Task<bool> AddTickets(List<TicketModel> ticketModels, int tenantId)
         {
             using (var context = CreateContext(tenantId))
             {
-                context.Tickets.Add(ticketModel.ToTicketsEntity());
+                foreach (TicketModel ticketModel in ticketModels)
+                {
+                    context.Tickets.Add(ticketModel.ToTicketsEntity());
+                }
                 await context.SaveChangesAsync();
             }
             return true;
@@ -206,10 +196,11 @@ namespace Events_Tenant.Common.Repositories
             using (var context = CreateContext(tenantId))
             {
                 //get database name
-                string databaseName;
+                string databaseName, databaseServerName;
                 using (SqlConnection sqlConn = Sharding.ShardMap.OpenConnectionForKey(tenantId, _connectionString))
                 {
                     databaseName = sqlConn.Database;
+                    databaseServerName = sqlConn.DataSource.Split(':').Last().Split(',').First();
                 }
 
                 var venue = await context.Venue.FirstOrDefaultAsync();
@@ -218,6 +209,7 @@ namespace Events_Tenant.Common.Repositories
                 {
                     var venueModel = venue.ToVenueModel();
                     venueModel.DatabaseName = databaseName;
+                    venueModel.DatabaseServerName = databaseServerName;
                     return venueModel;
                 }
                 return null;
@@ -232,7 +224,7 @@ namespace Events_Tenant.Common.Repositories
         {
             using (var context = CreateContext(tenantId))
             {
-                var venueTypeDetails = await context.VenueTypes.Where(i => i.VenueType == venueType).FirstOrDefaultAsync();
+                var venueTypeDetails = await context.VenueTypes.FirstOrDefaultAsync(i => i.VenueType == venueType);
 
                 return venueTypeDetails?.ToVenueTypeModel();
             }

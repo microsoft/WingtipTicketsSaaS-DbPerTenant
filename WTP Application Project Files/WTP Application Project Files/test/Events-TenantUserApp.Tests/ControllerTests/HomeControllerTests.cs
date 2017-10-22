@@ -17,7 +17,6 @@ namespace Events_TenantUserApp.Tests.ControllerTests
     //https://github.com/aspnet/Tooling/issues/664
     //http://stackoverflow.com/questions/40190679/how-to-reference-an-asp-net-core-project-from-a-full-net-framework-test-project
 
-
     [TestClass]
     public class HomeControllerTests
     {
@@ -34,7 +33,6 @@ namespace Events_TenantUserApp.Tests.ControllerTests
 
             _homeController = new HomeController(mockCatalogRepo.Object, mockTenantRepo.Object, logger);
         }
-
 
         [Fact]
         public void Index_GetAllTenantDetails()

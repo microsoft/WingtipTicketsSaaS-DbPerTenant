@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Events_Tenant.Common.Interfaces;
+﻿using Events_Tenant.Common.Interfaces;
 using Events_Tenant.Common.Repositories;
 using Events_TenantUserApp.Controllers;
 using Microsoft.AspNetCore.Builder;
