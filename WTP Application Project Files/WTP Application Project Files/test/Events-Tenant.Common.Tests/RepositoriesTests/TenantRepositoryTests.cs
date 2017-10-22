@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Events_Tenant.Common.Interfaces;
 using Events_Tenant.Common.Models;
 using Events_Tenant.Common.Tests.MockRepositories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Threading.Tasks;
 
 namespace Events_Tenant.Common.Tests.RepositoriesTests
 {
@@ -12,19 +12,14 @@ namespace Events_Tenant.Common.Tests.RepositoriesTests
     public class TenantRepositoryTests
     {
         private ITenantRepository _tenantRepository;
-        private  int _tenantId;
-        private int _numberOfTicketPurchases;
-        private int _ticketsSold;
-
+        private const int _tenantId = 1368421345;
+        private const int _numberOfTicketPurchases = 1;
+        private const int _ticketsSold = 1;
 
         [TestInitialize]
         public void Setup()
         {
             _tenantRepository = new MockTenantRepository();
-            _tenantId = 1368421345;
-            _numberOfTicketPurchases = 1;
-            _ticketsSold = 1;
-
             _tenantRepository.AddCustomer(CreateCustomerModel(), _tenantId);
         }
 
@@ -92,7 +87,6 @@ namespace Events_Tenant.Common.Tests.RepositoriesTests
             Assert.AreEqual(1, result[2].EventId);
             Assert.AreEqual(60, result[2].Price);
         }
-
 
         [TestMethod]
         public async Task GetEventsForTenantTest()
@@ -165,19 +159,10 @@ namespace Events_Tenant.Common.Tests.RepositoriesTests
             };
 
             var result = (_tenantRepository.AddTicketPurchase(ticketPurchaseModel, _tenantId)).Result;
-            _numberOfTicketPurchases++;
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(_numberOfTicketPurchases, 2);
+            Assert.AreEqual(_numberOfTicketPurchases, 1);
             Assert.AreEqual(12, result);
-        }
-
-        [TestMethod]
-        public void GetNumberOfTicketPurchasesTest()
-        {
-            var result = (_tenantRepository.GetNumberOfTicketPurchases(_tenantId)).Result;
-
-            Assert.AreEqual(_numberOfTicketPurchases, result);
         }
 
         [TestMethod]
@@ -192,9 +177,10 @@ namespace Events_Tenant.Common.Tests.RepositoriesTests
                 RowNumber = 22,
                 TicketId = 100
             };
+            List<TicketModel> ticketModels = new List<TicketModel>();
+            ticketModels.Add(ticketModel);
 
-            var result = await _tenantRepository.AddTicket(ticketModel, _tenantId);
-            _ticketsSold++;
+            var result = await _tenantRepository.AddTickets(ticketModels, _tenantId);
 
             Assert.IsNotNull(result);
             Assert.IsTrue(result);

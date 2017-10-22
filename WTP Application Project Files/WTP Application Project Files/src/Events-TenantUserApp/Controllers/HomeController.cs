@@ -34,7 +34,6 @@ namespace Events_TenantUserApp.Controllers
 
         #endregion
 
-
         /// <summary>
         /// This method is hit when not passing any tenant name
         /// Will display the Events Hub page

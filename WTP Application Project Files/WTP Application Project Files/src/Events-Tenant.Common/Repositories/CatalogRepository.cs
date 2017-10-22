@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Events_Tenant.Common.Interfaces;
@@ -22,7 +20,6 @@ namespace Events_Tenant.Common.Repositories
 
         #region Constructor
 
-
         public CatalogRepository(CatalogDbContext catalogDbContext)
         {
             _catalogDbContext = catalogDbContext;
@@ -41,7 +38,6 @@ namespace Events_Tenant.Common.Repositories
 
             return null;
         }
-
 
         public async Task<TenantModel> GetTenant(string tenantName)
         {

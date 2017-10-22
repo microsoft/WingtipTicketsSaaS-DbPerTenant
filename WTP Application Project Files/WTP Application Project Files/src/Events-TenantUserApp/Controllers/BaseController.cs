@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Events_Tenant.Common.Interfaces;
+using Events_Tenant.Common.Models;
 using Events_Tenant.Common.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -21,7 +22,7 @@ namespace Events_TenantUserApp.Controllers
         #endregion
 
         #region Constructors
-        public BaseController(IStringLocalizer<BaseController> localizer, ITenantRepository tenantRepository, IConfiguration configuration) 
+        public BaseController(IStringLocalizer<BaseController> localizer, ITenantRepository tenantRepository, IConfiguration configuration)
         {
             _localizer = localizer;
             _tenantRepository = tenantRepository;
@@ -76,8 +77,8 @@ namespace Events_TenantUserApp.Controllers
                             {
                                 tenantConfigs[i] = tenantConfig;
                                 HttpContext.Session.SetObjectAsJson("TenantConfigs", tenantConfigs);
+                                break;
                             }
-                            break;
                         }
                     }
                 }
@@ -86,6 +87,31 @@ namespace Events_TenantUserApp.Controllers
                 Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture(tenantConfig.TenantCulture);
                 Thread.CurrentThread.CurrentUICulture = new CultureInfo(tenantConfig.TenantCulture);
             }
+        }
+
+        /// <summary>
+        /// This method will return the tickets model that will be used for the database inserts
+        /// </summary>
+        /// <param name="eventId">The tenant identifier.</param>
+        /// <param name="sectionId">Section Id for the tickets.</param>
+        /// <param name="numberOfTickets">Count of tickets.</param>
+        /// <param name="purchaseTicketId">Parent id for which the tickets should be tied to</param>
+        /// <returns></returns>
+        protected List<TicketModel> BuildTicketModel(int eventId, int sectionId, int numberOfTickets, int purchaseTicketId)
+        {
+            var ticketsModel = new List<TicketModel>();
+            for (var i = 0; i < numberOfTickets; i++)
+            {
+                ticketsModel.Add(new TicketModel
+                {
+                    SectionId = sectionId,
+                    EventId = eventId,
+                    TicketPurchaseId = purchaseTicketId,
+                    RowNumber = sectionId + eventId + purchaseTicketId, // ensures that the ticket purchased  row number is always unique
+                    SeatNumber = i + 1
+                });
+            }
+            return ticketsModel;
         }
 
         #endregion
@@ -113,7 +139,7 @@ namespace Events_TenantUserApp.Controllers
                 }
                 else
                 {
-                    string[] hostpieces = host.Split(new[] {"."}, StringSplitOptions.RemoveEmptyEntries);
+                    string[] hostpieces = host.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
                     user = hostpieces[2];
                 }
 

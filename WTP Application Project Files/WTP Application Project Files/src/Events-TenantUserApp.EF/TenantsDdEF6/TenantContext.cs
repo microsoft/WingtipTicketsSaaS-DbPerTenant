@@ -3,10 +3,7 @@ using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
 
 namespace Events_TenantUserApp.EF.TenantsDdEF6
 {
-    using System;
     using System.Data.Entity;
-    using System.ComponentModel.DataAnnotations.Schema;
-    using System.Linq;
     using System.Data.SqlClient;
 
     public partial class TenantContext : DbContext
@@ -16,8 +13,8 @@ namespace Events_TenantUserApp.EF.TenantsDdEF6
         {
         }
 
-        public TenantContext(ShardMap shardMap,int shardingKey, string connectionStr)
-            : base(CreateDdrConnection(shardMap, shardingKey, connectionStr) , true)
+        public TenantContext(ShardMap shardMap, int shardingKey, string connectionStr)
+            : base(CreateDdrConnection(shardMap, shardingKey, connectionStr), true)
         {
 
         }

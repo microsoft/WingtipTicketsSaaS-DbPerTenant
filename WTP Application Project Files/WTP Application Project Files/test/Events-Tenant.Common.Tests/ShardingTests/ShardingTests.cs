@@ -1,12 +1,12 @@
 ﻿using System.Data.SqlClient;
+using System.Threading.Tasks;
 using Events_Tenant.Common.Interfaces;
+using Events_Tenant.Common.Tests.MockRepositories;
 using Events_Tenant.Common.Utilities;
 using Events_TenantUserApp.EF.CatalogDB;
 using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using System.Threading.Tasks;
-using Events_Tenant.Common.Tests.MockRepositories;
 
 namespace Events_Tenant.Common.Tests.ShardingTests
 {
@@ -30,7 +30,6 @@ namespace Events_Tenant.Common.Tests.ShardingTests
         private Mock<IUtilities> _mockUtilities;
 
         #endregion
-
 
         [TestInitialize]
         public void Setup()
@@ -112,7 +111,7 @@ namespace Events_Tenant.Common.Tests.ShardingTests
             };
 
             var sharding = new Sharding(_catalogConfig.CatalogDatabase, _connectionString, _mockCatalogRepo, _mockTenantRepo, _mockUtilities.Object);
-            var result = await Sharding.RegisterNewShard("Test Tenant 1", 1368421345, TestServer, _databaseConfig.DatabaseServerPort, _catalogConfig.ServicePlan);
+            var result = await Sharding.RegisterNewShard("TestTenant", 1368421345, TestServer, _databaseConfig.DatabaseServerPort, _catalogConfig.ServicePlan);
 
             Assert.IsTrue(result);
         }

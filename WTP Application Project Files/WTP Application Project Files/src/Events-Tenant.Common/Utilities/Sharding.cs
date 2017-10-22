@@ -63,7 +63,7 @@ namespace Events_Tenant.Common.Utilities
             }
             catch (Exception exception)
             {
-               Trace.TraceError(exception.Message, "Error in sharding initialisation.");
+                Trace.TraceError(exception.Message, "Error in sharding initialisation.");
             }
 
         }
@@ -94,7 +94,7 @@ namespace Events_Tenant.Common.Utilities
                     //create shard if it does not exist
                     shard = ShardMap.CreateShard(shardLocation);
                 }
-                
+
                 // Register the mapping of the tenant to the shard in the shard map.
                 // After this step, DDR on the shard map can be used
                 PointMapping<int> mapping;
@@ -128,8 +128,6 @@ namespace Events_Tenant.Common.Utilities
 
         }
 
-
         #endregion
-
     }
 }

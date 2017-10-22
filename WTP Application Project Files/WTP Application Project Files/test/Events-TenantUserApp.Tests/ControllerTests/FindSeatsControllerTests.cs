@@ -34,8 +34,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             mockTenantRepo.Setup(r => r.GetSections(seatSectionIds, 12345)).Returns(GetSeatSections());
             mockTenantRepo.Setup(r => r.GetSection(1, 12345)).Returns(GetSection());
             mockTenantRepo.Setup(r => r.GetTicketsSold(1, 1, 12345)).Returns(GetNumberOfTicketPurchased());
-            mockTenantRepo.Setup(r => r.AddTicket(GetTicketModel(), 12345)).Returns(GetBooleanValue());
-            mockTenantRepo.Setup(r => r.GetNumberOfTicketPurchases(12345)).Returns(GetNumberOfTicketPurchased());
+            mockTenantRepo.Setup(r => r.AddTickets(GetTicketModels(), 12345)).Returns(GetBooleanValue());
             mockTenantRepo.Setup(r => r.AddTicketPurchase(GetTicketPurchaseModel(), 12345)).Returns(GetTicketId());
 
             var mockUtilities = new Mock<IUtilities>();
@@ -80,7 +79,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
         [Fact]
         public void PurchaseTicketsTests()
         {
-            var result = _findSeatsController.PurchaseTickets("tenantName", "1", "5", "100", "2", "1");
+            var result = _findSeatsController.PurchaseTickets("tenantName", 1, 5, 100, 2, 1);
 
             var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.NotNull(redirectToActionResult.ControllerName);
@@ -98,7 +97,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
                 SubTitle = "Contoso Chamber Orchestra"
             };
         }
-        
+
         private async Task<int> GetTicketId()
         {
             return 11;
@@ -177,15 +176,19 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             };
         }
 
-        private TicketModel GetTicketModel()
+        private List<TicketModel> GetTicketModels()
         {
-            return new TicketModel
-            {
-                SectionId = 1,
-                EventId = 1,
-                RowNumber = 1000,
-                SeatNumber = 1001
-            };
+            List<TicketModel> ticketModels = new List<TicketModel>();
+            ticketModels.Add(
+                new TicketModel
+                {
+                    SectionId = 1,
+                    EventId = 1,
+                    RowNumber = 1000,
+                    SeatNumber = 1001
+                }
+            );
+            return ticketModels;
         }
     }
 }

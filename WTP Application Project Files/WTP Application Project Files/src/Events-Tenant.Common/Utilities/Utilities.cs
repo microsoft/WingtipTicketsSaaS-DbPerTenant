@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Diagnostics;
-using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,7 +15,7 @@ namespace Events_Tenant.Common.Utilities
     /// The Utilities class for doing common methods
     /// </summary>
     /// <seealso cref="Events_Tenant.Common.Interfaces.IUtilities" />
-    public class Utilities: IUtilities
+    public class Utilities : IUtilities
     {
         #region Public methods
 

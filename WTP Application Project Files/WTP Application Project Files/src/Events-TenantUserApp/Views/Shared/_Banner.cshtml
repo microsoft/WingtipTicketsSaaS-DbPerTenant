@@ -10,7 +10,6 @@
 @using Microsoft.AspNetCore.Http
 ﻿@inject IViewLocalizer Localizer
 
-
 @{
     var urlPath = Context.Request.Path.Value;
     string[] urlPieces = urlPath.Split(new[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
@@ -30,7 +29,7 @@
     <div class="col-xs-12 ">
         <div class="banner">
             <div class="row cover-2">
-                <img src = @blobpath class="img-responsive" style="width: 100%">
+                <img src=@blobpath class="img-responsive" style="width: 100%">
             </div>
             <div class="banner-home-left">
                 <div class="banner-caption">

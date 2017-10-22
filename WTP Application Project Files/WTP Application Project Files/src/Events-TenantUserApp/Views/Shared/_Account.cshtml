@@ -22,7 +22,7 @@
     @{
         var users = Context.Session.GetObjectFromJson<List<CustomerModel>>("SessionUsers");
         CustomerModel user = null;
-        if (users!= null && users.Count() > 0)
+        if (users != null && users.Count() > 0)
         {
             var urlPath = Context.Request.Path.Value;
             string[] urlPieces = urlPath.Split(new[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
@@ -37,7 +37,7 @@
 
         if (user != null)
         {
-            @Html.ActionLink(signOffText, "Logout", "Account", new { }, new { @class = "btn btn-themed-secondary", @style = "width: 100%" })
+            @Html.ActionLink(signOffText, "Logout", "Account", new { email = user.Email }, new { @class = "btn btn-themed-secondary", @style = "width: 100%" })
         }
         else
         {

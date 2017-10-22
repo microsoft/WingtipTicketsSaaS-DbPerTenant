@@ -226,11 +226,15 @@ namespace Events_TenantUserApp
 
             TenantServerConfig = new TenantServerConfig
             {
-                TenantServer = Configuration["TenantServer"] + ".database.windows.net",
-                ResetEventDates = Convert.ToBoolean(Configuration["ResetEventDates"])
+                TenantServer = Configuration["TenantServer"] + ".database.windows.net"
             };
-        }
 
+            bool isResetEventDatesEnabled = false;
+            if (bool.TryParse(Configuration["ResetEventDates"], out isResetEventDatesEnabled))
+            {
+                TenantServerConfig.ResetEventDates = isResetEventDatesEnabled;
+            }
+        }
 
         /// <summary>
         /// Initialises the shard map manager and shard map 

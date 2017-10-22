@@ -13,7 +13,6 @@ namespace Events_Tenant.Common.Tests.MockRepositories
         private CustomerModel CustomerModel { get; set; }
         #endregion
 
-
         #region Public Properties
 
         public List<EventSectionModel> EventSectionModels { get; set; }
@@ -23,7 +22,6 @@ namespace Events_Tenant.Common.Tests.MockRepositories
         public List<EventModel> EventModels { get; set; }
         #endregion
 
-
         public MockTenantRepository()
         {
             var country = new CountryModel
@@ -32,7 +30,7 @@ namespace Events_Tenant.Common.Tests.MockRepositories
                 CountryCode = "USA",
                 CountryName = "United States"
             };
-            Countries = new List<CountryModel> {country};
+            Countries = new List<CountryModel> { country };
 
             EventSectionModels = new List<EventSectionModel>
             {
@@ -117,7 +115,6 @@ namespace Events_Tenant.Common.Tests.MockRepositories
                     SubTitle = "Event 2 Subtitle"
                 }
             };
-
         }
 
         public async Task<List<CountryModel>> GetAllCountries(int tenantId)
@@ -141,7 +138,6 @@ namespace Events_Tenant.Common.Tests.MockRepositories
             return CustomerModel;
         }
 
-
         public async Task<List<EventSectionModel>> GetEventSections(int eventId, int tenantId)
         {
             return EventSectionModels;
@@ -163,14 +159,12 @@ namespace Events_Tenant.Common.Tests.MockRepositories
             return ticketPurchaseModel.TicketPurchaseId;
         }
 
-        public async Task<int> GetNumberOfTicketPurchases(int tenantId)
+        public async Task<bool> AddTickets(List<TicketModel> ticketModels, int tenantId)
         {
-            return TicketPurchaseModels.Count;
-        }
-
-        public async Task<bool> AddTicket(TicketModel ticketModel, int tenantId)
-        {
-            TicketModels.Add(ticketModel);
+            foreach (TicketModel ticketModel in ticketModels)
+            {
+                TicketModels.Add(ticketModel);
+            }
             return true;
         }
 
