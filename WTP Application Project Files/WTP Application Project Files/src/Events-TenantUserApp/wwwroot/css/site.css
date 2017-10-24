@@ -62,6 +62,13 @@ tr {
     color: #fff;
 }
 
+.div-copyright {
+   margin: 10px 0 0 -30px;
+   font-size: 12pt;
+   clear: both !important;		   
+   color: #fff;		      
+  }		  
+
 .page-heading {
     width: inherit;
     top: 0px;

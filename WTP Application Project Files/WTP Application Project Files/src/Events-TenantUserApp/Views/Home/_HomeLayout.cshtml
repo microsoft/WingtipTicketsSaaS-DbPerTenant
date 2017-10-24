@@ -54,7 +54,6 @@
 
             <div class="copyright">
                 <div class="p-copyright">
-                    @Localizer["Running on Azure SQL Database."] &copy; @DateTime.Now.Year @Localizer["Microsoft"]<br />
                     @Localizer["server:"] @Startup.CatalogConfig.CatalogServer <br />
                     @Localizer["database:"] @Startup.CatalogConfig.CatalogDatabase<br />
                 </div>
@@ -64,12 +63,22 @@
     </div>
 
     <div class="row">
-        <div class="col-xs-1">
+        <div class="col-xs-12">
+            <div class="col-xs-1" style="padding-left: 30px">
+            </div>
+            <div class="col-xs-6" style="padding-left: 20px">
+                <div class="btm-orange col-xs-4" style="width:auto;margin-top: 10px;">
+                    @Localizer["POWERED BY THE WINGTIP TICKETS PLATFORM"]
+                </div>
+            </div>
+            <div class="col-xs-5 pull-right">
+                <div class="copyright col-xs-12 text-left">
+                    <div class="div-copyright">
+                        @Localizer["Running on Azure SQL Database."] &copy; @DateTime.Now.Year @Localizer["Microsoft"]<br />
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="btm-text col-xs-4-custom" style="margin-left: 25px;">
-            @Localizer["Running on Azure SQL Database"]
-        </div>
-    </div>
 </footer>
 
 
