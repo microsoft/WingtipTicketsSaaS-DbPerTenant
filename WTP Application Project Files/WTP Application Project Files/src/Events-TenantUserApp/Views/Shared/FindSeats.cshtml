@@ -315,7 +315,7 @@
                     $("#seatsAvailable").html(data);
                 },
                 error: function() {
-                    showAlert('Error',"@Localizer["Technical issues, please try again later!"].Value")
+                    showAlert('Error',"@Localizer["Technical issues, please try again later!"].Value");
                 }
             });
         });
@@ -334,9 +334,11 @@
             if (isNaN(quantity) || (quantity > availableSeats) || quantity == 0) {
                 showAlert('Error',"@Localizer["The quantity is invalid."].Value");
                 $("#purchaseTicket").attr('disabled', 'disabled');
-                var totalPrice = "0.00";
+                var total = "0.00";
+                var totalPrice = total;
             } else {
-                var totalPrice = (price * quantity).toString();
+                var total = (price * quantity).toString();
+                var totalPrice = total;
             }
 
             $("#spanTotal1").html(totalPrice);
