@@ -38,7 +38,7 @@
     "tenantDogwoodDojoStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/',variables('tenantDogwoodDojo'),'.bacpac')]",
     "catalogDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/wingtipcatalogdb.bacpac",
     "baseTenantDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/wingtiptenantdb.bacpac",
-    "wtpEventsAppTrafficManagerUniqueDnsName": "[concat('events.wingtip-',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'))]",
+    "wtpEventsAppTrafficManagerUniqueDnsName": "[concat('events.wingtip.',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'))]",
     "wtpEventsApp": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'))]",
     "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage.zip"
   },
