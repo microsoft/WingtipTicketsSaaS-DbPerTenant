@@ -1,0 +1,13 @@
+﻿@using Microsoft.AspNetCore.Mvc.Localization
+@inject IViewLocalizer Localizer
+
+@{
+    ViewData["Title"] = "TenantError";
+}
+
+<br />
+<h1 class="text-danger">@Localizer["Error."]</h1>
+<br />
+<h2 class="text-danger">@Localizer["The following venue was not found:"] @Model</h2>
+<br />
+<h2 class="text-danger">@Localizer["Please verify the spelling and/or verify the venue has been registered."]</h2>

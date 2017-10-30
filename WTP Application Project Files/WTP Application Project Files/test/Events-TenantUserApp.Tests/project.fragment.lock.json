@@ -1,0 +1,86 @@
+{
+  "version": 2,
+  "exports": {
+    "Events-Tenant.Common/1.0.0": {
+      "type": "project",
+      "framework": ".NETFramework,Version=v4.5.2",
+      "compile": {
+        "bin/Release/Events-Tenant.Common.dll": {}
+      },
+      "runtime": {
+        "../../packages/EntityFramework.6.1.3/lib/net45/EntityFramework.SqlServer.dll": {},
+        "../../packages/EntityFramework.6.1.3/lib/net45/EntityFramework.dll": {},
+        "../../packages/Microsoft.Azure.SqlDatabase.ElasticScale.Client.1.3.3/lib/net45/Microsoft.Azure.SqlDatabase.ElasticScale.Client.dll": {},
+        "../../packages/Microsoft.EntityFrameworkCore.1.1.1/lib/net451/Microsoft.EntityFrameworkCore.dll": {},
+        "../../packages/Microsoft.Extensions.Caching.Abstractions.1.1.1/lib/netstandard1.0/Microsoft.Extensions.Caching.Abstractions.dll": {},
+        "../../packages/Microsoft.Extensions.Caching.Memory.1.1.1/lib/net451/Microsoft.Extensions.Caching.Memory.dll": {},
+        "../../packages/Microsoft.Extensions.DependencyInjection.1.1.0/lib/netstandard1.1/Microsoft.Extensions.DependencyInjection.dll": {},
+        "../../packages/Microsoft.Extensions.DependencyInjection.Abstractions.1.1.0/lib/netstandard1.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {},
+        "../../packages/Microsoft.Extensions.Logging.1.1.1/lib/netstandard1.1/Microsoft.Extensions.Logging.dll": {},
+        "../../packages/Microsoft.Extensions.Logging.Abstractions.1.1.1/lib/netstandard1.1/Microsoft.Extensions.Logging.Abstractions.dll": {},
+        "../../packages/Microsoft.Extensions.Options.1.1.1/lib/netstandard1.0/Microsoft.Extensions.Options.dll": {},
+        "../../packages/Microsoft.Extensions.Primitives.1.1.0/lib/netstandard1.0/Microsoft.Extensions.Primitives.dll": {},
+        "../../packages/Remotion.Linq.2.1.1/lib/net45/Remotion.Linq.dll": {},
+        "../../packages/System.Collections.Immutable.1.3.0/lib/portable-net45+win8+wp8+wpa81/System.Collections.Immutable.dll": {},
+        "../../packages/System.Interactive.Async.3.0.0/lib/net45/System.Interactive.Async.dll": {},
+        "../../packages/System.Runtime.CompilerServices.Unsafe.4.3.0/lib/netstandard1.0/System.Runtime.CompilerServices.Unsafe.dll": {},
+        "../../packages/System.Runtime.InteropServices.RuntimeInformation.4.3.0/lib/net45/System.Runtime.InteropServices.RuntimeInformation.dll": {},
+        "bin/Release/Events-Tenant.Common.dll": {}
+      },
+      "contentFiles": {
+        "bin/Release/Events-Tenant.Common.pdb": {
+          "buildAction": "None",
+          "codeLanguage": "any",
+          "copyToOutput": true
+        }
+      }
+    },
+    "Events-TenantUserApp.EF/1.0.0": {
+      "type": "project",
+      "framework": ".NETFramework,Version=v4.5.2",
+      "compile": {
+        "bin/Release/Events-TenantUserApp.EF.dll": {}
+      },
+      "runtime": {
+        "../../packages/EntityFramework.6.1.3/lib/net45/EntityFramework.SqlServer.dll": {},
+        "../../packages/EntityFramework.6.1.3/lib/net45/EntityFramework.dll": {},
+        "../../packages/Microsoft.AspNetCore.Hosting.Abstractions.1.1.1/lib/net451/Microsoft.AspNetCore.Hosting.Abstractions.dll": {},
+        "../../packages/Microsoft.AspNetCore.Hosting.Server.Abstractions.1.1.1/lib/net451/Microsoft.AspNetCore.Hosting.Server.Abstractions.dll": {},
+        "../../packages/Microsoft.AspNetCore.Http.Abstractions.1.1.1/lib/net451/Microsoft.AspNetCore.Http.Abstractions.dll": {},
+        "../../packages/Microsoft.AspNetCore.Http.Features.1.1.1/lib/net451/Microsoft.AspNetCore.Http.Features.dll": {},
+        "../../packages/Microsoft.Azure.SqlDatabase.ElasticScale.Client.1.3.3/lib/net45/Microsoft.Azure.SqlDatabase.ElasticScale.Client.dll": {},
+        "../../packages/Microsoft.EntityFrameworkCore.1.1.1/lib/net451/Microsoft.EntityFrameworkCore.dll": {},
+        "../../packages/Microsoft.EntityFrameworkCore.Design.1.1.1/lib/net451/Microsoft.EntityFrameworkCore.Design.dll": {},
+        "../../packages/Microsoft.EntityFrameworkCore.Relational.1.1.1/lib/net451/Microsoft.EntityFrameworkCore.Relational.dll": {},
+        "../../packages/Microsoft.EntityFrameworkCore.Relational.Design.1.1.1/lib/net451/Microsoft.EntityFrameworkCore.Relational.Design.dll": {},
+        "../../packages/Microsoft.EntityFrameworkCore.SqlServer.1.1.1/lib/net451/Microsoft.EntityFrameworkCore.SqlServer.dll": {},
+        "../../packages/Microsoft.EntityFrameworkCore.SqlServer.Design.1.1.1/lib/net451/Microsoft.EntityFrameworkCore.SqlServer.Design.dll": {},
+        "../../packages/Microsoft.Extensions.Caching.Abstractions.1.1.1/lib/netstandard1.0/Microsoft.Extensions.Caching.Abstractions.dll": {},
+        "../../packages/Microsoft.Extensions.Caching.Memory.1.1.1/lib/net451/Microsoft.Extensions.Caching.Memory.dll": {},
+        "../../packages/Microsoft.Extensions.Configuration.Abstractions.1.1.1/lib/netstandard1.0/Microsoft.Extensions.Configuration.Abstractions.dll": {},
+        "../../packages/Microsoft.Extensions.DependencyInjection.1.1.0/lib/netstandard1.1/Microsoft.Extensions.DependencyInjection.dll": {},
+        "../../packages/Microsoft.Extensions.DependencyInjection.Abstractions.1.1.0/lib/netstandard1.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {},
+        "../../packages/Microsoft.Extensions.FileProviders.Abstractions.1.1.0/lib/netstandard1.0/Microsoft.Extensions.FileProviders.Abstractions.dll": {},
+        "../../packages/Microsoft.Extensions.Logging.1.1.1/lib/netstandard1.1/Microsoft.Extensions.Logging.dll": {},
+        "../../packages/Microsoft.Extensions.Logging.Abstractions.1.1.1/lib/netstandard1.1/Microsoft.Extensions.Logging.Abstractions.dll": {},
+        "../../packages/Microsoft.Extensions.Options.1.1.1/lib/netstandard1.0/Microsoft.Extensions.Options.dll": {},
+        "../../packages/Microsoft.Extensions.Primitives.1.1.0/lib/netstandard1.0/Microsoft.Extensions.Primitives.dll": {},
+        "../../packages/Remotion.Linq.2.1.1/lib/net45/Remotion.Linq.dll": {},
+        "../../packages/System.Collections.Immutable.1.3.0/lib/portable-net45+win8+wp8+wpa81/System.Collections.Immutable.dll": {},
+        "../../packages/System.Diagnostics.DiagnosticSource.4.3.0/lib/portable-net45+win8+wpa81/System.Diagnostics.DiagnosticSource.dll": {},
+        "../../packages/System.Interactive.Async.3.0.0/lib/net45/System.Interactive.Async.dll": {},
+        "../../packages/System.Runtime.CompilerServices.Unsafe.4.3.0/lib/netstandard1.0/System.Runtime.CompilerServices.Unsafe.dll": {},
+        "../../packages/System.Runtime.InteropServices.RuntimeInformation.4.3.0/lib/net45/System.Runtime.InteropServices.RuntimeInformation.dll": {},
+        "../../packages/System.Text.Encodings.Web.4.3.0/lib/netstandard1.0/System.Text.Encodings.Web.dll": {},
+        "bin/Release/Events-TenantUserApp.EF.dll": {}
+      },
+      "contentFiles": {
+        "bin/Release/Events-TenantUserApp.EF.pdb": {
+          "buildAction": "None",
+          "codeLanguage": "any",
+          "copyToOutput": true
+        }
+      }
+    }
+  }
+}
