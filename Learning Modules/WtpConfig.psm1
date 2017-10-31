@@ -1,17 +1,14 @@
 # Get and/or set PowerShell session to only run scripts targeting aliases
 $scriptsTarget = 'alias'
-if ($WingtipScriptsTarget -and ($WingtipScriptsTarget -ne $scriptsTarget))
+if ($Global:WingtipScriptsTarget -and ($Global:WingtipScriptsTarget -ne $scriptsTarget))
 {
-    throw "This PowerShell session is setup to only run scripts targeting Wingtip '$WingtipScriptsTarget' architecture.`n 
-           Open up a new PowerShell session to run scripts targeting Wingtip '$scriptsTarget' architecture.
-          "  
+    throw "This PowerShell session is setup to only run scripts targeting Wingtip '$Global:WingtipScriptsTarget' architecture. Open up a new PowerShell session to run scripts targeting Wingtip '$scriptsTarget' architecture."  
 }
-else
+elseif (!$Global:WingtipScriptsTarget)
 {
     Write-Verbose "Configuring PowerShell session to only run scripts targeting Wingtip '$scriptsTarget' architecture ..."
-    Set-Variable WingtipScriptsTarget -option Constant -value $scriptsTarget
+    Set-Variable WingtipScriptsTarget -option Constant -value $scriptsTarget -scope global
 }
-
 
 <#
 .SYNOPSIS
