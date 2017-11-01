@@ -1,4 +1,5 @@
 # Get and/or set PowerShell session to only run scripts targeting aliases
+$Global:ErrorActionPreference = "Stop"
 $scriptsTarget = 'alias'
 if ($Global:WingtipScriptsTarget -and ($Global:WingtipScriptsTarget -ne $scriptsTarget))
 {
