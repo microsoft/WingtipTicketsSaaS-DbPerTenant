@@ -207,3 +207,4 @@ WebPortal/TenantProvisioning.Mvc/Resources/Tenant/Website/Package.zip
 !SecondaryPackage.zip
 !Powershell/Packages/PrimaryPackage.zip
 !Powershell/Packages/SecondaryPackage.zip
+Learning Modules/UserConfig.psm1

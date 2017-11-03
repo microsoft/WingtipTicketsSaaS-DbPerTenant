@@ -438,14 +438,15 @@ function Get-Tenant
         throw "Tenant '$TenantName' not found in catalog."
     }
 
-    $tenantServerName = $tenantShard.Shard.Location.Server.Split('.',2)[0]
+    $tenantAlias = $tenantShard.Shard.Location.Server
+    $tenantServerName = Get-ServerNameFromAlias $tenantAlias
     $tenantDatabaseName = $tenantShard.Shard.Location.Database
 
-    # requires tenant resource group is same as catalog resource group
-    $TenantResourceGroupName = $Catalog.Database.ResourceGroupName
-     
+    # Find tenant server in Azure 
+    $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
+
     $tenantDatabase = Get-AzureRmSqlDatabase `
-        -ResourceGroupName $TenantResourceGroupName `
+        -ResourceGroupName $tenantServer.ResourceGroupName `
         -ServerName $tenantServerName `
         -DatabaseName $tenantDatabaseName 
 
@@ -453,9 +454,10 @@ function Get-Tenant
         Name = $TenantName
         Key = $tenantKey
         Database = $tenantDatabase
+        Alias = $tenantAlias
     }
 
-    return $tenant            
+    return $tenant             
 }
 
 
@@ -640,6 +642,33 @@ function Get-TenantRawKey
     return $tenantRawKey
 }
 
+<#
+.SYNOPSIS
+    Returns the active tenant server for an input alias. Throws an error if the input alias does not exist
+#>
+function Get-ServerNameFromAlias
+{
+    [cmdletbinding()]
+    param
+    (
+        [parameter(Mandatory=$true)]
+        [string]$fullyQualifiedTenantAlias
+    )
+
+    # Lookup DNS Alias and return the Azure SQL Server to which it's pointing 
+    $serverAliases = (Resolve-DnsName $fullyQualifiedTenantAlias -DnsOnly).NameHost
+    if ($serverAliases.Length -gt 1)
+    {
+        $fullyQualifiedServerName = $serverAliases[0]
+    }
+    else
+    {
+        $fullyQualifiedServerName = $fullyQualifiedTenantAlias
+    }
+    
+    $serverName = $fullyQualifiedServerName.split('.')[0]
+    return $serverName
+}
 
 <#
 .SYNOPSIS
@@ -1377,7 +1406,10 @@ function Remove-Tenant
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [int32]$TenantKey
+        [int32]$TenantKey,
+
+        [parameter(Mandatory=$false)]
+        [switch]$KeepTenantDatabase
     )
 
     # Take tenant offline
@@ -1408,11 +1440,14 @@ function Remove-Tenant
     }    
 
     # Delete tenant database, ignore error if alread deleted
-    Remove-AzureRmSqlDatabase -ResourceGroupName $Catalog.Database.ResourceGroupName `
-        -ServerName ($tenantShard.Location.Server).Split('.')[0] `
-        -DatabaseName $tenantShard.Location.Database `
-        -ErrorAction Continue `
-        >$null
+    if (!$KeepTenantDatabase)
+    {
+        Remove-AzureRmSqlDatabase -ResourceGroupName $Catalog.Database.ResourceGroupName `
+            -ServerName ($tenantShard.Location.Server).Split('.')[0] `
+            -DatabaseName $tenantShard.Location.Database `
+            -ErrorAction Continue `
+            >$null
+    }
 
     # Remove Tenant entry from Tenants table and corresponding database entry from Databases table
     Remove-ExtendedTenant `
@@ -1565,6 +1600,82 @@ function Rename-TenantDatabase
     return $renamedDatabaseObject
 }
 
+<#
+.SYNOPSIS
+    Creates a DNS alias for an input ServerName. If the 'PollDnsUpdate' switch is specified, the function does not return until the DNS entry has been updated or created 
+#>
+function Set-DnsAlias
+{
+    param (
+        [parameter(Mandatory=$true)]
+        [string]$ResourceGroupName,
+
+        [parameter(Mandatory=$true)]
+        [string]$ServerName,
+
+        [parameter(Mandatory=$true)]
+        [string]$ServerDNSAlias,
+
+        [parameter(Mandatory=$false)]
+        [string]$OldServerName,
+
+        [parameter(Mandatory=$false)]
+        [string]$OldResourceGroupName,
+
+        [parameter(Mandatory=$false)]
+        [switch]$PollDnsUpdate
+    )
+
+    $fullyQualifiedDNSAlias = $ServerDNSAlias + ".database.windows.net"
+
+    # Check if input alias exists
+    $aliasExists = Test-IfDnsAlias $fullyQualifiedDNSAlias 
+
+    # Remove existing alias if it exists already 
+    if ($aliasExists)
+    {
+        Remove-AzureRMSqlServerDNSAlias `
+            -ResourceGroupName $OldResourceGroupName `
+            -ServerName $OldServerName `
+            -ServerDNSAliasName $ServerDNSAlias `
+            -Force `
+            >$null
+    }
+   
+    # Create new DNS alias using provided parameters 
+    New-AzureRmSqlServerDNSAlias `
+        -ResourceGroupName $ResourceGroupName `
+        -ServerName $ServerName `
+        -ServerDNSAliasName $ServerDNSAlias `
+        >$null
+
+    # Poll DNS for changes if requested 
+    if ($PollDnsUpdate)
+    {
+        $requestedServerName = $ServerName 
+        $currentServerName = Get-ServerNameFromAlias $fullyQualifiedDNSAlias -ErrorAction SilentlyContinue 2>$null
+        $elapsedTime = 0
+        $timeInterval = 2
+        $timeLimit = 150        #Poll for no more than 150 seconds
+
+        while ($currentServerName -ne $requestedServerName)
+        {
+            $currentServerName = Get-ServerNameFromAlias $fullyQualifiedDNSAlias -ErrorAction SilentlyContinue 2>$null
+            
+            if (($currentServerName -ne $requestedServerName) -and ($elapsedTime -lt $timeLimit))
+            {
+                Write-Verbose "Alias '$ServerDNSAlias' was created but has not fully propagated in DNS. Checking again in $timeInterval seconds..."
+                Start-Sleep $timeInterval
+                $elapsedTime += $timeInterval
+            }
+            elseif ($elapsedTime -gt $timeLimit)
+            {
+                Write-Verbose "Alias '$ServerDNSAlias' was created but has not completed DNS propagation. Exiting..."
+                break
+            }
+        }
+    }  
+}
 
 <#
 .SYNOPSIS
@@ -1891,4 +2002,100 @@ function Test-ValidVenueType
     }
 
     return $true
+}
+
+<#
+.SYNOPSIS
+    Validates that an input DNS alias exists. Returns true if the alias exists, false otherwise
+#>
+function Test-IfDnsAlias
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [string]$fullyQualifiedAliasName
+    )
+
+    # Retrieve the servername for input alias if it exists
+    try
+    {
+        $tenantServer = Get-ServerNameFromAlias $fullyQualifiedAliasName
+        return $true
+    }
+    catch
+    {
+        return $false
+    } 
+}
+
+<#
+.SYNOPSIS
+    Update tenant servername or service plan in the catalog database.
+    The name of a tenant cannot be updated.
+#>
+function Update-TenantEntryInCatalog
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$true)]
+        [string]$TenantName,
+
+        [parameter(Mandatory=$false)]
+        [string]$RequestedTenantServerName,
+
+        [parameter(Mandatory=$false)]
+        [string]$RequestedTenantServicePlan        
+    )
+
+    $config = Get-Configuration
+    $tenantObject = Get-Tenant -Catalog $Catalog -TenantName $TenantName
+
+    # Update tenant service plan if applicable 
+    if ($RequestedTenantServicePlan)
+    {
+        $tenantHexId = (Get-TenantRawKey -TenantKey $tenantObject.Key).RawKeyHexString        
+        $commandText = "
+            UPDATE [dbo].[Tenants] 
+            SET ServicePlan = '$RequestedTenantServicePlan', LastUpdated = CURRENT_TIMESTAMP
+            WHERE TenantId = $tenantHexId"
+    
+        Invoke-SqlAzureWithRetry `
+            -ServerInstance $Catalog.FullyQualifiedServerName `
+            -Database $Catalog.Database.DatabaseName `
+            -Query $commandText `
+            -UserName $config.CatalogAdminUserName `
+            -Password $config.CatalogAdminPassword
+    }
+
+    if ($RequestedTenantServerName)
+    {
+        # Remove tenant entry from catalog database
+        Remove-Tenant -Catalog $Catalog -TenantKey $tenantObject.Key -KeepTenantDatabase
+
+        # Remove entry from tenant database 
+        Remove-CatalogInfoFromTenantDatabase -TenantKey $tenantObject.Key -TenantDatabase $tenantObject.Database
+
+        # Add updated entry to tenant database and catalog 
+        $fullyQualifiedTenantServerName = "$RequestedTenantServerName.database.windows.net"
+
+        Add-Shard `
+            -ShardMap $Catalog.ShardMap `
+            -SqlServerName $fullyQualifiedTenantServerName `
+            -SqlDatabaseName $tenantObject.Database.DatabaseName
+
+        Add-ListMapping `
+            -KeyType $([int]) `
+            -ListShardMap $Catalog.ShardMap `
+            -SqlServerName $fullyQualifiedTenantServerName `
+            -SqlDatabaseName $tenantObject.Database.DatabaseName `
+            -ListPoint $tenantObject.Key
+
+        Add-ExtendedTenantMetaDataToCatalog `
+            -Catalog $Catalog `
+            -TenantKey $tenantObject.Key `
+            -TenantName $TenantName
+    }
+
+
 }
