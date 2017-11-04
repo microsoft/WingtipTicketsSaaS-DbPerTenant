@@ -29,7 +29,6 @@ $config = Get-Configuration
 # Get catalog
 Write-Output "Getting catalog..."
 $catalogServerName = $config.CatalogServerNameStem + $wtpUser.Name
-$catalogObject = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
 $catalogAliasName = $catalogServerName + "-alias"
 $fullyQualifiedCatalogDnsAlias = $catalogAliasName + ".database.windows.net"
 
@@ -55,6 +54,7 @@ if (!$RemoveAliases)
     }
 
     # Get the databases of all tenants currently registered in the catalog
+    $catalogObject = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
     $tenantDatabaseList = (Get-TenantDatabaseLocations -Catalog $catalogObject).Location
     $tenantAliasConfig = @()
 

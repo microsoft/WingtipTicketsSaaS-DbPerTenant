@@ -173,11 +173,21 @@ foreach($tenant in $allNewTenants)
         -VenueType $tenant.VenueType `
         -PostalCode $tenant.PostalCode
 
+    # Get alias for tenant database 
+    $tenantAlias = Set-TenantAlias -ResourceGroupName $WtpResourceGroupName `
+        -WtpUser $WtpUser `
+        -TenantName $tenant.NormalizedName `
+        -TenantServerName $tenantDatabase.ServerName `
+        -Verbose
+
     # Register the tenant to database mapping in the catalog
+    $tenantServicePlan = @('premium', 'standard', 'free') | Get-Random
     Add-TenantDatabaseToCatalog -Catalog $catalog `
         -TenantName $tenant.Name `
         -TenantKey $tenantKey `
-        -TenantDatabase $tenantDatabase
+        -TenantDatabase $tenantDatabase `
+        -TenantAlias $tenantAlias `
+        -tenantServicePlan $tenantServicePlan
 
     Write-Output "Tenant '$($tenant.Name)' initialized and registered in the catalog."
 } 
