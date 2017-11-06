@@ -125,7 +125,6 @@ while ($recoveredDatabaseCount -lt $tenantDatabaseCount)
       Enable-ChangeTrackingForTenant -Catalog $tenantCatalog -TenantServerName $restoredServerName -TenantDatabaseName $database.DatabaseName -RetentionPeriod 10
 
       # Mark database as restored 
-      $originServerName = $database.ServerName
       $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
      
       # Remove database from queue 

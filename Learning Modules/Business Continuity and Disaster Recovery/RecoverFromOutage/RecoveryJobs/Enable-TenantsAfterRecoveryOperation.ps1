@@ -169,7 +169,7 @@ while ($true)
         # Update tenant recovery status to 'ResettingTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startReset" -TenantKey $tenantKey
       }
-      elseif ($tenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState = 'ResettingTenantData')
+      elseif (($tenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState = 'ResettingTenantData'))
       {
         # Update tenant recovery status to 'ResetTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -TenantKey $tenantKey
@@ -193,7 +193,7 @@ while ($true)
           -OldServerName $restoredTenantServer `
           -OldResourceGroupName $WingtipRecoveryResourceGroup
       }
-      elseif (($tenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState = 'ResetTenantData')
+      elseif (($tenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState = 'ResetTenantData'))
       {
         # Update tenant recovery status to 'MarkingTenantOnlineInOrigin'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToOrigin" -TenantKey $tenantKey

@@ -35,7 +35,6 @@ if (!$credentialLoad)
 # Get deployment configuration  
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
-$tenantAdminCredentials = @()
 
 # Get the active tenant catalog 
 $tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name

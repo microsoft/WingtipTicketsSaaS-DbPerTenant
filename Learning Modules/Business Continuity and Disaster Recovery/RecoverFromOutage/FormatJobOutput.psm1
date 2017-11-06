@@ -11,7 +11,7 @@ function Format-JobOutput
     [string] $JobOutput
     )
 
-    $formttedJobOutput = $null
+    $formattedJobOutput = $null
 
     if (!$JobOutput)
     {

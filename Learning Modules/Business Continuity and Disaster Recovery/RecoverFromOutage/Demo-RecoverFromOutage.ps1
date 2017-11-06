@@ -11,9 +11,6 @@ Import-Module "$PSScriptRoot\..\..\WtpConfig" -Force
 # Get Azure credentials if not already logged on,  Use -Force to select a different subscription 
 Initialize-Subscription
 
-# Get the resource group and user names used when the WTP application was deployed from UserConfig.psm1.  
-$wtpUser = Get-UserConfig
-
 $DemoScenario = 0
 <# Select the demo scenario that will be run. It is recommended you run the scenarios below in order. 
      Demo   Scenario
