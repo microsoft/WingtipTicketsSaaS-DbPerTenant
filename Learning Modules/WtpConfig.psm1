@@ -1,6 +1,7 @@
-# Get and/or set PowerShell session to only run scripts targeting aliases
+# Get and/or set PowerShell session to only run scripts targeting dbpertenant Wingtip deployment 
 $Global:ErrorActionPreference = "Stop"
-$scriptsTarget = 'alias'
+$scriptsTarget = 'dbpertenant'
+
 if ($Global:WingtipScriptsTarget -and ($Global:WingtipScriptsTarget -ne $scriptsTarget))
 {
     throw "This PowerShell session is setup to only run scripts targeting Wingtip '$Global:WingtipScriptsTarget' architecture. Open up a new PowerShell session to run scripts targeting Wingtip '$scriptsTarget' architecture."  
