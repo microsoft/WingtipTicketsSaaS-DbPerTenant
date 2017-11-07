@@ -22,6 +22,10 @@ Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -For
 Import-Module "$using:scriptPath\..\..\WtpConfig" -Force
 Import-Module "$using:scriptPath\..\..\UserConfig" -Force
 
+# Import-Module "$PSScriptRoot\..\..\..\Common\CatalogAndDatabaseManagement" -Force
+# Import-Module "$PSScriptRoot\..\..\..\WtpConfig" -Force
+# Import-Module "$PSScriptRoot\..\..\..\UserConfig" -Force
+
 # Stop execution on error 
 $ErrorActionPreference = "Stop"
   
@@ -67,25 +71,32 @@ while ($true)
     }
 
     # Get list of offline tenant databases and their recovery status 
-    $offlineTenantDatabases = @()
-    $offlineTenantDatabases += Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {"$($_.ServerName)/$($_.DatabaseName)" -In $offlineTenants.CompoundDatabaseName}
-    $restoredDatabaseObjects = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases"
+    $originTenantDatabases = @()
+    $originTenantDatabases += Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoverySuffix)$")}
+    $restoredTenantDatabases = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases"
+
+    # Output recovery progress 
+    $TenantRecoveryPercentage = [math]::Round($onlineTenantCount/$tenantCount,2)
+    $TenantRecoveryPercentage = $TenantRecoveryPercentage * 100
+    Write-Output "$TenantRecoveryPercentage% ($onlineTenantCount of $tenantCount)"
 
     # Update tenant status based on the status of database 
     # Note: this job can be sped up by checking the status of tenant databases in multiple background jobs
-    foreach ($tenantDatabase in $offlineTenantDatabases)
+    foreach ($tenant in $offlineTenants)
     {
-      $tenantKey = Get-TenantKey $tenantDatabase.DatabaseName
-      $tenantRecoveryState = $tenantObject.RecoveryState
-      $tenantObject = $offlineTenants | Where-Object {$_.DatabaseName -eq $tenantDatabase.DatabaseName}
-      $tenantAliasName = ($tenantObject.TenantAlias -split ".database.windows.net")[0]
+      $tenantKey = Get-TenantKey $tenant.TenantName
+      $tenantRecoveryState = $tenant.TenantRecoveryState     
+      $tenantAliasName = ($tenant.TenantAlias -split ".database.windows.net")[0]
+      $activeTenantDatabase = $tenant.CompoundDatabaseName
+      $originTenantDatabase = $originTenantDatabases | Where-Object {$_.DatabaseName -eq $tenant.DatabaseName}
+      $restoredTenantDatabase = $restoredTenantDatabases | Where-Object {$_.Name -match $tenant.DatabaseName}
       
-      if ($tenantDatabase.RecoveryState -In 'restoring')
+      if ($originTenantDatabase.RecoveryState -In 'restoring')
       {
         # Update tenant recovery status to 'RecoveringTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -TenantKey $tenantKey
       }
-      elseif (($tenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState = 'RecoveringTenantData'))
+      elseif (($originTenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState -eq 'RecoveringTenantData'))
       {
         # Update tenant recovery status to 'RecoveredTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -TenantKey $tenantKey
@@ -93,66 +104,70 @@ while ($true)
         # Update tenant recovery status to 'MarkingTenantOnlineInRecovery'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToRecovery" -TenantKey $tenantKey
 
-        # Take tenant offline
-        Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey 
+        # Take tenant offline if applicable
+        if ($tenant.TenantStatus -ne "Offline")
+        {
+          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey 
+        }
         
-        # Get recovered tenant resources
-        $restoredTenantDatabase = $restoredDatabaseObjects.Name -match "[\w-]+/$($tenantDatabase.DatabaseName)$"
-        $restoredTenantServer = $restoredTenantDatabase.Split('/')[0] 
+        # Get tenant resources
+        $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0] 
+        $originTenantServer = $originTenantDatabase.ServerName
                
         # Update tenant alias to point to recovered database        
         Set-DnsAlias `
           -ResourceGroupName $WingtipRecoveryResourceGroup `
           -ServerName $restoredTenantServer `
           -ServerDNSAlias $tenantAliasName `
-          -OldServerName $tenantDatabase.ServerName `
+          -OldServerName $originTenantServer `
           -OldResourceGroupName $wtpUser.ResourceGroupName                
       }
-      elseif (($tenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState = 'RecoveredTenantData'))
+      elseif (($originTenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState -eq 'RecoveredTenantData'))
       {
         # Update tenant recovery status to 'MarkingTenantOnlineInRecovery'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToRecovery" -TenantKey $tenantKey
 
-        # Take tenant offline
-        Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey 
+        # Take tenant offline if applicable
+        if ($tenant.TenantStatus -ne "Offline")
+        {        
+          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey 
+        }
         
-        # Get recovered tenant resources
-        $restoredTenantDatabase = $restoredDatabaseObjects.Name -match "[\w-]+/$($tenantDatabase.DatabaseName)$"
-        $restoredTenantServer = $restoredTenantDatabase.Split('/')[0] 
+        # Get tenant resources
+        $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0] 
+        $originTenantServer = $originTenantDatabase.ServerName
                
         # Update tenant alias to point to recovered database        
         Set-DnsAlias `
           -ResourceGroupName $WingtipRecoveryResourceGroup `
           -ServerName $restoredTenantServer `
           -ServerDNSAlias $tenantAliasName `
-          -OldServerName $tenantDatabase.ServerName `
+          -OldServerName $originTenantServer `
           -OldResourceGroupName $wtpUser.ResourceGroupName
       }
-      elseif (($tenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState = 'MarkingTenantOnlineInRecovery'))
+      elseif (($originTenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState -eq 'MarkingTenantOnlineInRecovery'))
       {
-        $restoredTenantDatabase = $restoredDatabaseObjects.Name -match "[\w-]+/$($tenantDatabase.DatabaseName)$"
-        $restoredTenantServer = $restoredTenantDatabase.Split('/')[0] 
+        $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
+        $originTenantServer = $originTenantDatabase.ServerName  
                
         # Update tenant alias to point to recovered database if applicable
         $aliasInRecoveryRegion = Get-AzureRmSqlServerDNSAlias `
                                     -ResourceGroupName $WingtipRecoveryResourceGroup `
                                     -ServerName $restoredTenantServer `
                                     -ServerDNSAliasName $tenantAliasName `
-                                    -ErrorAction SilentlyContinue `
-                                    2>$null
+                                    -ErrorAction SilentlyContinue
         if (!$aliasInRecoveryRegion)
         {
           Set-DnsAlias `
             -ResourceGroupName $WingtipRecoveryResourceGroup `
             -ServerName $restoredTenantServer `
             -ServerDNSAlias $tenantAliasName `
-            -OldServerName $tenantDatabase.ServerName `
+            -OldServerName $originTenantServer `
             -OldResourceGroupName $wtpUser.ResourceGroupName
         }
 
-
         # Check if DNS change to tenant alias has propagated
-        $activeTenantServer = Get-ServerNameFromAlias $tenantAliasName
+        $activeTenantServer = Get-ServerNameFromAlias "$tenantAliasName.database.windows.net"
         if ($activeTenantServer -eq $restoredTenantServer)
         {
           # Bring tenant online
@@ -164,12 +179,12 @@ while ($true)
 
         }
       }
-      elseif ($tenantDatabase.RecoveryState -In 'resetting')
+      elseif (($restoredTenantDatabase) -and ($restoredTenantDatabase.RecoveryState -In 'resetting'))
       {
         # Update tenant recovery status to 'ResettingTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startReset" -TenantKey $tenantKey
       }
-      elseif (($tenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState = 'ResettingTenantData'))
+      elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'ResettingTenantData'))
       {
         # Update tenant recovery status to 'ResetTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -TenantKey $tenantKey
@@ -177,13 +192,15 @@ while ($true)
         # Update tenant recovery status to 'MarkingTenantOnlineInOrigin'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToOrigin" -TenantKey $tenantKey
 
-        # Take tenant offline 
-        Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+        # Take tenant offline if applicable
+        if ($tenant.TenantStatus -ne "Offline")
+        {
+          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+        }
 
         # Get tenant resources
-        $restoredTenantDatabase = $restoredDatabaseObjects.Name -match "[\w-]+/$($tenantDatabase.DatabaseName)$"
-        $restoredTenantServer = $restoredTenantDatabase.Split('/')[0] 
-        $originTenantServer = ($restoredTenantServer -split $config.RecoverySuffix)[0]
+        $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
+        $originTenantServer = $originTenantDatabase.ServerName 
 
         # Update tenant alias to point to origin database 
         Set-DnsAlias `
@@ -193,18 +210,20 @@ while ($true)
           -OldServerName $restoredTenantServer `
           -OldResourceGroupName $WingtipRecoveryResourceGroup
       }
-      elseif (($tenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState = 'ResetTenantData'))
+      elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'ResetTenantData'))
       {
         # Update tenant recovery status to 'MarkingTenantOnlineInOrigin'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToOrigin" -TenantKey $tenantKey
 
-        # Take tenant offline 
-        Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+        # Take tenant offline if applicable
+        if ($tenant.TenantStatus -ne "Offline")
+        {
+          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+        }
 
         # Get tenant resources
-        $restoredTenantDatabase = $restoredDatabaseObjects.Name -match "[\w-]+/$($tenantDatabase.DatabaseName)$"
-        $restoredTenantServer = $restoredTenantDatabase.Split('/')[0] 
-        $originTenantServer = ($restoredTenantServer -split $config.RecoverySuffix)[0]
+        $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
+        $originTenantServer = $originTenantDatabase.ServerName 
 
         # Update tenant alias to point to origin database 
         Set-DnsAlias `
@@ -214,11 +233,10 @@ while ($true)
           -OldServerName $restoredTenantServer `
           -OldResourceGroupName $WingtipRecoveryResourceGroup
       }
-      elseif (($tenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState = 'MarkingTenantOnlineInOrigin'))
+      elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'MarkingTenantOnlineInOrigin'))
       {
-        $restoredTenantDatabase = $restoredDatabaseObjects.Name -match "[\w-]+/$($tenantDatabase.DatabaseName)$"
-        $restoredTenantServer = $restoredTenantDatabase.Split('/')[0]
-        $originTenantServer = ($restoredTenantServer -split $config.RecoverySuffix)[0] 
+        $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
+        $originTenantServer = $originTenantDatabase.ServerName  
                
         # Update tenant alias to point to original database if applicable
         $aliasInOriginalRegion = Get-AzureRmSqlServerDNSAlias `
@@ -233,12 +251,12 @@ while ($true)
             -ResourceGroupName $wtpUser.ResourceGroupName `
             -ServerName $originTenantServer `
             -ServerDNSAlias $tenantAliasName `
-            -OldServerName $tenantDatabase.ServerName `
+            -OldServerName $restoredTenantServer `
             -OldResourceGroupName $WingtipRecoveryResourceGroup
         }
 
         # Check if DNS change to tenant alias has propagated
-        $activeTenantServer = Get-ServerNameFromAlias $tenantAliasName
+        $activeTenantServer = Get-ServerNameFromAlias "$tenantAliasName.database.windows.net"
         if ($activeTenantServer -eq $originTenantServer)
         {
           # Bring tenant online
@@ -249,12 +267,12 @@ while ($true)
           $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endAliasFailoverToOrigin" -TenantKey $tenantKey
         } 
       }
-      elseif ($tenantDatabase.RecoveryState -In 'replicating')
+      elseif (($restoredTenantDatabase) -and ($restoredTenantDatabase.RecoveryState -In 'replicating'))
       {
         # Update tenant recovery status to 'RepatriatingTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startRepatriation" -TenantKey $tenantKey
       }
-      elseif ($tenantDatabase.RecoveryState -In 'replicated')
+      elseif (($restoredTenantDatabase) -and ($restoredTenantDatabase.RecoveryState -In 'replicated'))
       {
         # Update tenant recovery status to 'RepatriatingTenantData' if applicable
         if ($tenantRecoveryState -ne 'RepatriatingTenantData')
@@ -262,7 +280,7 @@ while ($true)
           $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startRepatriation" -TenantKey $tenantKey
         }
       }
-      elseif ($tenantDatabase.RecoveryState -In 'repatriating')
+      elseif (($restoredTenantDatabase) -and ($restoredTenantDatabase.RecoveryState -In 'repatriating'))
       {
         # Update tenant recovery status to 'RepatriatingTenantData' if applicable 
         if ($tenantRecoveryState -ne 'RepatriatingTenantData')
@@ -270,7 +288,7 @@ while ($true)
           $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startRepatriation" -TenantKey $tenantKey
         }
       }
-      elseif (($tenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState = 'RepatriatingTenantData'))
+      elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'RepatriatingTenantData'))
       {
         # Update tenant recovery status to 'RepatriatedTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endRepatriation" -TenantKey $tenantKey
@@ -278,13 +296,15 @@ while ($true)
         # Update tenant recovery status to 'MarkingTenantOnlineInOrigin'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToOrigin" -TenantKey $tenantKey
 
-        # Take tenant offline 
-        Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+        # Take tenant offline if applicable
+        if ($tenant.TenantStatus -ne "Offline")
+        {
+          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+        }
 
         # Get tenant resources
-        $restoredTenantDatabase = $restoredDatabaseObjects.Name -match "[\w-]+/$($tenantDatabase.DatabaseName)$"
-        $restoredTenantServer = $restoredTenantDatabase.Split('/')[0] 
-        $originTenantServer = ($restoredTenantServer -split $config.RecoverySuffix)[0]
+        $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
+        $originTenantServer = $originTenantDatabase.ServerName 
 
         # Update tenant alias to point to origin database 
         Set-DnsAlias `
@@ -294,18 +314,20 @@ while ($true)
           -OldServerName $restoredTenantServer `
           -OldResourceGroupName $WingtipRecoveryResourceGroup
       }
-      elseif (($tenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState = 'RepatriatedTenantData'))
+      elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'RepatriatedTenantData'))
       {
         # Update tenant recovery status to 'MarkingTenantOnlineInOrigin'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToOrigin" -TenantKey $tenantKey
 
-        # Take tenant offline 
-        Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+        # Take tenant offline if applicable
+        if ($tenant.TenantStatus)
+        {
+          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+        }
 
         # Get tenant resources
-        $restoredTenantDatabase = $restoredDatabaseObjects.Name -match "[\w-]+/$($tenantDatabase.DatabaseName)$"
-        $restoredTenantServer = $restoredTenantDatabase.Split('/')[0] 
-        $originTenantServer = ($restoredTenantServer -split $config.RecoverySuffix)[0]
+        $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
+        $originTenantServer = $originTenantDatabase.ServerName 
 
         # Update tenant alias to point to origin database 
         Set-DnsAlias `

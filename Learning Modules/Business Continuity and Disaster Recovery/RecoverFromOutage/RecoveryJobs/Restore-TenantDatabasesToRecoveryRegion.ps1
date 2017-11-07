@@ -76,11 +76,11 @@ $pastDeploymentWaitTime = 0
 
 # Wait until all elastic pools have been restored to start restoring databases
 # This ensures that all required container resources have been acquired before database recovery begins 
-$nonRecoveredPoolList = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoverySuffix)$") -and ($_.RecoveryState -In 'restoring')}
+$nonRecoveredPoolList = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoverySuffix)$") -and ($_.RecoveryState -NotIn 'restored')}
 while ($nonRecoveredPoolList)
 {
   Start-Sleep $sleepInterval
-  $nonRecoveredPoolList = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoverySuffix)$") -and ($_.RecoveryState -In 'restoring')}
+  $nonRecoveredPoolList = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoverySuffix)$") -and ($_.RecoveryState -NotIn 'restored')}
 }
 
 # Restore tenant databases while there are databases to restore

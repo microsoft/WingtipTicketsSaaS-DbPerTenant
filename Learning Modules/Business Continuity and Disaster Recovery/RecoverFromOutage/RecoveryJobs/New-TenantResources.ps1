@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
-  Creates a new tenant server and elastic pool in the input resourcce group
+  Creates a new tenant server and elastic pool in the input resource group. 
+  The script additionally geo-replicates the golden tenant database that is used to create new tenant databases
 
 .DESCRIPTION
   This script is intended to be run as a background job in the Wingtip SaaS app recovery scripts.
@@ -13,8 +14,6 @@
 .PARAMETER ServerName
   Servername for new tenant server that will be created 
 
-.PARAMETER ReplicateGoldenTenantDatabase
-  This parameter sets the ARM template to geo-relicate the golden tenant database that is used to create new tenant databases
 
 .EXAMPLE
   [PS] C:\>.\New-TenantResources.ps1 -ResourceGroupName "Sample-RecoveryGroup" -ServerName "Sample-tenant2"
@@ -25,10 +24,7 @@ param (
     [String] $ResourceGroupName,
 
     [parameter(Position=1,Mandatory=$false)]
-    [String] $ServerName,
-
-    [parameter(Position=2,Mandatory=$false)]
-    [switch] $ReplicateGoldenTenantDatabase
+    [String] $ServerName
 )
 
 Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -Force
@@ -89,15 +85,19 @@ else
 
 # Create a tenant server with firewall rules, and an elastic pool for new tenants (idempotent)
 # Note: In a production scenario you would additionally create logins and users that need to exist on the server(see: https://docs.microsoft.com/en-us/azure/sql-database/sql-database-disaster-recovery)
-if (!$ReplicateGoldenTenantDatabase)
+$existingGoldenTenantDatabase = Find-AzureRmResource -ResourceGroupNameEquals $ResourceGroupName -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains $config.GoldenTenantDatabaseName
+if ($existingGoldenTenantDatabase)
 {
   $deployment = New-AzureRmResourceGroupDeployment `
                     -Name $deploymentName `
                     -ResourceGroupName $ResourceGroupName `
                     -TemplateFile ("$using:scriptPath\RecoveryTemplates\" + $config.NewTenantResourcesProvisioningTemplate) `
                     -serverName $ServerName `
-                    -ReplicateGoldenTenantDatabase $false `
+                    -ReplicateGoldenTenantDatabase "false" `
                     -ErrorAction Stop
+
+  # Output recovery progress 
+  Write-Output "100% (2 of 2)" 
 }
 else
 {
@@ -121,15 +121,7 @@ else
                     -ReplicateGoldenTenantDatabase "true" `
                     -GoldenTenantDatabaseConfiguration $goldenTenantDatabaseConfig `
                     -ErrorAction Stop
-}
 
-# Output recovery progress 
-if ($ReplicateGoldenTenantDatabase)
-{
+  # Output recovery progress
   Write-Output "100% (3 of 3)"
 }
-else
-{
-  Write-Output "100% (2 of 2)" 
-}
-

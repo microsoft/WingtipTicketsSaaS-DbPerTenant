@@ -58,7 +58,7 @@ $startTime = Get-Date
 
 # Disable traffic manager profile for primary region (idempotent)
 Write-Output "Disabling traffic manager endpoint for Wingtip events app..."
-$profileName = $config.PrimaryEventsAppNameStem + $wtpUser.Name
+$profileName = $config.EventsAppNameStem + $wtpUser.Name
 Disable-AzureRmTrafficManagerEndpoint -Name $profileName -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -Force -ErrorAction SilentlyContinue > $null
 
 try
@@ -83,6 +83,7 @@ catch
   }
 
   # Geo-restore the catalog database in a resource group in the recovery region. The ARM template also creates the catalog server if required 
+  Write-Output "Georestoring catalog database to recovery region..."
   $deployment = New-AzureRmResourceGroupDeployment `
                   -Name "CatalogRecovery" `
                   -ResourceGroupName $recoveryResourceGroup.ResourceGroupName `
@@ -183,8 +184,8 @@ while ($true)
   # This signals that the app is ready to receive traffic and can process new tenant registrations while recovery operations are underway
   if ($newTenantProvisioningJob.State -eq "Completed")
   {
-    $profileName = $config.PrimaryEventsAppNameStem + $wtpUser.Name
-    $endpointName = $config.PrimaryEventsAppNameStem + $wtpUser.Name + $config.RecoverySuffix
+    $profileName = $config.EventsAppNameStem + $wtpUser.Name
+    $endpointName = $config.EventsAppNameStem + $wtpUser.Name + $config.RecoverySuffix
 
     $webAppEndpoint = Get-AzureRmTrafficManagerEndpoint -Name $endpointName -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName
     

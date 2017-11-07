@@ -1580,6 +1580,7 @@ function Remove-ExtendedDatabase
         [string]$DatabaseName
     )
 
+    $config = Get-Configuration
     $commandText = "
         DELETE FROM Databases 
         WHERE ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';"
@@ -1638,6 +1639,7 @@ function Remove-ExtendedServer
         [string]$ServerName
     )
 
+    $config = Get-Configuration
     # Delete the database data from the Tenants table
     $commandText = "
         DELETE FROM [dbo].[Servers] 
@@ -1963,6 +1965,7 @@ function Set-DnsAlias
             -ServerName $OldServerName `
             -ServerDNSAliasName $ServerDNSAlias `
             -Force `
+            -ErrorAction SilentlyContinue `
             >$null
     }
    

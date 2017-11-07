@@ -74,7 +74,28 @@ while (($pastDeployment) -and ($pastDeployment.ProvisioningState -NotIn "Succeed
   }  
 }
 
-Write-Output "0% (0 of $poolCount)" 
+# Check for elastic pools that have previously been recovered 
+$restoredElasticPools = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
+foreach ($pool in $tenantElasticPools)
+{
+  $compoundPoolName = "$($pool.ServerName + $config.RecoverySuffix)/$($pool.ElasticPoolName)"
+  $pool | Add-Member "CompoundPoolName" $compoundPoolName
+
+  if (($restoredElasticPools.Name -contains $pool.CompoundPoolName) -and ($pool.RecoveryState -In 'restoring'))
+  {
+    $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $pool.ServerName -ElasticPoolName $pool.ElasticPoolName
+    $recoveredPoolCount += 1
+  }
+  elseif ($pool.RecoveryState -In 'restored')
+  {
+    $recoveredPoolCount += 1
+  }
+}
+
+# Output recovery progress 
+$elasticPoolRecoveryPercentage = [math]::Round($recoveredPoolCount/$poolCount,2)
+$elasticPoolRecoveryPercentage = $elasticPoolRecoveryPercentage * 100
+Write-Output "$elasticPoolRecoveryPercentage% ($recoveredPoolCount of $poolCount)"
 
 while ($recoveredPoolCount -lt $poolCount)
 {
@@ -137,7 +158,7 @@ while ($recoveredPoolCount -lt $poolCount)
       # Mark elastic pools as recovered if no error has occurred
       foreach ($pool in $poolRecoveryQueue)
       {
-        $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $_.ServerName -ElasticPoolName $_.ElasticPoolName 
+        $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $pool.ServerName -ElasticPoolName $pool.ElasticPoolName 
       }
       $recoveredPoolCount += $poolRecoveryQueue.length
     } 

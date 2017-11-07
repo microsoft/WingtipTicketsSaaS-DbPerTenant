@@ -228,7 +228,7 @@ while (1 -eq 1)
         # Sync any configuration changes for tenant databases already in the catalog
         elseif ($syncedDatabases.compoundDatabaseName -contains $tenantDatabase.compoundDatabaseName)
         {
-            $syncedDatabase = $syncedDatabases | Where-Object {$_.ServerName -eq $tenantDatabase.ServerName -and $_.DatabaseName -eq $tenantDatabase.DatabaseName}
+            $syncedDatabase = $syncedDatabases | Where-Object {$_.compoundDatabaseName -eq $tenantDatabase.compoundDatabaseName}
 
             # Check if database configuration has changed 
             if

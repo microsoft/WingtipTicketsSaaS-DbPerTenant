@@ -8,7 +8,8 @@ function Format-JobOutput
    param (
     [parameter(Mandatory=$true)]
     [AllowEmptyString()]
-    [string] $JobOutput
+    [AllowNull()]
+    $JobOutput
     )
 
     $formattedJobOutput = $null
@@ -21,6 +22,10 @@ function Format-JobOutput
     {
        # Display most recent job status 
        $formattedJobOutput = $JobOutput[-1]
+    }
+    elseif ($JobOutput.Count -eq 1)
+    {
+       $formattedJobOutput = $JobOutput
     }
 
     return $formattedJobOutput
