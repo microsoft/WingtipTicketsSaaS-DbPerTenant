@@ -168,7 +168,8 @@ foreach ($venue in $venues)
     $venueTickets = 0
      
     $venueDatabaseName = $venue.Location.Database
-    $venueServer = $venue.Location.Server
+    $tenantAlias = $venue.Location.Server 
+    $venueServer = (Get-ServerNameFromAlias $tenantAlias) + ".database.windows.net"
      
     # set the venue popularity, which determines the sales curves used: 1=popular, 2=moderate, 3=unpopular
 

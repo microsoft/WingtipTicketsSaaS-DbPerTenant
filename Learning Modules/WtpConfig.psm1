@@ -1,6 +1,7 @@
 # Get and/or set PowerShell session to only run scripts targeting dbpertenant Wingtip deployment 
 $Global:ErrorActionPreference = "Stop"
 $scriptsTarget = 'dbpertenant'
+
 if ($Global:WingtipScriptsTarget -and ($Global:WingtipScriptsTarget -ne $scriptsTarget))
 {
     throw "This PowerShell session is setup to only run scripts targeting Wingtip '$Global:WingtipScriptsTarget' architecture. Open up a new PowerShell session to run scripts targeting Wingtip '$scriptsTarget' architecture."  
@@ -10,7 +11,6 @@ elseif (!$Global:WingtipScriptsTarget)
     Write-Verbose "Configuring PowerShell session to only run scripts targeting Wingtip '$scriptsTarget' architecture ..."
     Set-Variable WingtipScriptsTarget -option Constant -value $scriptsTarget -scope global
 }
-
 
 <#
 .SYNOPSIS
@@ -25,15 +25,22 @@ function Get-Configuration
         TenantDatabaseBatchTemplate = "tenantdatabasebatchtemplate.json"
         TenantDatabaseCopyBatchTemplate = "tenantdatabasecopybatchtemplate.json"
         WebApplicationTemplate = "webapplicationtemplate.json"
+        WebApplicationRecoveryTemplate = "webappRecoveryTemplate.json"
         LogAnalyticsWorkspaceTemplate = "loganalyticsworkspacetemplate.json"
         LogAnalyticsWorkspaceNameStem = "wtploganalytics-"
         LogAnalyticsDeploymentLocation = "westcentralus"
         DatabaseAndBacpacTemplate = "databaseandbacpactemplate.json"
         TenantBacpacUrl = "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtiptenantdb.bacpac"
+        EventsAppNameStem = "eventswtp-"
+        RecoverySuffix = "-recovery"
         GoldenTenantDatabaseName = "baseTenantDB"
         CatalogDatabaseName = "tenantcatalog"
         CatalogServerNameStem = "catalog-"
+        CatalogRecoveryTemplate = "tenantcatalogrecoverytemplate.json"
         TenantServerNameStem = "tenants1-"
+        TenantElasticPoolRestoreBatchTemplate = "tenantelasticpoolrecoverybatchtemplate.json"
+        TenantDatabaseRestoreBatchTemplate = "tenantdatabaserecoverybatchtemplate.json"
+        TenantServerRestoreBatchTemplate = "tenantserverrecoverybatchtemplate.json"
         TenantPoolNameStem = "Pool"
         CatalogShardMapName = "tenantcatalog"
         CatalogAdminUserName = "developer"
@@ -45,6 +52,7 @@ function Get-Configuration
         CatalogManagementAppSkuCode = "S1"
         CatalogManagementAppWorkerSize = 0
         ServicePrincipalPassword = "P@ssword1"
+        NewTenantResourcesProvisioningTemplate = "newtenantresourcestemplate.json"
         JobAccount = "jobaccount"
         JobAccountDatabaseName = "jobaccount"
         JobAccountDatabaseServiceObjective = "S2"

@@ -1,0 +1,71 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "recoveryCatalogServerConfiguration": {
+      "type": "object" 
+    },      
+    "catalogDatabaseName": {
+      "type": "String"
+    },
+    "sourceDatabaseId": {
+      "type": "String"
+    },
+    "serviceObjectiveName": {
+      "type": "String",
+      "defaultValue": "S1"
+    }
+  },
+  "variables": {
+    "catalogServerName": "[parameters('recoveryCatalogServerConfiguration').CatalogServerName]",
+    "catalogAdminLogin": "[parameters('recoveryCatalogServerConfiguration').AdminLogin]",
+    "catalogAdminPassword": "[parameters('recoveryCatalogServerConfiguration').AdminPassword]",
+    "recoveryLocation": "[resourceGroup().location]"
+  },
+  "resources": [
+  {
+    "name": "[variables('catalogServerName')]",
+    "type": "Microsoft.Sql/servers",
+    "apiVersion": "2015-05-01-preview",
+    "location": "[variables('recoveryLocation')]",
+    "tags": {},
+    "properties": {
+        "administratorLogin": "[variables('catalogAdminLogin')]",
+        "administratorLoginPassword": "[variables('catalogAdminPassword')]"
+    },
+    "resources": [
+    {
+      "dependsOn": ["[concat('Microsoft.Sql/servers/',variables('catalogServerName'))]" ],
+      "apiVersion": "2014-04-01",
+      "name": "AllowAllAzureIPs",
+      "properties": {
+          "startIpAddress": "0.0.0.0",
+          "endIpAddress": "0.0.0.0"
+      },
+      "type": "firewallRules"
+    },
+    {
+      "dependsOn": ["[concat('Microsoft.Sql/servers/',variables('catalogServerName'))]"],
+      "apiVersion": "2014-04-01",
+      "name": "Open",
+      "properties": {
+          "startIpAddress": "0.0.0.0",
+          "endIpAddress": "255.255.255.255"
+      },
+      "type": "firewallRules"
+    },    
+    {
+      "dependsOn": ["[concat('Microsoft.Sql/servers/',variables('catalogServerName'))]"],
+      "name": "[concat(variables('catalogServerName'), '/', parameters('catalogDatabaseName'))]",
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2014-04-01-preview",
+      "location": "[variables('recoveryLocation')]",
+      "tags": {},
+      "properties": {
+        "createMode": "recovery",
+        "sourceDatabaseId": "[parameters('sourceDatabaseId')]",
+        "requestedServiceObjectiveName": "[parameters('serviceObjectiveName')]"
+      }
+    }]
+  }]
+}

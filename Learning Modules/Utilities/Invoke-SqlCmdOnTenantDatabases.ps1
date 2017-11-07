@@ -41,10 +41,13 @@ foreach ($shard in $Shards)
 {
 
     Write-Output "Applying script to database '$($shard.Location.Database)' on server '$($shard.Location.Server)'."
+    $tenantAlias = $shard.Location.Server
+    $tenantServer = (Get-ServerNameFromAlias $tenantAlias) + ".database.windows.net"
+
     Invoke-SqlcmdWithRetry `
         -Username $adminUserName `
         -Password $adminPassword `
-        -ServerInstance $shard.Location.Server `
+        -ServerInstance $tenantServer `
         -Database $shard.Location.Database `
         -ConnectionTimeout 30 `
         -QueryTimeout $QueryTimeout `
@@ -58,7 +61,7 @@ $adminUserName = $config.CatalogAdminUserName
 $adminPassword = $config.CatalogAdminPassword
 
 $catalogServer = $config.CatalogServerNameStem + $WtpUser
-$fullyQualifiedCatalogServerName = $catalogServer + ".database.windows.net"
+$fullyQualifiedCatalogServerName = $catalogServer + "-alias.database.windows.net"
 $goldenTenantDatabase = $config.GoldenTenantDatabaseName
 
     Write-Output "Applying script to database '$goldenTenantDatabase' on server '$catalogServer'."
