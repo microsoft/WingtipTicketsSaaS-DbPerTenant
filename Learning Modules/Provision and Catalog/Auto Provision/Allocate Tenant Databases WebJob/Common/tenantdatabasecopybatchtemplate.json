@@ -1,0 +1,51 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "serverName": {
+      "type": "string"  
+    },
+    "elasticPoolName": {
+      "type": "string"
+    },
+    "databaseNames": {
+    "type": "array"
+    },
+    "sourceDatabaseId": {
+      "type": "string"
+    }
+  },
+  "resources": [ 
+    { 
+        "apiVersion": "2015-01-01", 
+        "name": "[concat('TenantDatabaseCopyDeployment-',parameters('databaseNames')[copyIndex()])]",
+        "type": "Microsoft.Resources/deployments",
+        "copy": { 
+            "name": "newdbs",
+            "count": "[length(parameters('databaseNames'))]"
+            }, 
+        "properties": { 
+            "mode": "Incremental", 
+            "templateLink": {
+            "uri": "https://wtpdeploystorageaccount.blob.core.windows.net/templates/tenantdatabasecopytemplate.json",
+            "contentVersion": "1.0.0.0"
+            }, 
+            "parameters": {
+                "location": {"value": "[parameters('location')]"
+                },
+                "serverName": {"value": "[parameters('serverName')]"
+                },
+                "databaseName": {"value": "[parameters('databaseNames')[copyIndex()]]"
+                },
+                "sourceDatabaseId": {"value": "[parameters('sourceDatabaseId')]" 
+                },
+                "elasticPoolName": {"value": "[parameters('elasticPoolName')]"
+                }
+            }
+        }
+    } 
+  ]
+}
