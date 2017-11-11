@@ -14,7 +14,7 @@ Also available in the Documentation folder in this repo is an **overview present
 To deploy the app to Azure, click the link below.  Deploy the app in a new resource group, and provide a short *user* value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
 
 
-<a href="http://aka.ms/deploywtpapp" target="_blank">
+<a href="https://aka.ms/deploywtp-dptapp" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
