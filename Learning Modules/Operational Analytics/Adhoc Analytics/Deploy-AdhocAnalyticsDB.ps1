@@ -2,16 +2,7 @@
 
 <#
  .SYNOPSIS
-    Deploys an database for Ad-hoc query analytics
-
- .DESCRIPTION
-    Deploys the Adhoc Analytics database to be used with Elastic Query for distributing queries across tenant databases.
-
- .PARAMETER WtpResourceGroupName
-    The name of the resource group in which the Wingtip SaaS application is deployed.
-
- .PARAMETER WtpUser
-    # The 'User' value entered during the deployment of the Wingtip SaaS application.
+    Deploys the Ad-hoc Analytics database, used for distributed query across tenant databases
 #>
 param(
     [Parameter(Mandatory=$true)]
