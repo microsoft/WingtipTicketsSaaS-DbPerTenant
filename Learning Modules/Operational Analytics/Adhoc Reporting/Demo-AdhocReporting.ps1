@@ -37,7 +37,7 @@ if ($DemoScenario -eq 1)
     exit
 }
 
-### Deploy the Ad-hoc Analytics database used with Elastic Query to the catalog server
+### Deploy the Ad-hoc Reporting database used with Elastic Query to the catalog server
 if ($DemoScenario -eq 2)
 {
     & $PSScriptRoot\Deploy-AdhocReportingDB.ps1 `
