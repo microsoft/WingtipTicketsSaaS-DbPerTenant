@@ -5,7 +5,7 @@ $DemoScenario = 2
      Demo   Scenario
       0       None
       1       Purchase tickets for events at all venues
-      2       Deploy Ad-hoc analytics database 
+      2       Deploy Ad-hoc reporting database 
 #>
 
 ## ------------------------------------------------------------------------------------------------
