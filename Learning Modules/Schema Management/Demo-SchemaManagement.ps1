@@ -16,8 +16,8 @@ $wtpUser = Get-UserConfig
     -WtpResourceGroupname $WtpUser.ResourceGroupName `
     -WtpUser $WtpUser.Name
     
-# Provisions the adhoc analytics database if not already deployed and initializes its schema
-& "$PSScriptRoot\..\Operational Analytics\Adhoc Analytics\Deploy-AdhocAnalyticsDB.ps1" `
+# Provisions the adhoc reporting database if not already deployed and initializes its schema
+& "$PSScriptRoot\..\Operational Analytics\Adhoc Reporting\Deploy-AdhocReportingDB.ps1" `
     -WtpResourceGroupname $WtpUser.ResourceGroupName `
     -WtpUser $WtpUser.Name `
     -DeploySchema
