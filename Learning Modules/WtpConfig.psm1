@@ -32,6 +32,8 @@ function Get-Configuration
         TenantBacpacUrl = "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtiptenantdb.bacpac"
         GoldenTenantDatabaseName = "baseTenantDB"
         CatalogDatabaseName = "tenantcatalog"
+        CatalogServerNameStem = "catalog-dpt-"
+        TenantServerNameStem = "tenants1-dpt-"
         TenantPoolNameStem = "Pool"
         CatalogShardMapName = "tenantcatalog"
         CatalogAdminUserName = "developer"
