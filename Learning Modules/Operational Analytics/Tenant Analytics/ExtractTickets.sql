@@ -15,7 +15,7 @@ EXEC jobs.sp_add_job
 --@schedule_start_time='2017-08-21 10:00:00.0000000',
 --@schedule_end_time='2017-08-21 11:00:00.0000000'
 
-SET @server2 = 'catalog-' + @User + '.database.windows.net'
+SET @server2 = 'catalog-dpt-' + @User + '.database.windows.net'
 
 -- Create job step to retrieve ticket and customer data that is distributed across all the tenants
 EXEC jobs.sp_add_jobstep
