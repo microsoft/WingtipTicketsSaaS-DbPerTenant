@@ -233,7 +233,7 @@ foreach ($venue in $venues)
         }
 
         # Display the sections, seats row and seats per row
-        Write-Output "Venue has $numSections sections,  $SeatRows rows and $SeatsPerRow seats per row"
+        # Write-Output "Venue has $numSections sections,  $SeatRows rows and $SeatsPerRow seats per row"
 
         $Sections = (1..$numSections)
         Foreach ($section in $Sections){
@@ -305,9 +305,8 @@ foreach ($venue in $venues)
 
         # assign a sales curve for this event from the set assigned to this venue
         $eventCurve = $venueCurves | Get-Random
-        #$eventCurve = 
-        Write-Output "Curve behaviour ($popularity - $eventCurve) "
-        Write-Host -NoNewline "  Processing event '$($event.EventName)'..."
+        Write-Host -NoNewline "  Processing event '$($event.EventName)' ($($eventCurve.Curve))..."
+        
 
         $eventTickets = 0
 
