@@ -88,7 +88,7 @@ CREATE TABLE [dbo].[EventsRawData](
 	  [internal_execution_id] [uniqueidentifier] NULL,
 	  [Timestamp] [rowversion] NOT NULL
     )
-
+GO
 --Create fact and dimension tables for the star-schema
 
 -- Create an event dimension table in tenantanalytics database 
@@ -164,7 +164,7 @@ CREATE TABLE [dbo].[fact_Tickets](
 	[VenueID] [int] NOT NULL,
 	[PurchaseDateID ] [int] NOT NULL,
 	[PurchaseTotal] [money] NOT NULL,
-	[DaysToGo] [int] NOT NULL,
+	[SaleDay] [int] NOT NULL,
 	[RowNumber] [int] NOT NULL,
 	[SeatNumber] [int] NOT NULL,
 	CONSTRAINT [FK_Tickets_PurchaseDateID] FOREIGN KEY ([PurchaseDateID]) REFERENCES [dim_Dates]([PurchaseDateID]),
@@ -271,18 +271,18 @@ WHEN NOT MATCHED BY TARGET THEN
 -- Merge tickets from raw data to the fact table
 MERGE INTO [dbo].[fact_Tickets] AS [target]
 USING (SELECT DISTINCT T.TicketPurchaseId
-						,T.EventId
-						,T.CustomerEmailId	
-						,T.VenueId
-						,PurchaseDateId = cast(replace(cast(convert(date, T.PurchaseDate) as varchar(25)),'-','')as int)
-						,T.PurchaseTotal			
-						,DaysToGo =  DATEDIFF(d, CAST(T.PurchaseDate AS DATE), CAST(E.EventDate AS DATE))
-						,T.RowNumber
-						,T.SeatNumber
-	   FROM [dbo].[TicketsRawData] T 
-	   INNER JOIN [dbo].[dim_Events] E on T.VenueId = E.VenueId AND T.EventId = E.EventId
-	   WHERE T.Timestamp <= @SourceLastTimestamp)
-AS source(TicketPurchaseId, EventId, CustomerEmailId, VenueID, PurchaseDateId, PurchaseTotal, DaysToGo,  RowNumber, SeatNumber) 
+			,T.EventId
+			,T.CustomerEmailId	
+			,T.VenueId
+			,PurchaseDateId = cast(replace(cast(convert(date, T.PurchaseDate) as varchar(25)),'-','')as int)
+			,T.PurchaseTotal			
+			,SaleDay = 60 -  DATEDIFF(d, CAST(T.PurchaseDate AS DATE), CAST(E.EventDate AS DATE))
+			,T.RowNumber
+			,T.SeatNumber
+	FROM [dbo].[TicketsRawData] T 
+	INNER JOIN [dbo].[dim_Events] E on T.VenueId = E.VenueId AND T.EventId = E.EventId
+	WHERE T.Timestamp <= @SourceLastTimestamp)
+AS source(TicketPurchaseId, EventId, CustomerEmailId, VenueID, PurchaseDateId, PurchaseTotal, SaleDay,  RowNumber, SeatNumber) 
 ON ([target].TicketPurchaseId = source.TicketPurchaseId AND [target].RowNumber = source.RowNumber AND 
     [target].SeatNumber = source.SeatNumber AND [target].VenueId = source.VenueId)
 WHEN MATCHED THEN
@@ -292,12 +292,12 @@ WHEN MATCHED THEN
 		   VenueId = source.VenueId,
 		   PurchaseDateId = source.PurchaseDateId, 
 		   PurchaseTotal = source.PurchaseTotal,	
-		   DaysToGo = source.DaysToGo, 
+		   SaleDay = source.SaleDay, 
 		   RowNumber = source.RowNumber,
 		   SeatNumber = source. SeatNumber
 WHEN NOT MATCHED BY TARGET THEN
-		 INSERT(TicketPurchaseId, EventId, CustomerEmailId, VenueId, PurchaseDateId, PurchaseTotal,  DaysToGo, RowNumber, SeatNumber)
-		 VALUES(source.TicketPurchaseId, source.EventId, source.CustomerEmailId, source.VenueId, source.PurchaseDateId, source.PurchaseTotal, source.DaysToGo, source.RowNumber, source.SeatNumber);
+		 INSERT(TicketPurchaseId, EventId, CustomerEmailId, VenueId, PurchaseDateId, PurchaseTotal,  SaleDay, RowNumber, SeatNumber)
+		 VALUES(source.TicketPurchaseId, source.EventId, source.CustomerEmailId, source.VenueId, source.PurchaseDateId, source.PurchaseTotal, source.SaleDay, source.RowNumber, source.SeatNumber);
 
 --Delete the rows in the source table already shredded
 DELETE FROM TicketsRawData
