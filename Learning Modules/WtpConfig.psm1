@@ -54,7 +54,6 @@ function Get-Configuration
         TenantAnalyticsDWDatabaseName = "tenantanalytics-dw"
         AdhocAnalyticsDatabaseName = "adhocanalytics"
         AdhocAnalyticsDatabaseServiceObjective = "S0"
-        AdhocAnalyticsBacpacUrl = "https://wtpdeploystorageaccount.blob.core.windows.net/wingtip-bacpacsvold/adhoctenantanalytics.bacpac"
         SearchDatabaseName = "tenantsearch"  
         SearchDatabaseServiceObjective = "S0"              
         StorageKeyType = "SharedAccessKey"
