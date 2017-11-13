@@ -55,9 +55,7 @@ function Add-ExtendedTenantMetaDataToCatalog
         -Username $config.TenantAdminuserName `
         -Password $config.TenantAdminPassword `
         -Database $Catalog.Database.DatabaseName `
-        -Query $commandText `
-        -ConnectionTimeout 30 `
-        -QueryTimeout 30 `
+        -Query $commandText 
 }
 
 
@@ -295,9 +293,7 @@ function Get-ExtendedDatabase{
                     -Database $Catalog.Database.DatabaseName `
                     -Query $commandText `
                     -UserName $config.CatalogAdminUserName `
-                    -Password $config.CatalogAdminPassword `
-                    -ConnectionTimeout 30 `
-                    -QueryTimeout 15 `   
+                    -Password $config.CatalogAdminPassword   
     
     return $extendedDatabases
 }
@@ -351,9 +347,7 @@ function Get-ExtendedElasticPool{
                     -Database $Catalog.Database.DatabaseName `
                     -Query $commandText `
                     -UserName $config.CatalogAdminUserName `
-                    -Password $config.CatalogAdminPassword `
-                    -ConnectionTimeout 30 `
-                    -QueryTimeout 15 
+                    -Password $config.CatalogAdminPassword  
     
     return $extendedElasticPools
 }
@@ -390,9 +384,7 @@ function Get-ExtendedServer{
                     -Database $Catalog.Database.DatabaseName `
                     -Query $commandText `
                     -UserName $config.CatalogAdminUserName `
-                    -Password $config.CatalogAdminPassword `
-                    -ConnectionTimeout 30 `
-                    -QueryTimeout 15 `      
+                    -Password $config.CatalogAdminPassword      
     
     return $extendedServers
 }
@@ -604,9 +596,7 @@ function Get-TenantNameFromTenantDatabase
         -Username $config.TenantAdminuserName `
         -Password $config.TenantAdminPassword `
         -Database $TenantDatabaseName `
-        -Query $commandText `
-        -ConnectionTimeout 30 `
-        -QueryTimeout 30 `
+        -Query $commandText 
 }
 
 
@@ -961,13 +951,13 @@ function Invoke-SqlCmdWithRetry{
 
 <#
 .SYNOPSIS
-  Provisions a new Wingtip Tickets Platform (WTP) tenant and registers it in the catalog   
+  Provisions a new Wingtip Tickets tenant and registers it in the catalog   
 
 .DESCRIPTION
-  Creates a new database, imports the WTP tenant bacpac using an ARM template, and initializes 
-  venue information.  The tenant database is then in the catalog database.  The tenant
-  name is used as the basis of the database name and to generate the tenant key
-  used in the catalog.
+  Creates a new database and initializes venue information.  
+  The tenant database is then registered as a shard in the catalog database.  
+  The tenant name is used as the basis of the database name and to generate 
+  the tenant key used in the catalog.
 
 .PARAMETER WtpResourceGroupName
   The resource group name used during the deployment of the WTP app (case sensitive)
@@ -1047,7 +1037,7 @@ function New-Tenant
 
 <#
 .SYNOPSIS
-    Creates a tenant database using an ARM template and adds the Venue information.
+    Creates a tenant database and adds the venue information.
 #>
 function New-TenantDatabase
 {
