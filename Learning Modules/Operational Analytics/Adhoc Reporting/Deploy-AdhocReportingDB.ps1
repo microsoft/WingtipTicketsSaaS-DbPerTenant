@@ -35,7 +35,7 @@ if(!$resourceGroup)
 
 $catalogServerName = $config.CatalogServerNameStem + $WtpUser
 $fullyQualifiedCatalogServerName = $catalogServerName + ".database.windows.net"
-$AdhocAnalyticsDatabaseName = $config.AdhocAnalyticsDatabaseName
+$AdhocAnalyticsDatabaseName = $config.AdhocReportingDatabaseName
 
 # Check if Ad-hoc Analytics database already exists 
 $adHocAnalyticsDB = Get-AzureRmSqlDatabase `
@@ -54,18 +54,18 @@ if($adHocAnalyticsDB)
 
 Write-output "Deploying database '$AdhocAnalyticsDatabaseName' on server '$catalogServerName'..."
 
-# Deploy adhoc analytics database 
+# Deploy adhoc reporting database 
 New-AzureRmSqlDatabase `
         -ResourceGroupName $WtpResourceGroupName `
         -ServerName $catalogServerName `
         -DatabaseName $AdhocAnalyticsDatabaseName `
-        -RequestedServiceObjectiveName $config.AdhocAnalyticsDatabaseServiceObjective `
+        -RequestedServiceObjectiveName $config.AdhocReportingDatabaseServiceObjective `
         > $null
 
 # if schema deployment is requested... 
 if($DeploySchema.IsPresent)
 {
-    $commandText = [IO.File]::ReadAllText("$PSScriptRoot\Initialize-AdhocAnalyticsDb.sql")
+    $commandText = [IO.File]::ReadAllText("$PSScriptRoot\Initialize-AdhocReportingDB.sql")
 
     Write-output "Initializing database schema..."
 	  

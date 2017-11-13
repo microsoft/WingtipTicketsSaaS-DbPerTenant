@@ -1,5 +1,5 @@
 -- ********************************************************************************************
--- SETUP Adhoc analytics database with external data source and tables needed for Elastic Query 
+-- SETUP Adhoc reporting database with external data source and tables needed for Elastic Query 
 -- *********************************************************************************************
 
 -- Create encryption key that will encrypt database logins
@@ -189,7 +189,7 @@ WHEN NOT MATCHED BY TARGET THEN
 GO
 
 
---- Verify that the external data source and tables exist in the adhoc analytics database
+--- Verify that the external data source and tables exist in the adhoc reporting database
 select * from sys.external_data_sources;
 select * from sys.external_tables;
 GO
