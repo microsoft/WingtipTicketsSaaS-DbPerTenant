@@ -17,7 +17,7 @@ EXEC jobs.sp_add_job
 --@schedule_end_time='2017-08-21 11:00:00.0000000'
 
 -- Create job step to retrieve venues and events all the tenants
-SET @server2 = 'catalog-' + @User + '.database.windows.net'
+SET @server2 = 'catalog-dpt-' + @User + '.database.windows.net'
 
 EXEC jobs.sp_add_jobstep
 @job_name='ExtractVenuesEvents',
