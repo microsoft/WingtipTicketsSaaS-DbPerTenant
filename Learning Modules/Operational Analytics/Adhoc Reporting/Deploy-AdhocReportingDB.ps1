@@ -46,7 +46,7 @@ $adHocAnalyticsDB = Get-AzureRmSqlDatabase `
 
 if($adHocAnalyticsDB)
 {
-    Write-Output "Ad-hoc Analytics database '$AdhocAnalyticsDatabaseName' already exists."
+    Write-Output "Ad-hoc Reporting database '$AdhocAnalyticsDatabaseName' already exists."
 
     # it is assumed that if the database is present it is initialized, so script exits at this point 
     exit
@@ -70,9 +70,9 @@ if($DeploySchema.IsPresent)
     Write-output "Initializing database schema..."
 	  
 	Invoke-SqlcmdWithRetry `
-    -ServerInstance $fullyQualifiedCatalogServerName `
+        -ServerInstance $fullyQualifiedCatalogServerName `
 	-Username $config.CatalogAdminUserName `
-    -Password $config.CatalogAdminPassword `
+        -Password $config.CatalogAdminPassword `
 	-Database $AdhocAnalyticsDatabaseName `
 	-Query $commandText `
 	-ConnectionTimeout 30 `
