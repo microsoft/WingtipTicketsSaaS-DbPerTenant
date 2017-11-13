@@ -9,7 +9,7 @@ SET @User = <'User'>;
 EXEC [jobs].sp_add_target_group @target_group_name = 'TenantGroup'
 
 -- Add a server target member, includes all databases in tenant server
-SET @server1 = 'tenants1-' + @User + '.database.windows.net'
+SET @server1 = 'tenants1-dpt-' + @User + '.database.windows.net'
 
 EXEC [jobs].sp_add_target_group_member
 @target_group_name = 'TenantGroup',
@@ -22,7 +22,7 @@ EXEC [jobs].sp_add_target_group_member
 EXEC [jobs].sp_add_target_group @target_group_name = 'AnalyticsGroup'
 
 -- Add a server target member, includes only tenantanalytics database in catalog server
-SET @server2 = 'catalog-' + @User + '.database.windows.net'
+SET @server2 = 'catalog-dpt-' + @User + '.database.windows.net'
 
 -- Doesn't required refresh credential because this target group only contains a single database
 EXEC [jobs].sp_add_target_group_member
