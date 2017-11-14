@@ -5,7 +5,7 @@
     "user": {
       "type": "string",
       "metadata": {
-        "description": "User parameter will be used to create a unique Wingtip Platform Demo. Use 15 characters or less for this parameter."
+        "description": "User parameter is used to make resource names unique. Use 15 characters or less for this parameter."
       }
     }
   },

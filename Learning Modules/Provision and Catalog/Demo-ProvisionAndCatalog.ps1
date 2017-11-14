@@ -26,10 +26,10 @@ Import-Module "$PSScriptRoot\..\UserConfig" -Force
 # Get Azure credentials if not already logged on,  Use -Force to select a different subscription 
 Initialize-Subscription -NoEcho
 
-# Get the resource group and user names used when the WTP application was deployed from UserConfig.psm1.  
+# Get the resource group and user names used when the application was deployed  
 $wtpUser = Get-UserConfig
 
-# get the WTP app configuration
+# Get the Wingtip Tickets app configuration
 $config = Get-Configuration
 
 ### Provision a single tenant
