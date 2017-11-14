@@ -179,7 +179,7 @@ GO
 CREATE PROCEDURE [dbo].[sp_ShredRawExtractedData]
 AS
 
--- Variable to get the max timstamp of the source table
+-- Variable to get the max timestamp of the source tables
 DECLARE @SourceLastTimestamp binary(8) = (SELECT MAX(Timestamp) FROM  [dbo].[TicketsRawData])
 DECLARE @SourceVELastTimestamp binary(8) = (SELECT MAX(Timestamp) FROM  [dbo].[EventsRawData])
 
@@ -220,7 +220,7 @@ WHEN NOT MATCHED BY TARGET THEN
 		VALUES(source.PurchaseDateID, source.DateValue, source.DateYear, source.DateMonth, source.DateDay, source.DateDayOfYear, source.DateWeekday, source.DateWeek, source.DateQuarter, source.DateMonthName, source.DateQuarterName, source.DateWeekdayName, source.MonthYear);
 
 
--- Merge customers from the raw data to the dimension table
+-- Merge customers from the source table to the dimension table
 MERGE INTO [dbo].[dim_Customers] AS [target]
 USING (SELECT DISTINCT CustomerEmailId, CustomerPostalCode, CustomerCountryCode FROM [dbo].[TicketsRawData] WHERE Timestamp <= @SourceLastTimestamp)
 AS source (CustomerEmailId, CustomerPostalCode, CustomerCountryCode) 
