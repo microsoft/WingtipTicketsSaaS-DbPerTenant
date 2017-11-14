@@ -51,7 +51,7 @@ New-AzureRmSqlDatabase `
     -RequestedServiceObjectiveName "P1" `
     > $null
 
-# Pre-create the tenant analytics columnstore table schema
+# Set up the tenant analytics database schema with a columnstore index on the fact table.
 
 $commandText = "
 -- Create table for storing raw tickets data. 
