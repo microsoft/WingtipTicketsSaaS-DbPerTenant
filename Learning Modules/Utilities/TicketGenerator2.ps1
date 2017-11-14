@@ -71,6 +71,9 @@ function Get-CurvedSalesForDay
 
     # add some random variation
     [decimal] $variance = (-10, -8, -5, -4, 0, 5, 10) | Get-Random 
+
+    # Getting 100% tickets for Mad Rush
+    if ($Curve.Curve -eq "MadRush"){$variance = 0}
     $curvePercent = $curvePercent + ($curvePercent * $variance/100)
 
     if ($curvePercent -lt 0) {$curvePercent = 0}
@@ -161,6 +164,8 @@ $venues = Get-Shards -ShardMap $catalog.ShardMap
 $totalTicketPurchases = 0
 $totalTickets = 0
 
+$standardPrice = 10
+
 # load characteristics of known venues from config
 
 foreach ($venue in $venues)
@@ -199,6 +204,54 @@ foreach ($venue in $venues)
                 -Database $venueDatabaseName `
                 -Query $customersSql 
 
+    # Initialize script for generating random number of sections for each venues
+    $sectionsSql  = "
+    DELETE FROM [dbo].[EventSections]
+    DELETE FROM [dbo].[Sections]
+    SET IDENTITY_INSERT [dbo].[Sections] ON 
+    INSERT INTO [dbo].[Sections] 
+    ([SectionId],[SectionName],[SeatRows],[SeatsPerRow],[StandardPrice]) 
+    VALUES `n"
+
+    # Add sections to the venue
+    if     ($venueDatabaseName -eq 'contosoconcerthall') { }
+    elseif ($venueDatabaseName -eq 'fabrikamjazzclub')   { }
+    elseif ($venueDatabaseName -eq 'dogwooddojo')        { }
+    else
+    {
+        # set random number of sections for all other venues   
+        switch ($popularity) 
+            {"popular" {$numSections = Get-Random -Maximum 6 -Minimum 4
+                        $SeatRows = Get-Random -Maximum 20 -Minimum 15
+                        $SeatsPerRow = Get-Random -Maximum 30 -Minimum 25}
+             "moderate" {$numSections = Get-Random -Maximum 4 -Minimum 2
+                         $SeatRows = Get-Random -Maximum 18 -Minimum 12
+                         $SeatsPerRow = Get-Random -Maximum 30 -Minimum 25}
+             "unpopular" {$numSections = Get-Random -Maximum 4 -Minimum 1
+                          $SeatRows = Get-Random -Maximum 10 -Minimum 4
+                          $SeatsPerRow = Get-Random -Maximum 20 -Minimum 10}
+        }
+
+        # Display the sections, seats row and seats per row
+        # Write-Output "Venue has $numSections sections,  $SeatRows rows and $SeatsPerRow seats per row"
+
+        $Sections = (1..$numSections)
+        Foreach ($section in $Sections){
+            $sectionId = $section
+            $sectionName = "Section " + $section 
+            $sectionsSql += "      ($sectionId,'$sectionName',$seatRows,$seatsPerRow,$standardPrice),`n"
+        }
+        $sectionsSql  = $sectionsSql.TrimEnd(("`n",","," ")) + ";`nSET IDENTITY_INSERT [dbo].[Sections] OFF"
+        $sectionsSql += "`nINSERT INTO [dbo].[EventSections] (EVentId, SectionId, Price)
+                           SELECT e.EventId, s.SectionId, s.StandardPrice
+                           FROM [dbo].[Events] e
+                           JOIN [dbo].[Sections] s on 1=1;"
+        $resultsSection = Invoke-SqlAzureWithRetry `
+            -Username "$AdminUserName" -Password "$AdminPassword" `
+            -ServerInstance $venueServer `
+            -Database $venueDatabaseName `
+            -Query $sectionsSql   
+    }
     # initialize ticket purchase identity for this venue
     $ticketPurchaseId = 1
 
@@ -252,8 +305,8 @@ foreach ($venue in $venues)
 
         # assign a sales curve for this event from the set assigned to this venue
         $eventCurve = $venueCurves | Get-Random
-
-        Write-Host -NoNewline "  Processing event '$($event.EventName)'..."
+        Write-Host -NoNewline "  Processing event '$($event.EventName)' ($($eventCurve.Curve))..."
+        
 
         $eventTickets = 0
 
@@ -324,6 +377,9 @@ foreach ($venue in $venues)
             # find the number of tickets to purchase this day based on this event's curve
             [int]$ticketsToPurchase = Get-CurvedSalesForDay -Curve $eventCurve -Day $day -Seats $capacity.Capacity
             
+            # Displaying the number of tickets bought on that day
+            if ($eventCurve.Curve -eq "MadRush"){Write-Output "tickets bought on day $day : $ticketsToPurchase"}
+
             # if no tickets to sell this day, skip this day
             if ($ticketsToPurchase -eq 0) 
             {
@@ -398,7 +454,7 @@ foreach ($venue in $venues)
                     }
 
                     # set time of day of purchase - distributed randomly over prior 24 hours
-                    $mins = Get-Random -Maximum 1440 -Minimum 0
+                    $mins = Get-Random -Maximum 1140 -Minimum 0
                     $purchaseTime = $purchaseDate.AddMinutes(-$mins)
 
                     # add ticket purchase to batch
@@ -422,8 +478,12 @@ foreach ($venue in $venues)
                 $totalTickets += $ticketOrder
                 $eventTickets += $ticketOrder
                 $venueTickets += $ticketOrder
+
+           
             
-            }  # all customer orders (ticket purchases) for one day                                 
+            }  # all customer orders (ticket purchases) for one day 
+            
+            #Write-Output "$ticketsPurchased tickets purchased"                                
         
         } # purchases for all 60 days
 

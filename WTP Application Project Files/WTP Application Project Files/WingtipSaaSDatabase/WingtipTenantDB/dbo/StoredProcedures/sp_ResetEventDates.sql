@@ -6,8 +6,8 @@ AS
 
     DECLARE @EventId int
     DECLARE @Index int = 1
-    DECLARE @Offset int = -5    -- offset of the first event in days from current date   
-    DECLARE @Interval int = 3   -- interval between each event
+    DECLARE @Offset int = ROUND(((-3 - (-5) - 1) * RAND() + (-5)), 0)    -- offset of the first event in days from current date   
+    DECLARE @Interval int = ROUND(((5 - 2 - 1) * RAND() + 2), 0)   -- interval between each event
     DECLARE @OldEventDate datetime
     DECLARE @NewEventDate datetime
     DECLARE @Diff int

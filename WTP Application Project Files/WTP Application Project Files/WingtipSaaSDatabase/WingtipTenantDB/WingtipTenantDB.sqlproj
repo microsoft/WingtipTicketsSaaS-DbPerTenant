@@ -89,6 +89,8 @@
     <Build Include="dbo\Views\Venues.sql" />
     <Build Include="dbo\Views\VenueEvents.sql" />
     <Build Include="dbo\Views\TicketFacts.sql" />
+    <Build Include="dbo\Tables\LastExtracted.sql" />
+    <Build Include="dbo\Views\EventFacts.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="WingtipTenantDB.publish.xml" />
