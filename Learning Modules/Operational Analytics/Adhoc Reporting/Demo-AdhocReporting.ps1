@@ -1,11 +1,11 @@
-﻿# Helper script for deploying and using adhoc analytics
+﻿# Helper script for deploying and using adhoc reporting
 
 $DemoScenario = 2
 <# Select the demo scenario that will be run. It is recommended you run the scenarios below in order. 
      Demo   Scenario
       0       None
       1       Purchase tickets for events at all venues
-      2       Deploy Ad-hoc analytics database 
+      2       Deploy Ad-hoc reporting database 
 #>
 
 ## ------------------------------------------------------------------------------------------------
@@ -37,10 +37,10 @@ if ($DemoScenario -eq 1)
     exit
 }
 
-### Deploy the Ad-hoc Analytics database used with Elastic Query to the catalog server
+### Deploy the Ad-hoc Reporting database used with Elastic Query to the catalog server
 if ($DemoScenario -eq 2)
 {
-    & $PSScriptRoot\Deploy-AdhocAnalyticsDB.ps1 `
+    & $PSScriptRoot\Deploy-AdhocReportingDB.ps1 `
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name
     exit

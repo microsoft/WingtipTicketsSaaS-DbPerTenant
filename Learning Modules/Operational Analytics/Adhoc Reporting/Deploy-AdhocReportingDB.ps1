@@ -35,7 +35,7 @@ if(!$resourceGroup)
 
 $catalogServerName = $config.CatalogServerNameStem + $WtpUser
 $fullyQualifiedCatalogServerName = $catalogServerName + ".database.windows.net"
-$AdhocAnalyticsDatabaseName = $config.AdhocAnalyticsDatabaseName
+$AdhocAnalyticsDatabaseName = $config.AdhocReportingDatabaseName
 
 # Check if Ad-hoc Analytics database already exists 
 $adHocAnalyticsDB = Get-AzureRmSqlDatabase `
@@ -46,7 +46,7 @@ $adHocAnalyticsDB = Get-AzureRmSqlDatabase `
 
 if($adHocAnalyticsDB)
 {
-    Write-Output "Ad-hoc Analytics database '$AdhocAnalyticsDatabaseName' already exists."
+    Write-Output "Ad-hoc Reporting database '$AdhocAnalyticsDatabaseName' already exists."
 
     # it is assumed that if the database is present it is initialized, so script exits at this point 
     exit
@@ -54,25 +54,25 @@ if($adHocAnalyticsDB)
 
 Write-output "Deploying database '$AdhocAnalyticsDatabaseName' on server '$catalogServerName'..."
 
-# Deploy adhoc analytics database 
+# Deploy adhoc reporting database 
 New-AzureRmSqlDatabase `
         -ResourceGroupName $WtpResourceGroupName `
         -ServerName $catalogServerName `
         -DatabaseName $AdhocAnalyticsDatabaseName `
-        -RequestedServiceObjectiveName $config.AdhocAnalyticsDatabaseServiceObjective `
+        -RequestedServiceObjectiveName $config.AdhocReportingDatabaseServiceObjective `
         > $null
 
 # if schema deployment is requested... 
 if($DeploySchema.IsPresent)
 {
-    $commandText = [IO.File]::ReadAllText("$PSScriptRoot\Initialize-AdhocAnalyticsDb.sql")
+    $commandText = [IO.File]::ReadAllText("$PSScriptRoot\Initialize-AdhocReportingDB.sql")
 
     Write-output "Initializing database schema..."
 	  
 	Invoke-SqlcmdWithRetry `
-    -ServerInstance $fullyQualifiedCatalogServerName `
+        -ServerInstance $fullyQualifiedCatalogServerName `
 	-Username $config.CatalogAdminUserName `
-    -Password $config.CatalogAdminPassword `
+        -Password $config.CatalogAdminPassword `
 	-Database $AdhocAnalyticsDatabaseName `
 	-Query $commandText `
 	-ConnectionTimeout 30 `
