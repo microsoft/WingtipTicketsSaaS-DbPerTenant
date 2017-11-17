@@ -1,7 +1,7 @@
 ﻿# Helper script for provisioning and de-provisioning tenants and their databases.
 
 # IMPORTANT: Before provisioning tenants using this script ensure the catalog is initialized using 
-# http://events.wtp.<USER>.trafficmanager.net
+# http://events.wingtip-dpt.<USER>.trafficmanager.net
 
 # Parameters for scenarios #1 and #2 provision or deprovision a single tenant 
 $TenantName = "Red Maple Racing" # name of the venue to be added/removed as a tenant
