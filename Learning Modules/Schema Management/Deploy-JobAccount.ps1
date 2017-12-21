@@ -19,6 +19,7 @@ param(
 
 $ErrorActionPreference = "Stop" 
 
+Import-Module "$PSScriptRoot\..\Common\CatalogAndDatabaseManagement" -Force
 Import-Module "$PSScriptRoot\..\Common\SubscriptionManagement" -Force
 Import-Module "$PSScriptRoot\..\WtpConfig" -Force
 
