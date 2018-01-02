@@ -22,6 +22,7 @@ namespace Events_Tenant.Common.Utilities
     /// </summary>
     public class CatalogConfig
     {
+        public string CatalogAlias { get; set; }
         public string CatalogServer { get; set; }
         public string CatalogDatabase { get; set; }
         public string ServicePlan { get; set; }
@@ -33,6 +34,9 @@ namespace Events_Tenant.Common.Utilities
     public class TenantServerConfig
     {
         public string TenantServer { get; set; }
+        public string ContosoConcertHallServerAlias { get; set; }
+        public string FabrikamJazzClubServerAlias { get; set; }
+        public string DogwoodDojoServerAlias { get; set; }
 
         /// <summary>
         /// Boolean value to specify if the events dates need to be reset
@@ -42,6 +46,7 @@ namespace Events_Tenant.Common.Utilities
         ///   <c>true</c> if [reset event dates]; otherwise, <c>false</c>.
         /// </value>
         public bool ResetEventDates { get; set; }
+
     }
 
     /// <summary>
@@ -50,6 +55,7 @@ namespace Events_Tenant.Common.Utilities
     public class TenantConfig
     {
         public int TenantId { get; set; }
+        public string TenantAlias { get; set; }
         public string VenueName { get; set; }
         public string EventTypeNamePlural { get; set; }
         public string BlobImagePath { get; set; }

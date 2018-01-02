@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "DnsClient": "1.0.7",
     "EntityFramework": "6.1.3",
     "Microsoft.AspNet.Providers.Core": "2.0.0",
     "Microsoft.AspNetCore": "1.1.1",

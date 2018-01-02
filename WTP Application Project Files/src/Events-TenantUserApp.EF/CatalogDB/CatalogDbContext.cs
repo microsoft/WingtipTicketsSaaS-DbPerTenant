@@ -32,6 +32,17 @@ namespace Events_TenantUserApp.EF.CatalogDB
                 entity.Property(e => e.TenantName)
                     .IsRequired()
                     .HasMaxLength(50);
+
+                entity.Property(e => e.TenantAlias)
+                    .IsRequired()
+                    .HasMaxLength(65);
+
+                entity.Property(e => e.RecoveryState)
+                    .IsRequired()
+                    .HasMaxLength(30);
+
+                entity.Property(e => e.LastUpdated)
+                    .IsRequired();
             });
         }
     }

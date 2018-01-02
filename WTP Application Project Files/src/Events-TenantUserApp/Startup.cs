@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using DnsClient;
 
 namespace Events_TenantUserApp
 {
@@ -29,6 +30,7 @@ namespace Events_TenantUserApp
         private IUtilities _utilities;
         private ICatalogRepository _catalogRepository;
         private ITenantRepository _tenantRepository;
+        private ILookupClient _client;
         #endregion
 
         #region Public Properties
@@ -55,8 +57,7 @@ namespace Events_TenantUserApp
             Configuration = builder.Build();
 
             //read config settigs from appsettings.json
-            ReadAppConfig();
-
+            ReadAppConfig();            
         }
 
         #endregion
@@ -89,6 +90,7 @@ namespace Events_TenantUserApp
             services.AddTransient<ITenantRepository, TenantRepository>();
             services.AddSingleton<ITenantRepository>(p => new TenantRepository(GetBasicSqlConnectionString()));
             services.AddSingleton<IConfiguration>(Configuration);
+            services.AddSingleton<ILookupClient>(p => new LookupClient());
 
             //create instance of utilities class
             services.AddTransient<IUtilities, Utilities>();
@@ -96,6 +98,7 @@ namespace Events_TenantUserApp
             _utilities = provider.GetService<IUtilities>();
             _catalogRepository = provider.GetService<ICatalogRepository>();
             _tenantRepository = provider.GetService<ITenantRepository>();
+            _client = provider.GetService<ILookupClient>();
         }
 
         /// <summary>
@@ -219,6 +222,7 @@ namespace Events_TenantUserApp
 
             CatalogConfig = new CatalogConfig
             {
+                CatalogAlias = Configuration["CatalogAlias"],
                 ServicePlan = Configuration["ServicePlan"],
                 CatalogDatabase = Configuration["CatalogDatabase"],
                 CatalogServer = Configuration["CatalogServer"] + ".database.windows.net"
@@ -226,7 +230,10 @@ namespace Events_TenantUserApp
 
             TenantServerConfig = new TenantServerConfig
             {
-                TenantServer = Configuration["TenantServer"] + ".database.windows.net"
+                TenantServer = Configuration["TenantServer"] + ".database.windows.net",
+                ContosoConcertHallServerAlias = Configuration["ContosoConcertHallAlias"] + ".database.windows.net",
+                FabrikamJazzClubServerAlias = Configuration["FabrikamJazzClubAlias"] + ".database.windows.net",
+                DogwoodDojoServerAlias = Configuration["DogwoodDojoAlias"] + ".database.windows.net"
             };
 
             bool isResetEventDatesEnabled = false;

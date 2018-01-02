@@ -19,14 +19,16 @@ namespace Events_TenantUserApp.Controllers
         private readonly IStringLocalizer<BaseController> _localizer;
         private readonly ITenantRepository _tenantRepository;
         private readonly IConfiguration _configuration;
+        private readonly DnsClient.ILookupClient _client;
         #endregion
 
         #region Constructors
-        public BaseController(IStringLocalizer<BaseController> localizer, ITenantRepository tenantRepository, IConfiguration configuration)
+        public BaseController(IStringLocalizer<BaseController> localizer, ITenantRepository tenantRepository, IConfiguration configuration, DnsClient.ILookupClient client)
         {
             _localizer = localizer;
             _tenantRepository = tenantRepository;
             _configuration = configuration;
+            _client = client;
         }
 
         #endregion
@@ -149,6 +151,10 @@ namespace Events_TenantUserApp.Controllers
                     (_tenantRepository.GetVenueType(venueDetails.VenueType, tenantId)).Result;
                 var countries = (_tenantRepository.GetAllCountries(tenantId)).Result;
 
+                //get servername from tenant alias
+                var serverAliases = _client.Query(venueDetails.DatabaseServerName, DnsClient.QueryType.CNAME);
+                var tenantServerName = serverAliases.Answers.CnameRecords().ElementAt(0).CanonicalName;
+
                 //get country language from db 
                 var country = (_tenantRepository.GetCountry(venueDetails.CountryCode, tenantId)).Result;
                 RegionInfo regionalInfo = new RegionInfo(country.Language);
@@ -156,11 +162,12 @@ namespace Events_TenantUserApp.Controllers
                 return new TenantConfig
                 {
                     DatabaseName = venueDetails.DatabaseName,
-                    DatabaseServerName = venueDetails.DatabaseServerName,
+                    DatabaseServerName = tenantServerName,
                     VenueName = venueDetails.VenueName,
                     BlobImagePath = blobPath + venueTypeDetails.VenueType + "-user.jpg",
                     EventTypeNamePlural = venueTypeDetails.EventTypeShortNamePlural.ToUpper(),
                     TenantId = tenantId,
+                    TenantAlias = venueDetails.DatabaseServerName.Split('.')[0],
                     TenantName = venueDetails.DatabaseName,
                     Currency = regionalInfo.CurrencySymbol,
                     TenantCulture =

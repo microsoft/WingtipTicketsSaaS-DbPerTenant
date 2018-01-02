@@ -173,6 +173,26 @@ header {
     font-size: 15pt;
     font-family: "Segoe UI", Frutiger, "Frutiger Linotype", "Dejavu Sans", "Helvetica Neue", Arial, sans-serif;
 }
+.welcome-text p {
+    margin: 0;
+}
+.welcome-text span {
+    font-style: italic;
+    font-size: 1.7rem;
+    padding-left: 10px;
+    padding-top: 5px;
+    display: inline-block;
+    margin-bottom: 10px;
+}
+
+#venueName {
+     width: 102%;
+     height: 90px;
+     padding-top: 2%;
+}
+#navbar-collapse {
+    padding: 0;
+}
 
 tr {
     background-color: #FFFFFF;
@@ -258,15 +278,14 @@ iframe {
 }
 
 .logo-heading {
-    height: 90px;
+    height: 60px;
     width: inherit;
     margin: 0px;
-    padding: 25px 25px 25px 25px;
     float: left;
     color: #000000;
-    background-color: #FFFFFF;
     font-family: 'Segoe UI';
     font-size: 33px;
+    padding-left: 15px;
 }
 
 .logo-heading2 {
@@ -789,7 +808,7 @@ select::-ms-expand {
     /*position:absolute;*/
     bottom: 0;
     width: inherit;
-    height: 150px; /* Height of the footer */
+    height: 215px; /* Height of the footer */
     background: #666;
     font-size: 10pt;
     /*line-height: 20px;*/
@@ -798,15 +817,96 @@ select::-ms-expand {
 
     .footer a {
         color: #fff;
-        font-size: 14pt;
-        padding-left: 20px;
-        padding-right: 20px;
+        font-size: 12pt;        
     }
 
 .footerLinks_desc {
     font-size: 12px;
     margin-left: 80px;
     color: #fff;
+}
+footer .logo-image {
+    margin-left:15px;
+    height: 80px;
+}
+
+footer .logo-heading {
+    display: inline-block;
+    height: 80px;
+    color: white;
+    padding-left: 10px;
+    padding-right: 10px;
+    width: initial;
+    background-color: initial;
+}
+.footer .logo-heading span {
+    margin-top: 8%;
+    display: inline-block;
+    font-family: 'Segoe UI' ;
+    font-size: 2.4rem;
+}
+.footer-left-third {
+    width: 33%;
+    display: inline-block;
+    float: left;
+    margin-top: 2%;
+}
+.footer-middle-third {
+    width: 30%;
+    display: inline-block;
+    float: left;
+}
+.footer-right-third {
+    display: inline-block;
+    /*margin-left: 1%;*/
+    width: 33%;
+    float: left;
+    color: white;
+    font-size: 1.6rem;
+}
+.about-header {
+    font-family: 'Segoe UI' ;
+    font-size: 2.2rem;
+    margin-left: 10px;
+    color: white;
+}
+.about-text {
+    color: white;
+    font-size: 12pt;
+    font-family:segoeuil;
+}
+.tutorial-link {
+    border-bottom: 2px solid;
+    padding-bottom: 3px;
+}
+.deployment-info-header {
+    font-family: 'Segoe UI' ;
+    font-size: 2.2rem;
+    color: white;
+    display: block;
+    margin-bottom: 6%;
+    margin-top: 2px;
+}
+.grow { 
+    transition: all .2s ease-in;
+    display: inline-block; 
+}
+.grow:hover { 
+    transform: scale(1.5); 
+    z-index: 5;
+    box-shadow: 0px 0px 150px #000000;
+    padding-left: 2%;
+    background-color: #E77A39;
+    width: 35%;
+}
+.footer-divider {
+    width: 1px;
+    float: left;
+    display: inline-block;
+    height: 150px;
+    margin-right: 20px;
+    border: 0;
+    border-right: 1px solid white;   
 }
 
 /* ========================================================================================== */
@@ -1297,4 +1397,41 @@ input::-moz-placeholder { /* Mozilla Firefox 19+ */
 
 input:-ms-input-placeholder { /* Internet Explorer 10-11 */
     color: #9a9a9a;
+}
+
+.maintenance { 
+  text-align: center; 
+  padding: 150px; 
+  font-size: 20px; 
+  color: #333;
+}
+  
+.maintenance-header { 
+  font-size: 50px; 
+  margin-bottom: 15px;
+}
+
+.maintenance article { 
+  display: block; 
+  text-align: left; 
+  width: 650px; 
+  margin: 0 auto;
+  margin-left: 16%; 
+}
+  
+.maintenance a { 
+  color: #dc8100; 
+  text-decoration: none; 
+}
+  
+.maintenance a:hover { 
+  color: #333; 
+  text-decoration: none; 
+}
+
+.maintenance #venueName {
+    width: 80%;
+    text-align: left;
+    margin-left: 3px;
+    padding-top: 3%;
 }

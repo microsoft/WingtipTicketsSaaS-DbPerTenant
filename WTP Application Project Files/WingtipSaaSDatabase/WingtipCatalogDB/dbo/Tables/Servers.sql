@@ -1,0 +1,8 @@
+CREATE TABLE [dbo].[Servers]
+(
+    [ServerName] NVARCHAR(128) NOT NULL PRIMARY KEY, 
+    [Location] NVARCHAR (30) NOT NULL,
+    [State] NVARCHAR(30) NOT NULL DEFAULT 'initial',
+    [RecoveryState] NVARCHAR(30) NULL,
+    [LastUpdated] DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+)

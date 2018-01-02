@@ -20,18 +20,20 @@ namespace Events_TenantUserApp.Controllers
         private readonly IStringLocalizer<AccountController> _localizer;
         private readonly ICatalogRepository _catalogRepository;
         private readonly ILogger _logger;
+        private readonly DnsClient.ILookupClient _client;
 
         #endregion
 
         #region Constructors
 
-        public AccountController(IStringLocalizer<AccountController> localizer, IStringLocalizer<BaseController> baseLocalizer, ITenantRepository tenantRepository, ICatalogRepository catalogRepository, ILogger<AccountController> logger, IConfiguration configuration)
-            : base(baseLocalizer, tenantRepository, configuration)
+        public AccountController(IStringLocalizer<AccountController> localizer, IStringLocalizer<BaseController> baseLocalizer, ITenantRepository tenantRepository, ICatalogRepository catalogRepository, ILogger<AccountController> logger, IConfiguration configuration, DnsClient.ILookupClient client)
+            : base(baseLocalizer, tenantRepository, configuration, client)
         {
             _localizer = localizer;
             _tenantRepository = tenantRepository;
             _catalogRepository = catalogRepository;
             _logger = logger;
+            _client = client;
         }
 
         #endregion

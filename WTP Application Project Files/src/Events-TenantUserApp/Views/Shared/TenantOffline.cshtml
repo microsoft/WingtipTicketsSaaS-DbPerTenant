@@ -1,0 +1,25 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@inject IViewLocalizer Localizer
+
+@{
+    ViewData["Title"] = "TenantOffline";
+}
+
+<div class = "maintenance">
+	<div class="row" style="margin-left:16%">
+	  <a href="~/Home/Index">
+	    <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg">
+	    <h1 id="venueName" class="logo-heading">@Model</h1>
+	  </a>
+	</div>
+
+	<article>
+	    <h1 class="maintenance-header">@Localizer["We'll be back soon!"]</h1>
+	    <div>
+	        <p>@Localizer["Sorry for the inconvenience but we're performing some maintenance at the moment. We'll be back online shortly but if you need to, you can contact us via email."]
+	        </p>
+	        <p>&mdash; @Model</p>
+	    </div>
+	</article>
+</div>
+
