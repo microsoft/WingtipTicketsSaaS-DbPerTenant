@@ -1,0 +1,154 @@
+{
+  "contentVersion": "1.0.0.0",
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "parameters": {
+      "wtpUser": {
+          "type": "string",
+          "metadata": {
+              "description": "Refers to the 'user' variable that was used during the initial Wingtip deployment."
+          }
+      },
+      "wtpOriginResourceGroup": {
+          "type": "string",
+          "metadata": {
+              "description": "Refers to the resource group that contains the primary Wingtip application deployment"
+          }
+      },
+      "recoverySuffix": {
+          "type": "string",
+          "metadata": {
+              "description": "Suffix that is appended onto resource name to indicate it is created for recovery purposes"
+          }
+      },
+      "catalogRecoveryServer": {
+          "type": "string",
+          "metadata": {
+              "description": "Refers to the name of the SQL server created for recovery of the catalog database."
+          }
+      },
+      "tenantsRecoveryServer": {
+          "type": "string",
+          "metadata": {
+              "description": "Refers to the name of the SQL Server created for recovery of tenant databases."
+          }
+      }
+  },
+  "variables": {
+      "lowerCaseUser": "[toLower(parameters('wtpUser'))]",
+      "catalogDatabaseName": "tenantcatalog",
+      "databasePerTenantSuffix": "dpt",
+      "originRoleSuffix": "-home",
+      "trafficManagerInstance": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'), '-', 'profiles')]",
+      "trafficManagerRecoveryProfileName": "[concat('events-wingtip-', variables('databasePerTenantSuffix'), '-', variables('lowerCaseUser'), parameters('recoverySuffix'))]",
+      "recoveryLocation": "[resourceGroup().location]",
+      "recoveryWebAppSku": "Standard",
+      "wtpEventsRecoveryApp": "[concat('events-wingtip-', variables('databasePerTenantSuffix'), '-', variables('lowerCaseUser'), parameters('recoverySuffix'))]",
+      "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage-v4.zip"
+  },
+  "resources": [
+    {
+      "name": "[variables('wtpEventsRecoveryApp')]",
+      "apiVersion": "2014-06-01",
+      "location": "[variables('recoveryLocation')]",
+      "type": "Microsoft.Web/serverfarms",
+      "properties": {
+          "name": "[variables('wtpEventsRecoveryApp')]",
+          "sku": "[variables('recoveryWebAppSku')]"
+      }
+    },
+    {
+      "dependsOn": [
+          "[concat('Microsoft.Web/serverfarms/',variables('wtpEventsRecoveryApp'))]"
+      ],
+      "name": "[variables('wtpEventsRecoveryApp')]",
+      "apiVersion": "2015-08-01",
+      "type": "Microsoft.Web/sites",
+      "location": "[variables('recoveryLocation')]",
+      "properties": {
+          "name": "[variables('wtpEventsRecoveryApp')]",
+          "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/',variables('wtpEventsRecoveryApp'))]",
+          "siteConfig": {
+              "appSettings": []
+          }
+      },
+      "resources": [
+          {
+            "dependsOn": [
+                "[concat('Microsoft.Web/serverfarms/',variables('wtpEventsRecoveryApp'))]",
+                "[concat('Microsoft.Web/sites/',variables('wtpEventsRecoveryApp'))]"
+            ],
+            "name": "MSDeploy",
+            "type": "extensions",
+            "location": "[variables('recoveryLocation')]",
+            "apiVersion": "2015-08-01",
+            "properties": {
+                "packageUri": "[variables('wtpEventsAppPackageUri')]"
+            }
+          },
+          {
+            "dependsOn": [
+                "[concat('Microsoft.Web/sites/',variables('wtpEventsRecoveryApp'))]",
+                "MSDeploy"
+            ],
+            "apiVersion": "2015-08-01",
+            "type": "config",
+            "name": "appsettings",
+            "properties": {
+                "BlobPath": "https://wingtipsaas.blob.core.windows.net/images/",
+                "ConnectionTimeOut": "30",
+                "CatalogDatabase": "[variables('catalogDatabaseName')]",
+                "CatalogServer": "[parameters('catalogRecoveryServer')]",
+                "DatabasePassword": "P@ssword1",
+                "DatabaseServerPort": "1433",
+                "DatabaseUser": "developer",
+                "ResetEventDates": "false",
+                "ServicePlan": "Standard",
+                "SqlProtocol": "tcp",
+                "TenantServer": "[parameters('tenantsRecoveryServer')]",
+                "LearnHowFooterUrl": "https://aka.ms/sqldbsaastutorial",
+                "User": "[variables('lowerCaseUser')]",
+                "ASPNETCORE_ENVIRONMENT": "Production",
+                "WEBSITE_NODE_DEFAULT_VERSION": "4.2.3",
+                "DefaultRequestCulture": "en-US",
+                "SupportedCultures:SupportedCulture:0": "fr-CA",
+                "SupportedCultures:SupportedCulture:1": "fr-FR",
+                "SupportedCultures:SupportedCulture:2": "en-CA",
+                "SupportedCultures:SupportedCulture:3": "en-GB",
+                "SupportedCultures:SupportedCulture:4": "en-US"
+            }
+          }
+      ]
+    },
+    {
+      "dependsOn": [
+          "[concat('Microsoft.Web/serverfarms/',variables('wtpEventsRecoveryApp'))]",
+          "[concat('Microsoft.Web/sites/',variables('wtpEventsRecoveryApp'))]"
+      ],
+      "apiVersion": "2017-05-10",
+      "name": "nestedTemplate",
+      "type": "Microsoft.Resources/deployments",
+      "resourceGroup": "[parameters('wtpOriginResourceGroup')]",
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {},
+          "variables": {},
+          "resources": [
+            {
+              "apiVersion": "2015-11-01",
+              "type": "Microsoft.Network/trafficManagerProfiles/azureEndpoints",
+              "name": "[concat(variables('trafficManagerInstance'), '/', variables('trafficManagerRecoveryProfileName'))]",
+              "location": "global",
+              "properties": {
+                "targetResourceId": "[resourceId('Microsoft.Web/sites/',variables('wtpEventsRecoveryApp'))]",
+                "endpointStatus": "Disabled"
+              }
+            }                        
+          ]
+        }
+      }
+    }       
+  ]
+}

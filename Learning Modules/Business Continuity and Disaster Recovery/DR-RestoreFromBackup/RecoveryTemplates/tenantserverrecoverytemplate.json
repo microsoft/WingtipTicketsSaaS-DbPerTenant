@@ -1,0 +1,53 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "serverName": {
+        "type": "string"
+    },
+    "location": {
+        "type": "string"
+    },
+    "adminLogin": {
+        "type": "string"
+    },
+    "adminPassword": {
+        "type": "string"
+    }
+  },
+  "resources": [
+  {
+    "name": "[parameters('serverName')]",
+    "type": "Microsoft.Sql/servers",
+    "apiVersion": "2015-05-01-preview",
+    "location": "[parameters('location')]",
+    "tags": {},
+    "properties": {
+        "administratorLogin": "[parameters('adminLogin')]",
+        "administratorLoginPassword": "[parameters('adminPassword')]"
+    },
+    "resources": [
+      {
+        "dependsOn": ["[concat('Microsoft.Sql/servers/',parameters('serverName'))]" ],
+        "apiVersion": "2014-04-01",
+        "name": "AllowAllAzureIPs",
+        "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+        },
+        "type": "firewallRules"
+      },
+      {
+          "dependsOn": ["[concat('Microsoft.Sql/servers/',parameters('serverName'))]"],
+          "apiVersion": "2014-04-01",
+          "name": "Open",
+          "properties": {
+              "startIpAddress": "0.0.0.0",
+              "endIpAddress": "255.255.255.255"
+          },
+          "type": "firewallRules"
+      }
+    ]
+  }
+  ]
+}
