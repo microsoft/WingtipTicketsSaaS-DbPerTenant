@@ -34,29 +34,23 @@
     @RenderBody()
 </div>
 
-<footer class="footer" style="width: 102%; margin-left: -8px; margin-bottom: 1px; min-height:215px">
+<footer class="footer" style="width: 102%; margin-left: -8px; margin-bottom: 1px">
     <div class="footer-left-third">
         <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg">
         <div class="logo-heading"><span>@Localizer["Wingtip Tickets Platform"]</span></div>
     </div>
-    <div class="footer-middle-third">
-        <div style="margin-bottom: 6%; display: inline-block">
-            <span class="about-header">@Localizer["Wingtip Tickets Platform"]</span>
+    <div class="footer-right-third">
+        <div class="tutorial-link">
+            <a href=@Startup.DatabaseConfig.LearnHowFooterUrl target="_blank">@Localizer["Learn how to build a SaaS app on SQL database"]</a>
         </div>
-        <div class="about-text" style="margin-left: 3%; max-width: 325px">
-            <p>@Localizer["Sample event listing and ticketing multi-tenant SaaS application built using Azure SQL Database"]</p>
-            <p>
-                <a href=@Startup.DatabaseConfig.LearnHowFooterUrl class="tutorial-link" target="_blank">@Localizer["Learn how to build a SaaS app on SQL database"]</a>
-            </p>
-            <p style="margin-top: 8%">&copy; @Localizer["Copyright"] @DateTime.Now.Year @Localizer["Microsoft"] </p>
+        <div class="grow">
+            <p><b>@Localizer["Catalog alias"]: </b>@Startup.CatalogConfig.CatalogAlias</p>
+            <p><b>@Localizer["Catalog server"]: </b>@Startup.CatalogConfig.CatalogServer.Split('.')[0]</p>
+            <p><b>@Localizer["Catalog database"]: </b>@Startup.CatalogConfig.CatalogDatabase</p>
         </div>
-    </div>
-    <hr class="footer-divider" /> 
-    <div class="footer-right-third grow">
-        <span class="deployment-info-header">@Localizer["Deployment Info"]</span>
-        <p><b>@Localizer["Catalog alias"]: </b>@Startup.CatalogConfig.CatalogAlias</p>
-        <p><b>@Localizer["Catalog server"]: </b>@Startup.CatalogConfig.CatalogServer.Split('.')[0]</p>
-        <p><b>@Localizer["Catalog database"]: </b>@Startup.CatalogConfig.CatalogDatabase</p>
+        <div class="copyright">
+            <p>Running on Azure SQL Database. &copy; @DateTime.Now.Year @Localizer["Microsoft"] </p>
+        </div>
     </div>    
 </footer>
 

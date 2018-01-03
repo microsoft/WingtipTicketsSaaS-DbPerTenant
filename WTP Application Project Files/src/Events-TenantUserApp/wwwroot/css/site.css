@@ -144,7 +144,6 @@ body {
     background-color: #999 !important;
     color: #999 !important;
     height: 2px !important;
-    width: 115%;
     margin: 0px 0px 16px -20px;
 }
 
@@ -175,6 +174,7 @@ header {
 }
 .welcome-text p {
     margin: 0;
+    margin-bottom: 10px;
 }
 .welcome-text span {
     font-style: italic;
@@ -286,6 +286,12 @@ iframe {
     font-family: 'Segoe UI';
     font-size: 33px;
     padding-left: 15px;
+}
+.logo-heading-tenant {
+    color: #FFFFFF;
+    background-color: #626262;
+    padding-left: 15px;
+    margin-top: 0px;
 }
 
 .logo-heading2 {
@@ -808,7 +814,7 @@ select::-ms-expand {
     /*position:absolute;*/
     bottom: 0;
     width: inherit;
-    height: 215px; /* Height of the footer */
+    height: 170px; /* Height of the footer */
     background: #666;
     font-size: 10pt;
     /*line-height: 20px;*/
@@ -827,29 +833,37 @@ select::-ms-expand {
 }
 footer .logo-image {
     margin-left:15px;
-    height: 80px;
+    height: 90px;
 }
 
 footer .logo-heading {
     display: inline-block;
-    height: 80px;
+    height: 90px;
     color: white;
-    padding-left: 10px;
-    padding-right: 10px;
-    width: initial;
+    padding-left: 4rem;
+    padding-right: 4rem;
+    margin-left: 5px;
+    /*width: initial;*/
+    /*background-color: initial;*/
+}
+footer .logo-heading-tenant {
+    display: inline-block;
+    height: 90px;
+    color: white;
+    margin-left: 5px;
+    padding-left: 2rem;
     background-color: initial;
 }
-.footer .logo-heading span {
-    margin-top: 8%;
+.footer .logo-heading span, .footer .logo-heading-tenant span {
+    margin-top: 5%;
     display: inline-block;
     font-family: 'Segoe UI' ;
-    font-size: 2.4rem;
+    font-size: 3.5rem;
 }
 .footer-left-third {
-    width: 33%;
+    /*width: 33%;*/
     display: inline-block;
     float: left;
-    margin-top: 2%;
 }
 .footer-middle-third {
     width: 30%;
@@ -858,11 +872,13 @@ footer .logo-heading {
 }
 .footer-right-third {
     display: inline-block;
-    /*margin-left: 1%;*/
-    width: 33%;
-    float: left;
+    padding-right: 5%;
+    float: right;
     color: white;
     font-size: 1.6rem;
+}
+.footer-right-third p {
+    margin-bottom: 3px;
 }
 .about-header {
     font-family: 'Segoe UI' ;
@@ -878,6 +894,10 @@ footer .logo-heading {
 .tutorial-link {
     border-bottom: 2px solid;
     padding-bottom: 3px;
+    margin-bottom: 10px;
+}
+.tutorial-link a {
+    font-size: 2rem;
 }
 .deployment-info-header {
     font-family: 'Segoe UI' ;
@@ -891,13 +911,17 @@ footer .logo-heading {
     transition: all .2s ease-in;
     display: inline-block; 
 }
+.copyright {
+    margin-top: 3%;
+}
 .grow:hover { 
     transform: scale(1.5); 
     z-index: 5;
     box-shadow: 0px 0px 150px #000000;
     padding-left: 2%;
+    padding-right: 2%;
     background-color: #E77A39;
-    width: 35%;
+    /*width: 35%;*/
 }
 .footer-divider {
     width: 1px;
