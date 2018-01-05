@@ -36,11 +36,17 @@ if (!$credentialLoad)
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
 
-# Get the active tenant catalog 
-$tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
-
 # Get the recovery region resource group
 $recoveryResourceGroup = Get-AzureRmResourceGroup -Name $WingtipRecoveryResourceGroup
+
+# Get the tenant catalog in the recovery region
+$tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
+while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup.ResourceGroupName)
+{
+  Start-Sleep 10
+  # Get the active tenant catalog
+  $tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
+}
 
 # Get list of tenant elastic pools to be recovered 
 $tenantElasticPools = @()

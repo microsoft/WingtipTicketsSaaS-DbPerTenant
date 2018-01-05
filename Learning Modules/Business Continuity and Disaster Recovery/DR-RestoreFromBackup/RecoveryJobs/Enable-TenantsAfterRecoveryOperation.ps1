@@ -22,10 +22,6 @@ Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -For
 Import-Module "$using:scriptPath\..\..\WtpConfig" -Force
 Import-Module "$using:scriptPath\..\..\UserConfig" -Force
 
-# Import-Module "$PSScriptRoot\..\..\..\Common\CatalogAndDatabaseManagement" -Force
-# Import-Module "$PSScriptRoot\..\..\..\WtpConfig" -Force
-# Import-Module "$PSScriptRoot\..\..\..\UserConfig" -Force
-
 # Stop execution on error 
 $ErrorActionPreference = "Stop"
   
@@ -41,11 +37,17 @@ $wtpUser = Get-UserConfig
 $config = Get-Configuration
 $currentSubscriptionId = Get-SubscriptionId
 
-# Get the active tenant catalog 
-$tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
-
 # Get the recovery region resource group
 $recoveryResourceGroup = Get-AzureRmResourceGroup -Name $WingtipRecoveryResourceGroup
+
+# Get the tenant catalog in the recovery region
+$tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
+while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup.ResourceGroupName)
+{
+  Start-Sleep 10
+  # Get the active tenant catalog
+  $tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
+}
 
 # Mark tenants online as their databases become available
 while ($true)
@@ -365,6 +367,11 @@ while ($true)
       {
         Write-Verbose "Tenant was in an invalid initial recovery state when recovery operation attempted: $tenantRecoveryState"
       }
+
+       # Output recovery progress 
+      $TenantRecoveryPercentage = [math]::Round($onlineTenantCount/$tenantCount,2)
+      $TenantRecoveryPercentage = $TenantRecoveryPercentage * 100
+      Write-Output "$TenantRecoveryPercentage% ($onlineTenantCount of $tenantCount)"
     }
 
     # Output recovery progress 
