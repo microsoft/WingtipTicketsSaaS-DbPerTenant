@@ -97,30 +97,29 @@ catch
                   -ServiceObjectiveName "S1" `
                   -ErrorAction Stop
 }
-finally
+
+# Get DNS alias for catalog server 
+$catalogAliasName = "catalog-" + $wtpUser.Name
+$fullyQualifiedCatalogAlias = $catalogAliasName + ".database.windows.net"
+$activeCatalogServerName = Get-ServerNameFromAlias $fullyQualifiedCatalogAlias -ErrorAction Stop  
+
+# Update catalog alias to point to catalog database in recovery region if needed
+if ($activeCatalogServerName -ne $recoveryCatalogServerName)
 {
-  # Get DNS alias for catalog server 
-  $catalogAliasName = "catalog-" + $wtpUser.Name
-  $fullyQualifiedCatalogAlias = $catalogAliasName + ".database.windows.net"
-  $activeCatalogServerName = Get-ServerNameFromAlias $fullyQualifiedCatalogAlias -ErrorAction Stop  
-
-  # Update catalog alias to point to catalog database in recovery region if needed
-  if ($activeCatalogServerName -ne $recoveryCatalogServerName)
-  {
-    Write-Output "Updating catalog alias to point to recovery region instance..."
-    Set-DnsAlias `
-      -ResourceGroupName $recoveryResourceGroupName `
-      -ServerName $recoveryCatalogServerName `
-      -ServerDNSAlias $catalogAliasName `
-      -OldResourceGroupName $wtpUser.ResourceGroupName `
-      -OldServerName $activeCatalogServerName `
-      -PollDnsUpdate  
-  }
-
-  # Get catalog object
-  $tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name 
-  Write-Output "Acquired tenant catalog in recovery region..."
+  Write-Output "Updating catalog alias to point to recovery region instance..."
+  Set-DnsAlias `
+    -ResourceGroupName $recoveryResourceGroupName `
+    -ServerName $recoveryCatalogServerName `
+    -ServerDNSAlias $catalogAliasName `
+    -OldResourceGroupName $wtpUser.ResourceGroupName `
+    -OldServerName $activeCatalogServerName `
+    -PollDnsUpdate  
 }
+
+# Get catalog object
+$tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name 
+Write-Output "Acquired tenant catalog in recovery region..."
+
 
 # Initalize Azure context for background scripts  
 $scriptPath= $PSScriptRoot

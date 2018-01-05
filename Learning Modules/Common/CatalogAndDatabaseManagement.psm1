@@ -963,17 +963,7 @@ function Get-ServerNameFromAlias
     )
 
     # Lookup DNS Alias and return the Azure SQL Server to which it's pointing 
-    $serverAliases = @()
-    $serverAliases += (Resolve-DnsName $fullyQualifiedTenantAlias -DnsOnly).NameHost
-    if ($serverAliases.Length -gt 1)
-    {
-        $fullyQualifiedServerName = $serverAliases[0]
-    }
-    else
-    {
-        $fullyQualifiedServerName = $fullyQualifiedTenantAlias
-    }
-    
+    $fullyQualifiedServerName = (Resolve-DnsName $fullyQualifiedTenantAlias -Type CNAME -DnsOnly).NameHost    
     $serverName = $fullyQualifiedServerName.split('.')[0]
     return $serverName
 }
@@ -2004,7 +1994,7 @@ function Set-DnsAlias
     {
         $subscriptionId = Get-SubscriptionId
         Set-AzureRmSqlServerDNSAlias `
-            -Name $ServerDNSAlias `
+            -DnsAliasName $ServerDNSAlias `
             -ResourceGroupName $ResourceGroupName `
             -TargetServerName $ServerName `
             -SourceServerResourceGroupName $OldResourceGroupName `
