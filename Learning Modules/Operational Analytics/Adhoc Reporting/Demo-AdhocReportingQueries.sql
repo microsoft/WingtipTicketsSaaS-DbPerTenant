@@ -70,5 +70,3 @@ GROUP	BY VenueName, Subtitle, EventName, (CAST(VenueEvents.Date AS DATE))
 ORDER	BY SUM(PurchaseTotal) DESC
 
 GO
-
---select 1

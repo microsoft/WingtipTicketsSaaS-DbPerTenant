@@ -16,9 +16,7 @@ $DemoScenario = 0
      Demo   Scenario
       0       None
       1       Start a background job that syncs tenant server, pool, and database configuration info into the catalog
-      2       Recover the SaaS app into a recovery region by restoring from geo-redundant backups
-      3       Repatriate the SaaS app into its original region.
-      4       Delete the resources in the recovery region
+      2       Recover the SaaS app into a recovery region by restoring from geo-redundant backups     
 #>
 
 ## ------------------------------------------------------------------------------------------------

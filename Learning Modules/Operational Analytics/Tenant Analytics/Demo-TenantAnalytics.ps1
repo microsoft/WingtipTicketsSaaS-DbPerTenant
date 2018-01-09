@@ -11,7 +11,7 @@ Initialize-Subscription -NoEcho
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
 
-$DemoScenario = 1
+$DemoScenario = 0
 
 <# Select the demo scenario that will be run. It is recommended you run the scenarios below in order. 
      Demo   Scenario
@@ -74,7 +74,7 @@ if ($DemoScenario -eq 4)
 ### Create and run job to extract tenant data to database for analysis
 if ($DemoScenario -eq 5)
 {
-    $outputServer = $config.catalogServerNameStem + $wtpUser.Name + ".database.windows.net"
+    $outputServer = $config.catalogServerNameStem + $wtpUser.Name + $config.OriginRoleSuffix + ".database.windows.net"
     & $PSScriptRoot\Start-TicketDataExtractJob.ps1 `
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name `
@@ -90,7 +90,7 @@ if ($DemoScenario -eq 5)
 ### Create and run job to extract tenant data to columnstore database for analysis
 if ($DemoScenario -eq 6)
 {
-    $outputServer = $config.catalogServerNameStem + $wtpUser.Name + ".database.windows.net"
+    $outputServer = $config.catalogServerNameStem + $wtpUser.Name + $config.OriginRoleSuffix + ".database.windows.net"
     & $PSScriptRoot\Start-TicketDataExtractJob.ps1 `
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name `

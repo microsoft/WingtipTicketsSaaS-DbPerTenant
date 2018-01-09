@@ -4,29 +4,29 @@
 
 -- Create encryption key that will encrypt database logins
 IF NOT EXISTS (SELECT * FROM sys.symmetric_keys WHERE symmetric_key_id = 101)
-	CREATE MASTER KEY;
+    CREATE MASTER KEY;
 GO
 
 -- Create login credential, used to access the catalog and remote databases
 IF NOT EXISTS (SELECT * FROM sys.database_scoped_credentials WHERE name = 'AdhocQueryDBCred')
-	CREATE DATABASE SCOPED CREDENTIAL [AdhocQueryDBCred] WITH IDENTITY = N'developer', SECRET = N'P@ssword1';
+    CREATE DATABASE SCOPED CREDENTIAL [AdhocQueryDBCred] WITH IDENTITY = N'developer', SECRET = N'P@ssword1';
 GO
 
 -- Add catalog database as external data source using credential created above
 IF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'WtpTenantDBs')
 BEGIN
-	DECLARE @catalogServerName nvarchar(128) = (SELECT @@servername + '.database.windows.net');
-	DECLARE @createExternalSource nvarchar(500) =
-	N'CREATE EXTERNAL DATA SOURCE [WtpTenantDBs]
-	WITH
-	(
-		TYPE = SHARD_MAP_MANAGER,
-		LOCATION = ''' + @catalogServerName + ''',
-		DATABASE_NAME = ''tenantcatalog'',
-		SHARD_MAP_NAME = ''tenantcatalog'',
-		CREDENTIAL = [AdhocQueryDBCred]
-	);'
-	EXEC(@createExternalSource)
+    DECLARE @catalogServerName nvarchar(128) = (SELECT @@servername + '.database.windows.net');
+    DECLARE @createExternalSource nvarchar(500) =
+    N'CREATE EXTERNAL DATA SOURCE [WtpTenantDBs]
+    WITH
+    (
+        TYPE = SHARD_MAP_MANAGER,
+        LOCATION = ''' + @catalogServerName + ''',
+        DATABASE_NAME = ''tenantcatalog'',
+        SHARD_MAP_NAME = ''tenantcatalog'',
+        CREDENTIAL = [AdhocQueryDBCred]
+    );'
+    EXEC(@createExternalSource)
 END
 
 -- Add external tables that will be used for querying data across all tenants.  
@@ -73,8 +73,8 @@ BEGIN
     )
     WITH
     (
-	    DATA_SOURCE = [WtpTenantDBs],
-	    DISTRIBUTION = SHARDED(VenueId)
+        DATA_SOURCE = [WtpTenantDBs],
+        DISTRIBUTION = SHARDED(VenueId)
     );
 END
 GO
@@ -100,8 +100,8 @@ BEGIN
     )
     WITH
     (
-	    DATA_SOURCE = [WtpTenantDBs],
-	    DISTRIBUTION = SHARDED(VenueId)
+        DATA_SOURCE = [WtpTenantDBs],
+        DISTRIBUTION = SHARDED(VenueId)
     );
 END
 GO
@@ -119,17 +119,17 @@ BEGIN
     (
         [VenueId] INT NOT NULL,
         [VenueName] NVARCHAR (50) NOT NULL,
-        [VenueType] CHAR (30) NOT NULL,
-        [AdminEmail] VARCHAR (50) NOT NULL,
-        [PostalCode] CHAR (10) NULL,
+        [VenueType] NVARCHAR (30) NOT NULL,
+        [AdminEmail] NVARCHAR (128) NOT NULL,
+        [PostalCode] NVARCHAR (20) NULL,
         [CountryCode] CHAR (3) NOT NULL,
         [Server] NVARCHAR(128) NOT NULL,
         [DatabaseName] NVARCHAR(128) NOT NULL
     )
     WITH
     (
-	    DATA_SOURCE = [WtpTenantDBs],
-	    DISTRIBUTION = SHARDED(VenueId)
+        DATA_SOURCE = [WtpTenantDBs],
+        DISTRIBUTION = SHARDED(VenueId)
     );
 END
 GO
@@ -139,12 +139,12 @@ GO
 DROP TABLE IF EXISTS dbo.VenueTypes
 CREATE TABLE [dbo].[VenueTypes]
 (
-    [VenueType] CHAR(30) NOT NULL,
-    [VenueTypeName] NCHAR(30) NOT NULL,  
+    [VenueType] NVARCHAR(30) NOT NULL,
+    [VenueTypeName] NVARCHAR(30) NOT NULL,  
     [EventTypeName] NVARCHAR(30) NOT NULL, 
     [EventTypeShortName] NVARCHAR(20) NOT NULL,
     [EventTypeShortNamePlural] NVARCHAR(20) NOT NULL,
-    [Language] CHAR(8) NOT NULL,
+    [Language] NVARCHAR(10) NOT NULL,
     PRIMARY KEY CLUSTERED ([VenueType] ASC)
 )
 GO

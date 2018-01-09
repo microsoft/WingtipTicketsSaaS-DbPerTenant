@@ -36,6 +36,7 @@
   "variables": {
       "lowerCaseUser": "[toLower(parameters('wtpUser'))]",
       "catalogDatabaseName": "tenantcatalog",
+      "catalogAliasName": "[concat('catalog-',variables('lowerCaseUser'))]",
       "databasePerTenantSuffix": "dpt",
       "originRoleSuffix": "-home",
       "trafficManagerInstance": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'), '-', 'profiles')]",
@@ -96,6 +97,7 @@
             "properties": {
                 "BlobPath": "https://wingtipsaas.blob.core.windows.net/images/",
                 "ConnectionTimeOut": "30",
+                "CatalogAlias": "[variables('catalogAliasName')]",
                 "CatalogDatabase": "[variables('catalogDatabaseName')]",
                 "CatalogServer": "[parameters('catalogRecoveryServer')]",
                 "DatabasePassword": "P@ssword1",

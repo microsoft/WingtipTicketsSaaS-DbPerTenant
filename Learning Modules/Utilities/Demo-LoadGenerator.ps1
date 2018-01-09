@@ -10,7 +10,7 @@ $SingleTenantDatabaseName = "contosoconcerthall"
 # If true, generator will run once. If false will keep looking for additional tenants and apply load to them 
 $OneTime = $true
 
-$DemoScenario = 1
+$DemoScenario = 0
 <# Select the demo scenario to run 
     Demo    Scenario
       0       None

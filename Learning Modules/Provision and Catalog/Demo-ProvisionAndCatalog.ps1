@@ -36,7 +36,7 @@ $config = Get-Configuration
 if ($DemoScenario -eq 1)
 {
     # set up the server and pool names in which the tenant will be provisioned
-    $serverName = $config.TenantServerNameStem + $wtpUser.Name
+    $serverName = $config.TenantServerNameStem + $wtpUser.Name + $config.OriginRoleSuffix
     $poolName = $config.TenantPoolNameStem + "1"
     try
     {
@@ -60,7 +60,7 @@ if ($DemoScenario -eq 1)
     Write-Output "Provisioning complete for tenant '$TenantName'"
 
     # Open the events page for the new venue
-    Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
+    Start-Process "http://events.wingtip-dpt.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
     
     exit
 }

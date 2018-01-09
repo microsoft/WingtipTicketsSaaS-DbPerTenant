@@ -9,7 +9,7 @@ Import-Module "$PSScriptRoot\..\UserConfig" -Force
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
 
-$serverName = $config.CatalogServerNameStem + $wtpUser.Name
+$serverName = $config.CatalogServerNameStem + $wtpUser.Name + $config.OriginRoleSuffix
 $resourceGroupName = $wtpUser.ResourceGroupName
 
 <#

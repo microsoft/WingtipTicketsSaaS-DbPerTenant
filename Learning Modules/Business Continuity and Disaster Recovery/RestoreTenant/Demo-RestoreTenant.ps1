@@ -39,7 +39,7 @@ if ($DemoScenario -eq 0)
 if ($DemoScenario -eq 1)
 {
   # Open the events page for the venue to track any changes that happen to the event listing 
-  Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
+  Start-Process "http://events.wingtip-dpt.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
 
   # Record point in time before deletion to enable the database to be restored later to an earlier point(in UTC time) 
   $restorePoint = (Get-Date).AddMinutes(-5).ToUniversalTime()
@@ -78,7 +78,7 @@ if ($DemoScenario -eq 2)
       -NoEcho
 
   # Open the events page for the restored venue
-  Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)_old"
+  Start-Process "http://events.wingtip-dpt.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)_old"
 
   Write-Output "'$deletedEvent' event restored to $TenantName"
   exit
@@ -122,7 +122,7 @@ if ($DemoScenario -eq 4)
       -NoEcho
 
   # Open the events page for the restored venue
-  Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
+  Start-Process "http://events.wingtip-dpt.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
 
   Write-Output "'$deletedEvent' event restored to $TenantName"
   exit

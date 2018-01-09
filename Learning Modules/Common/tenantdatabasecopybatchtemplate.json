@@ -16,6 +16,9 @@
     },
     "sourceDatabaseId": {
       "type": "string"
+    },
+    "wingtipDeploymentUser": {
+      "type": "string"
     }
   },
   "resources": [ 
@@ -30,7 +33,7 @@
         "properties": { 
             "mode": "Incremental", 
             "templateLink": {
-            "uri": "https://wtpdeploystorageaccount.blob.core.windows.net/templates/tenantdatabasecopytemplate.json",
+            "uri": "https://ayoframeworktestry2hdl.blob.core.windows.net/wingtipbacpacs/tenantdatabasecopytemplate.json",
             "contentVersion": "1.0.0.0"
             }, 
             "parameters": {
@@ -43,7 +46,8 @@
                 "sourceDatabaseId": {"value": "[parameters('sourceDatabaseId')]" 
                 },
                 "elasticPoolName": {"value": "[parameters('elasticPoolNames')[copyIndex()]]"
-                }
+                },
+                "tenantAlias": {"value": "[concat(parameters('databaseNames')[copyIndex()],'-',parameters('wingtipDeploymentUser'))]"}
             }
         }
     } 

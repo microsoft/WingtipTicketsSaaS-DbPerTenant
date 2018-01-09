@@ -13,7 +13,6 @@ Import-Module sqlserver -ErrorAction SilentlyContinue
 # Stop execution on error
 $ErrorActionPreference = "Stop"
 
-
 <#
 .SYNOPSIS
     Adds extended tenant meta data associated with a mapping using the raw value of the tenant key
@@ -30,6 +29,9 @@ function Add-ExtendedTenantMetaDataToCatalog
         [parameter(Mandatory=$true)]
         [string]$TenantName,
 
+        [parameter(Mandatory=$true)]
+        [string]$TenantAlias,
+
         [parameter(Mandatory=$false)]
         [string]$TenantServicePlan = 'standard'
     )
@@ -44,8 +46,8 @@ function Add-ExtendedTenantMetaDataToCatalog
     # Add the tenant name into the Tenants table
     $commandText = "
         MERGE INTO Tenants as [target]
-        USING (VALUES ($rawkeyHexString, '$TenantName', '$TenantServicePlan', CURRENT_TIMESTAMP)) AS source
-            (TenantId, TenantName, ServicePlan, LastUpdated)
+        USING (VALUES ($rawkeyHexString, '$TenantName', '$TenantAlias', '$TenantServicePlan', CURRENT_TIMESTAMP)) AS source
+            (TenantId, TenantName, TenantAlias, ServicePlan, LastUpdated)
         ON target.TenantId = source.TenantId
         WHEN MATCHED THEN
             UPDATE SET 
@@ -53,8 +55,8 @@ function Add-ExtendedTenantMetaDataToCatalog
                 ServicePlan = source.ServicePlan,
                 LastUpdated = source.LastUpdated
         WHEN NOT MATCHED THEN
-            INSERT (TenantId, TenantName, ServicePlan, RecoveryState, LastUpdated)
-            VALUES (source.TenantId, source.TenantName, source.ServicePlan, 'n/a', CURRENT_TIMESTAMP);"
+            INSERT (TenantId, TenantName, TenantAlias, ServicePlan, RecoveryState, LastUpdated)
+            VALUES (source.TenantId, source.TenantName, source.TenantAlias, source.ServicePlan, 'n/a', CURRENT_TIMESTAMP);"
 
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -113,7 +115,26 @@ function Add-TenantDatabaseToCatalog
         -Catalog $Catalog `
         -TenantKey $TenantKey `
         -TenantName $TenantName `
+        -TenantAlias $fullyQualifiedTenantServerAlias `
         -TenantServicePlan $TenantServicePlan
+
+    # Add server details to catalog as extended meta data (idempotent)
+    Set-ExtendedServer -Catalog $Catalog -Server $TenantDatabase
+
+    # Add database details to catalog as extended meta data (idempotent)
+    Set-ExtendedDatabase -Catalog $Catalog -Database $TenantDatabase
+
+    # Add elastic pool details to catalog as extended meta data (idempotent)
+    if ($TenantDatabase.ElasticPoolName)
+    {
+        $tenantElasticPool = Get-AzureRmSqlElasticPool `
+                                -ResourceGroupName $TenantDatabase.ResourceGroupName `
+                                -ServerName $TenantDatabase.ServerName `
+                                -ElasticPoolName $TenantDatabase.ElasticPoolName
+
+        Set-ExtendedElasticPool -Catalog $Catalog -ElasticPool $tenantElasticPool    
+    }
+    
 }
 
 <#
@@ -793,7 +814,7 @@ function Get-TenantDatabaseForRestorePoint
     
     # Get active database for tenant 
     $tenantDatabase = Get-AzureRmSqlDatabase `
-                        -ResourceGroupName $tenantServerName.ResourceGroupName `
+                        -ResourceGroupName $tenantServer.ResourceGroupName `
                         -ServerName $tenantServerName `
                         -DatabaseName $tenantDatabaseName `
                         -ErrorAction SilentlyContinue
@@ -1374,6 +1395,7 @@ function New-Tenant
         -ResourceGroupName $WtpResourceGroupName `
         -ServerName $ServerName `
         -ElasticPoolName $PoolName `
+        -TenantKey $tenantKey `
         -TenantName $TenantName `
         -VenueType $VenueType `
         -PostalCode $PostalCode `
@@ -1685,7 +1707,7 @@ function Remove-ExtendedServer
 
 <#
 .SYNOPSIS
-    Removes extended tenant entry from catalog  
+    Removes extended tenant entry from catalog. Additionally removes tenant database entry from databases table  
 #>
 function Remove-ExtendedTenant
 {
@@ -1714,6 +1736,18 @@ function Remove-ExtendedTenant
     $commandText = "
         DELETE FROM Tenants 
         WHERE TenantId = $rawkeyHexString;"
+
+    Invoke-SqlAzureWithRetry `
+        -ServerInstance $Catalog.FullyQualifiedServerName `
+        -Username $config.CatalogAdminuserName `
+        -Password $config.CatalogAdminPassword `
+        -Database $Catalog.Database.DatabaseName `
+        -Query $commandText `
+
+    # Delete the tenant database entry from the Databases table
+    $commandText = "
+        DELETE FROM Databases 
+        WHERE ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';"
 
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -1796,9 +1830,10 @@ function Remove-Tenant
     if ($tenantAliasName -notmatch "-home$|-recovery$")
     {
         Remove-AzureRMSqlServerDNSAlias –ResourceGroupName $tenantServer.ResourceGroupName `
-            -ServerDNSAliasName $tenantAliasName `
+            -DnsAliasName $tenantAliasName `
             -ServerName $tenantServerName `
             -ErrorAction SilentlyContinue `
+            -Force `
             >$null 
     }
 
@@ -2636,6 +2671,7 @@ function Update-TenantEntryInCatalog
             -Catalog $Catalog `
             -TenantKey $tenantObject.Key `
             -TenantName $TenantName `
+            -TenantAlias $fullyQualifiedTenantServerName `
             -TenantServicePlan $servicePlan
     }
 

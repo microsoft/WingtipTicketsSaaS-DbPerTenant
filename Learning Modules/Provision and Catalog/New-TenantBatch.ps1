@@ -36,7 +36,7 @@ Import-Module $PSScriptRoot\..\Common\CatalogAndDatabaseManagement -Force
 Import-Module $PSScriptRoot\..\WtpConfig -Force
 
 $config = Get-Configuration
-$serverName = $config.TenantServerNameStem + $WtpUser 
+$serverName = $config.TenantServerNameStem + $WtpUser + $config.OriginRoleSuffix
 $fullyQualifiedServerName = $serverName + ".database.windows.net"
 $elasticPoolName = $config.TenantPoolNameStem + "1"
 
@@ -85,6 +85,7 @@ foreach ($newTenant in $NewTenants)
         NormalizedName = $normalizedNewTenantName
         VenueType = $newTenantVenueType
         PostalCode = $newTenantPostalCode
+        Alias = ($normalizedNewTenantName + '-' + $WtpUser)
         }
 
     $allNewTenants += $newTenantObj
@@ -127,7 +128,7 @@ if ($batchDatabaseNames.Count -gt 0)
         # Construct the resource id for the 'golden' tenant database on the catalog server
         $AzureContext = Get-AzureRmContext
         $subscriptionId = Get-SubscriptionId
-        $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$WtpResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser/databases/$($config.GoldenTenantDatabaseName)"
+        $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$WtpResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser$($config.OriginRoleSuffix)/databases/$($config.GoldenTenantDatabaseName)"
         
         # Use nested ARM templates to create the tenant database by copying the 'golden' database
         $deployment = New-AzureRmResourceGroupDeployment `
@@ -138,6 +139,7 @@ if ($batchDatabaseNames.Count -gt 0)
             -ServerNames $batchServerNames `
             -DatabaseNames $batchDatabaseNames `
             -ElasticPoolNames $batchElasticPoolNames `
+            -WingtipDeploymentUser $WtpUser
             -ErrorAction Stop `
             -Verbose                 
     }
@@ -177,7 +179,8 @@ foreach($tenant in $allNewTenants)
     Add-TenantDatabaseToCatalog -Catalog $catalog `
         -TenantName $tenant.Name `
         -TenantKey $tenantKey `
-        -TenantDatabase $tenantDatabase
+        -TenantDatabase $tenantDatabase `
+        -TenantAlias $tenant.Alias
 
     Write-Output "Tenant '$($tenant.Name)' initialized and registered in the catalog."
 } 
