@@ -2340,19 +2340,19 @@ function Stop-TenantRestoreOperation
     # Cancel restore operations still in progress or queued 
     $cancelServerRestoreQuery = "
         UPDATE [dbo].[Servers] 
-        SET RecoveryState = 'canceled'
+        SET RecoveryState = 'resetting'
         WHERE (RecoveryState = 'restoring' OR RecoveryState = 'n/a')
         "
 
     $cancelElasticPoolRestoreQuery = "
         UPDATE [dbo].[ElasticPools]
-        SET RecoveryState = 'canceled'
+        SET RecoveryState = 'resetting'
         WHERE (RecoveryState = 'restoring' OR RecoveryState = 'n/a')
         "
 
     $cancelDatabaseRestoreQuery = "
         UPDATE [dbo].[Databases]
-        SET RecoveryState = 'canceled'
+        SET RecoveryState = 'resetting'
         WHERE (RecoveryState = 'restoring' OR RecoveryState = 'n/a')
         "
 
@@ -2689,7 +2689,7 @@ function Update-TenantRecoveryState
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [validateset('startRecovery', 'endRecovery', 'startAliasFailoverToRecovery', 'endAliasFailoverToRecovery', 'startReset', 'endReset', 'startRepatriation', 'endRepatriation', 'startAliasFailoverToOrigin', 'endAliasFailoverToOrigin')]
+        [validateset('startRecovery', 'endRecovery', 'startAliasUpdateToRecovery', 'endAliasUpdateToRecovery', 'startReset', 'endReset', 'startRepatriation', 'endRepatriation', 'startAliasUpdateToOrigin', 'endAliasUpdateToOrigin')]
         [string]$UpdateAction,
 
         [parameter(Mandatory=$true)]
@@ -2698,19 +2698,44 @@ function Update-TenantRecoveryState
  
     $config = Get-Configuration
     $tenantHexId = (Get-TenantRawKey -TenantKey $TenantKey).RawKeyHexString
+
+    <# Recovery states for tenants
+
+        Initial State                   |   End State                       |   TransitionName
+        =================================================================================================
+        n/a                             |   RestoringTenantData             |   startRecovery               (start recovery operations for tenant resources)
+        OnlineInOrigin                  |   RestoringTenantData             |   startRecovery               (start recovery operations for tenant resources)
+        -------------------------------------------------------------------------------------------------
+        RestoringTenantData             |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
+        RestoredTenantData              |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
+        UpdatingTenantAliasToRecovery   |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
+        OnlineInRecovery                |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
+        ResettingTenantToOrigin         |   ResetTenantToOrigin             |   endReset                    (tenant resources successfully reset back to origin)
+        --------------------------------------------------------------------------------------------------
+        RestoringTenantData             |   RestoredTenantData              |   endRecovery                 (tenant resources successfully restored in recovery region)
+        RestoredTenantData              |   UpdatingTenantAliasToRecovery   |   startAliasUpdateToRecovery  (update tenant alias to bring tenant online in recovery region)
+        UpdatingTenantAliasToRecovery   |   OnlineInRecovery                |   endAliasUpdateToRecovery    (tenant alias update successful and tenant is online in recovery region)
+        --------------------------------------------------------------------------------------------------
+        OnlineInRecovery                |   RepatriatingTenantData          |   startRepatriation           (tenant resources in the process of migrating back to origin)
+        RepatriatingTenantData          |   RepatriatedTenantData           |   endRepatriation             (tenant resources successfully migrated back to origin)
+        --------------------------------------------------------------------------------------------------
+        ResetTenantToOrigin             |   UpdatingTenantAliasToOrigin     |   startAliasUpdateToOrigin    (update tenant alias to bring tenant online in origin region)
+        RepatriatedTenantData           |   UpdatingTenantAliasToOrigin     |   startAliasUpdateToOrigin    (update tenant alias to bring tenant online in origin region)
+        UpdatingTenantAliasToOrigin     |   OnlineInOrigin                  |   endAliasUpdateToOrigin      (tenant alias update successful and tenant is back online in origin region)
+    #>
     
     # Construct state transition dictionary for tenant object 
     $tenantRecoveryStates = @{
-        'startRecovery' = @{ "beginState" = ('n/a', 'OnlineInOrigin'); "endState" = ('RecoveringTenantData') };
-        'endRecovery' = @{ "beginState" = ('RecoveringTenantData'); "endState" = ('RecoveredTenantData') };
-        'startAliasFailoverToRecovery' = @{ "beginState" = ('RecoveredTenantData'); "endState" = ('MarkingTenantOnlineInRecovery')};
-        'endAliasFailoverToRecovery' = @{ "beginState" = ('MarkingTenantOnlineInRecovery'); "endState" = "OnlineInRecovery"};
-        'startReset' = @{ "beginState" = ('RecoveringTenantData', 'RecoveredTenantData', 'MarkingTenantOnlineInRecovery', 'OnlineInRecovery'); "endState" = ('ResettingTenantData') };
-        'endReset' = @{ "beginState" = ('ResettingTenantData'); "endState" = ('ResetTenantData') };
-        'startRepatriation' = @{ "beginState" = ('RecoveredTenantData', 'OnlineInRecovery'); "endState" = ('RepatriatingTenantData') };
+        'startRecovery' = @{ "beginState" = ('n/a', 'OnlineInOrigin'); "endState" = ('RestoringTenantData') };
+        'startReset' = @{ "beginState" = ('RestoringTenantData', 'RestoredTenantData', 'UpdatingTenantAliasToRecovery', 'OnlineInRecovery'); "endState" = ('ResettingTenantToOrigin') };
+        'endReset' = @{ "beginState" = ('ResettingTenantToOrigin'); "endState" = ('ResetTenantToOrigin') };
+        'endRecovery' = @{ "beginState" = ('RestoringTenantData'); "endState" = ('RestoredTenantData') };
+        'startAliasUpdateToRecovery' = @{ "beginState" = ('RestoredTenantData'); "endState" = ('UpdatingTenantAliasToRecovery')};
+        'endAliasUpdateToRecovery' = @{ "beginState" = ('UpdatingTenantAliasToRecovery'); "endState" = "OnlineInRecovery"};
+        'startRepatriation' = @{ "beginState" = ('OnlineInRecovery'); "endState" = ('RepatriatingTenantData') };        
         'endRepatriation' = @{ "beginState" = ('RepatriatingTenantData'); "endState" = ('RepatriatedTenantData') };
-        'startAliasFailoverToOrigin' = @{ "beginState" = ('ResetTenantData', 'RepatriatedTenantData'); "endState" = ('MarkingTenantOnlineInOrigin')};
-        'endAliasFailoverToOrigin' = @{ "beginState" = ('MarkingTenantOnlineInOrigin'); "endState" = ('OnlineInOrigin')};
+        'startAliasUpdateToOrigin' = @{ "beginState" = ('ResetTenantToOrigin', 'RepatriatedTenantData'); "endState" = ('UpdatingTenantAliasToOrigin')};
+        'endAliasUpdateToOrigin' = @{ "beginState" = ('UpdatingTenantAliasToOrigin'); "endState" = ('OnlineInOrigin')};
     }    
 
     $requestedState = $tenantRecoveryStates[$UpdateAction].endState
@@ -2749,7 +2774,7 @@ function Update-TenantResourceRecoveryState
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [validateset('startRecovery', 'cancelRecovery', 'endRecovery', 'startReset', 'endReset', 'startReplication', 'endReplication', 'bypassReplication', 'startFailoverToOrigin', 'conclude')]
+        [validateset('startRecovery', 'startFailover', 'cancelAndReset', 'endRecovery', 'startReset', 'endReset', 'startReplication', 'endReplication', 'startFailback', 'conclude')]
         [string]$UpdateAction,
 
         [parameter(Mandatory=$true)]
@@ -2762,19 +2787,45 @@ function Update-TenantResourceRecoveryState
         [string]$DatabaseName 
     )
 
+    <# Recovery states for databases, elastic pools, and servers
+
+        Initial State           |   End State           |   TransitionName
+        ==========================================================================
+        n/a                     |   restoring           |   startRecovery      (start recovery operations) 
+        n/a                     |   failingOver         |   startFailover      (start failover operations)
+        complete                |   restoring           |   startRecovery      (start recovery operations)
+        complete                |   failingOver         |   startFailover      (start failover operations)
+        --------------------------------------------------------------------------
+        restoring               |   resetting           |   cancelAndReset     (reset back to origin if region comes back online during recovery operations)
+        restored                |   resetting           |   startReset         (reset back to origin if data in recovery region is identical to origin region)        
+        resetting               |   complete            |   endReset           (reset operations successfully completed)
+        --------------------------------------------------------------------------
+        restoring               |   restored            |   endRecovery        (recovery operations successfully completed)
+        failingOver             |   failedOver          |   endFailover        (failover operations successfully completed)
+        --------------------------------------------------------------------------
+        restored                |   replicating         |   startReplication   (replicate changed data to origin)
+        replicating             |   replicated          |   endReplication     (replication to origin successfully completed)
+        --------------------------------------------------------------------------
+        replicated              |   repatriating        |   startFailback      (failback to origin)
+        failedOver              |   repatriating        |   startFailback      (failback to origin)
+        repatriating            |   complete            |   conclude           (failback to origin successfully completed)
+    #>
+
+
     $config = Get-Configuration
     
     # Construct state transition dictionary for tenant object 
     $resourceRecoveryStates = @{
         'startRecovery' = @{ "beginState" = ('n/a', 'complete'); "endState" = ('restoring') };
-        'cancelRecovery' = @{ "beginState" = ('restoring'); "endState" = ('cancelled') };
+        'startFailover' = @{ "beginState" = ('n/a', 'complete'); "endState" = ('failingOver') };
+        'cancelAndReset' = @{ "beginState" = ('restoring'); "endState" = ('resetting') };
+        'startReset' = @{ "beginState" = ('restored'); "endState" = ('resetting') };
+        'endReset' = @{ "beginState" = ('resetting'); "endState" = ('complete') };
         'endRecovery' = @{ "beginState" = ('restoring'); "endState" = ('restored') };
-        'startReset' = @{ "beginState" = ('restoring', 'cancelled', 'restored'); "endState" = ('resetting') };
-        'endReset' = @{ "beginState" = ('resetting', 'cancelled'); "endState" = ('complete') };
+        'endFailover' = @{ "beginState" = ('failingOver'); "endState" = ('failedOver') };        
         'startReplication' = @{ "beginState" = ('restored'); "endState" = ('replicating') };
         'endReplication' = @{ "beginState" = ('replicating'); "endState" = ('replicated') };
-        'bypassReplication' = @{ "beginState" = ('restored'); "endState" = ('replicated') };
-        'startFailoverToOrigin' = @{ "beginState" = ('replicated'); "endState" = ('repatriating') };
+        'startFailback' = @{ "beginState" = ('replicated', 'failedOver'); "endState" = ('repatriating') };
         'conclude' = @{ "beginState" = ('repatriating'); "endState" = ('complete') };
     }    
 

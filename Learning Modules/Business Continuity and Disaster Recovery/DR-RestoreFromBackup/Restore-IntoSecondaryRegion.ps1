@@ -10,7 +10,7 @@
   This stops the output of the signed in user to prevent double echo of subscription details
 
 .PARAMETER StatusCheckTimeInterval
-  This determines often the script will check on the status of background recovery jobs. The script will wait the provided time in seconds before checking the status again.
+  This determines how often the script will check on the status of background recovery jobs. The script will wait the provided time in seconds before checking the status again.
 
 .EXAMPLE
   [PS] C:\>.\Restore-IntoSecondaryRegion.ps1

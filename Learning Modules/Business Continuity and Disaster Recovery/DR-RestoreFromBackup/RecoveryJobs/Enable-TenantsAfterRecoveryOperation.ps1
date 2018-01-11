@@ -95,16 +95,16 @@ while ($true)
       
       if ($originTenantDatabase.RecoveryState -In 'restoring')
       {
-        # Update tenant recovery status to 'RecoveringTenantData'
+        # Update tenant recovery status to 'RestoringTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -TenantKey $tenantKey
       }
-      elseif (($originTenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState -eq 'RecoveringTenantData'))
+      elseif (($originTenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState -eq 'RestoringTenantData'))
       {
-        # Update tenant recovery status to 'RecoveredTenantData'
+        # Update tenant recovery status to 'RestoredTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -TenantKey $tenantKey
 
-        # Update tenant recovery status to 'MarkingTenantOnlineInRecovery'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToRecovery" -TenantKey $tenantKey
+        # Update tenant recovery status to 'UpdatingTenantAliasToRecovery'
+        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasUpdateToRecovery" -TenantKey $tenantKey
 
         # Take tenant offline if applicable
         if ($tenant.TenantStatus -ne "Offline")
@@ -124,10 +124,10 @@ while ($true)
           -OldServerName $originTenantServer `
           -OldResourceGroupName $wtpUser.ResourceGroupName                
       }
-      elseif (($originTenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState -eq 'RecoveredTenantData'))
+      elseif (($originTenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState -eq 'RestoredTenantData'))
       {
-        # Update tenant recovery status to 'MarkingTenantOnlineInRecovery'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToRecovery" -TenantKey $tenantKey
+        # Update tenant recovery status to 'UpdatingTenantAliasToRecovery'
+        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasUpdateToRecovery" -TenantKey $tenantKey
 
         # Take tenant offline if applicable
         if ($tenant.TenantStatus -ne "Offline")
@@ -147,7 +147,7 @@ while ($true)
           -OldServerName $originTenantServer `
           -OldResourceGroupName $wtpUser.ResourceGroupName
       }
-      elseif (($originTenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState -eq 'MarkingTenantOnlineInRecovery'))
+      elseif (($originTenantDatabase.RecoveryState -In 'restored') -and ($tenantRecoveryState -eq 'UpdatingTenantAliasToRecovery'))
       {
         $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
         $originTenantServer = $originTenantDatabase.ServerName  
@@ -177,7 +177,7 @@ while ($true)
           $onlineTenantCount += 1
 
           # Update tenant recovery status to 'OnlineInRecovery'
-          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endAliasFailoverToRecovery" -TenantKey $tenantKey
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endAliasUpdateToRecovery" -TenantKey $tenantKey
 
         }
       }
@@ -187,24 +187,21 @@ while ($true)
         if ($tenant.TenantStatus -ne "Online")
         {
           Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
-          $onlineTenantCount += 1
-
-          # Update tenant recovery status to 'OnlineInRecovery'
-          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endAliasFailoverToRecovery" -TenantKey $tenantKey
+          $onlineTenantCount += 1         
         }
       }
       elseif (($restoredTenantDatabase) -and ($restoredTenantDatabase.RecoveryState -In 'resetting'))
       {
-        # Update tenant recovery status to 'ResettingTenantData'
+        # Update tenant recovery status to 'ResettingTenantToOrigin'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startReset" -TenantKey $tenantKey
       }
-      elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'ResettingTenantData'))
+      elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'ResettingTenantToOrigin'))
       {
-        # Update tenant recovery status to 'ResetTenantData'
+        # Update tenant recovery status to 'ResetTenantToOrigin'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -TenantKey $tenantKey
 
-        # Update tenant recovery status to 'MarkingTenantOnlineInOrigin'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToOrigin" -TenantKey $tenantKey
+        # Update tenant recovery status to 'UpdatingTenantAliasToOrigin'
+        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasUpdateToOrigin" -TenantKey $tenantKey
 
         # Take tenant offline if applicable
         if ($tenant.TenantStatus -ne "Offline")
@@ -224,10 +221,10 @@ while ($true)
           -OldServerName $restoredTenantServer `
           -OldResourceGroupName $WingtipRecoveryResourceGroup
       }
-      elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'ResetTenantData'))
+      elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'ResetTenantToOrigin'))
       {
-        # Update tenant recovery status to 'MarkingTenantOnlineInOrigin'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToOrigin" -TenantKey $tenantKey
+        # Update tenant recovery status to 'UpdatingTenantAliasToOrigin'
+        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasUpdateToOrigin" -TenantKey $tenantKey
 
         # Take tenant offline if applicable
         if ($tenant.TenantStatus -ne "Offline")
@@ -247,7 +244,7 @@ while ($true)
           -OldServerName $restoredTenantServer `
           -OldResourceGroupName $WingtipRecoveryResourceGroup
       }
-      elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'MarkingTenantOnlineInOrigin'))
+      elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'UpdatingTenantAliasToOrigin'))
       {
         $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
         $originTenantServer = $originTenantDatabase.ServerName  
@@ -278,7 +275,7 @@ while ($true)
           $onlineTenantCount += 1 
 
           # Update tenant recovery status to 'OnlineInOrigin'
-          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endAliasFailoverToOrigin" -TenantKey $tenantKey
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endAliasUpdateToOrigin" -TenantKey $tenantKey
         } 
       }
       elseif (($restoredTenantDatabase) -and ($restoredTenantDatabase.RecoveryState -In 'replicating'))
@@ -307,8 +304,8 @@ while ($true)
         # Update tenant recovery status to 'RepatriatedTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endRepatriation" -TenantKey $tenantKey
 
-        # Update tenant recovery status to 'MarkingTenantOnlineInOrigin'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToOrigin" -TenantKey $tenantKey
+        # Update tenant recovery status to 'UpdatingTenantAliasToOrigin'
+        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasUpdateToOrigin" -TenantKey $tenantKey
 
         # Take tenant offline if applicable
         if ($tenant.TenantStatus -ne "Offline")
@@ -330,8 +327,8 @@ while ($true)
       }
       elseif (($originTenantDatabase.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'RepatriatedTenantData'))
       {
-        # Update tenant recovery status to 'MarkingTenantOnlineInOrigin'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasFailoverToOrigin" -TenantKey $tenantKey
+        # Update tenant recovery status to 'UpdatingTenantAliasToOrigin'
+        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startAliasUpdateToOrigin" -TenantKey $tenantKey
 
         # Take tenant offline if applicable
         if ($tenant.TenantStatus)
@@ -356,10 +353,7 @@ while ($true)
         # Set tenant online if not already so 
         if ($tenant.TenantStatus -ne "Online")
         {
-          Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
-
-          # Update tenant recovery status to 'OnlineInRecovery'
-          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endAliasFailoverToOrigin" -TenantKey $tenantKey
+          Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey         
         }
       }
 

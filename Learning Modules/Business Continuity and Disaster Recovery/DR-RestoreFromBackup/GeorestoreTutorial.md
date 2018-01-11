@@ -49,7 +49,7 @@ The management and recovery scripts that will be used in this tutorial are avail
 
 Sync the configuration of tenant servers, elastic pools, and databases into the tenant catalog in order to recover them in a recovery region.
 
-1. In the *PowerShell ISE*, open the ...\Learning Modules\UserConfig.psm1 file. Replace the '<resourcegroup>', and '<user>' variables with the names of the resource group and user variable that you used for the deployment above.
+1. In the *PowerShell ISE*, open the ...\Learning Modules\UserConfig.psm1 file. Replace the `<resourcegroup>`, and `<user>` variables with the names of the resource group and user variable that you used for the deployment above.
 
 2. In the *PowerShell ISE*, open the ...\Learning Modules\Business Continuity and Disaster Recovery\DR-RestoreFromBackup\Demo-RestoreFromBackup.ps1 script and set the following values:
 	* **$DemoScenario = 1, Start a background job that syncs tenant server, and pool configuration info into the catalog**
