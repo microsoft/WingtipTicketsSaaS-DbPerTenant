@@ -848,7 +848,7 @@ footer .logo-heading {
 }
 footer .logo-heading-tenant {
     display: inline-block;
-    height: 128px;
+    height: 102px;
     color: white;
     margin-left: 5px;
     padding-left: 2rem;
@@ -889,7 +889,11 @@ footer .logo-heading-tenant {
     font-family:segoeuil;
 }
 .tutorial-link {
-    border-bottom: 1px dashed;
+    margin-top: 15px;
+}
+.tutorial-link a:hover {
+    color:#e77a39;
+    text-decoration: none;
 }
 .tutorial-link a {
     font-size: 1.8rem;
@@ -905,15 +909,20 @@ footer .logo-heading-tenant {
 .grow { 
     transition: all .2s ease-in;
     display: inline-block; 
-    margin-top: 2%;
+    height: 90px;
+}
+.grow p, .grow-tenant-page p {
+    margin-bottom: 3px;
 }
 .grow-tenant-page {
     margin-top: 0px;
     transition: all .2s ease-in;
     display: inline-block; 
+    height: 102px;
 }
+
 .copyright {
-    margin-top: 3%;
+    margin-top: 15px;
     margin-left: 19.5%;
     clear: left;
     float: left;
@@ -923,13 +932,14 @@ footer .logo-heading-tenant {
     clear: none;
     float: none;
     margin-left: 15px;
+    margin-top: 15px;
 }
 .copyright p, .copyright-tenant-page p {
     color: white;
     font-size: 1.8rem;
 }
 .grow:hover, .grow-tenant-page:hover { 
-    transform: scale(1.5); 
+    transform: scale(1.3); 
     z-index: 5;
     box-shadow: 0px 0px 150px #000000;
     padding-left: 2%;
