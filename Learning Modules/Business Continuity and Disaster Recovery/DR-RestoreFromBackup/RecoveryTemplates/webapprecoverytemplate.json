@@ -44,7 +44,7 @@
       "recoveryLocation": "[resourceGroup().location]",
       "recoveryWebAppSku": "Standard",
       "wtpEventsRecoveryApp": "[concat('events-wingtip-', variables('databasePerTenantSuffix'), '-', variables('lowerCaseUser'), parameters('recoverySuffix'))]",
-      "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage-v4.zip"
+      "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage-v5.zip"
   },
   "resources": [
     {
