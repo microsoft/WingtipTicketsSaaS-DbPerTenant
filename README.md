@@ -32,7 +32,7 @@ To deploy the app to Azure, click the link below.  Deploy the app in a new resou
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
-After deployment completes, launch the app by browsing to ```http://events.wtp.USER.trafficmanager.net```, substituting *USER* with the value you set during deployment.
+After deployment completes, launch the app by browsing to ```http://events.wingtip-dpt.USER.trafficmanager.net```, substituting *USER* with the value you set during deployment.
 
 **IMPORTANT:** If you download and extract the repo or [Learning Modules](https://github.com/Microsoft/WingtipSaaS/tree/master/Learning%20Modules) from a zip file, make sure you unblock the .zip file before extracting. Executable contents (scripts, dlls) may be blocked by Windows when zip files are downloaded from an external source and extracted.
 
