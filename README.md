@@ -15,24 +15,24 @@ This project showcases the database per tenant model. This model is effective fo
 
 ## Get started
 
-The basic application, which includes three pre-defined databases for three venues, can be installed in your Azure subscription under a single ARM resource group.  To uninstall the application, delete the resource group from the Azure Portal.
+The basic application, which includes three sample databases for three venues, installs in your Azure subscription under a single ARM resource group.  To uninstall the application, delete the resource group from the Azure Portal.
 
-Management scripts are provided to allow you to explore many management scenarios, including adding tenants and monitoring performance of tenants.
+Sample management scripts let you to explore several management scenarios, including provisioning tenants and monitoring performance, managing database schema, analytics and more.
 
-NOTE: if you install the application you will be charged for the Azure resources created.  Actual costs incurred are based on your subscription offer type but are nominal if the application is not scaled up unreasonably and is deleted promptly after you have finished exploring the tutorials.
+NOTE: if you install the application you are charged for the Azure resources created.  Actual costs incurred are based on your subscription offer type but are nominal if the application is not scaled up unreasonably and is deleted promptly after you have finished exploring the tutorials.
 
 More information about the sample app can be found in the [associated tutorials](https://docs.microsoft.com/en-us/azure/sql-database/saas-dbpertenant-wingtip-app-overview).
 
 Also available in the Documentation folder in this repo is an **overview presentation** that provides background, explores alternative database models, and walks through several of the SaaS patterns at a high level. There is also a demo script you can use with the presentation to give others a guided tour of the app and several of the patterns.
 
-To deploy the app to Azure, click the link below.  Deploy the app in a new resource group, and provide a short *user* value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
+To deploy the app to Azure, click the link below.  Deploy the app in a new resource group, and provide a short *user* value that is appended to resource names to make them globally unique.  Your initials and a number is a good pattern to use.
 
 
 <a href="https://aka.ms/deploywingtipdpt" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
-After deployment completes, launch the app by browsing to ```http://events.wtp.USER.trafficmanager.net```, substituting *USER* with the value you set during deployment.
+After deployment completes, launch the app by browsing to ```http://events.wingtip-dpt.USER.trafficmanager.net```, substituting *USER* with the value you set during deployment.
 
 **IMPORTANT:** If you download and extract the repo or [Learning Modules](https://github.com/Microsoft/WingtipSaaS/tree/master/Learning%20Modules) from a zip file, make sure you unblock the .zip file before extracting. Executable contents (scripts, dlls) may be blocked by Windows when zip files are downloaded from an external source and extracted.
 
