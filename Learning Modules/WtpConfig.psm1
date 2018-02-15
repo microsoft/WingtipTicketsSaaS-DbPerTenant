@@ -27,7 +27,7 @@ function Get-Configuration
         WebApplicationTemplate = "webapplicationtemplate.json"
         LogAnalyticsWorkspaceTemplate = "loganalyticsworkspacetemplate.json"
         LogAnalyticsWorkspaceNameStem = "wtploganalytics-"
-        LogAnalyticsDeploymentLocation = "westcentralus"
+        LogAnalyticsDeploymentLocation = "eastus"
         DatabaseAndBacpacTemplate = "databaseandbacpactemplate.json"
         TenantBacpacUrl = "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtiptenantdb.bacpac"
         GoldenTenantDatabaseName = "baseTenantDB"
