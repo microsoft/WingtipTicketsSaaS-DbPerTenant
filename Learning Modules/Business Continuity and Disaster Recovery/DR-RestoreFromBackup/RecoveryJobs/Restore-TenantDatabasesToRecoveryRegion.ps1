@@ -10,10 +10,10 @@
   Resource group that will be used to contain recovered resources
 
 .PARAMETER TotalBatchMax
-  Number of tenant databases that will be restored in parallel at a time
+  Maximum number of tenant databases that can be restored in parallel in a batch
 
 .PARAMETER PoolBatchMax
-  Number of tenant databases that will be restored into an elastic pool in parallel at a time.
+  Maximum number of tenant databases that can be restored into an elastic pool in parallel in a batch.
 
 .EXAMPLE
   [PS] C:\>.\Restore-TenantDatabasesToRecoveryRegion.ps1 -WingtipRecoveryResourceGroup "sampleRecoveryResourceGroup"
