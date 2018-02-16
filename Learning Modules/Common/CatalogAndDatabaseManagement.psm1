@@ -594,7 +594,7 @@ function Get-ExtendedTenant
 
     $commandText = "SELECT TenantId, TenantName, TenantStatus, ServicePlan, TenantAlias, ServerName, DatabaseName, TenantRecoveryState, Location, LastUpdated FROM [dbo].[TenantsExtended]" 
     
-    if($TenantName)
+    if($TenantKey)
     {
         $tenantHexId = (Get-TenantRawKey -TenantKey $TenantKey).RawKeyHexString
         $commandText += " WHERE TenantId = $tenantHexId;"
@@ -1777,6 +1777,8 @@ function Remove-Tenant
         [switch]$KeepTenantDatabase
     )
 
+    $config = Get-Configuration
+
     # Take tenant offline
     Set-TenantOffline -Catalog $Catalog -TenantKey $TenantKey
 
@@ -2260,6 +2262,8 @@ function Set-TenantOffline
         [int32]$TenantKey
     )
 
+    $config = Get-Configuration
+
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $recoveryManager = ($Catalog.ShardMapManager).getRecoveryManager()
 
@@ -2283,6 +2287,20 @@ function Set-TenantOffline
     if ($tenantMapping.Status -eq "Online")
     {
         ($Catalog.ShardMap).MarkMappingOffline($tenantMapping) >$null
+
+        # Update timestamp in catalog
+        $tenantHexId = (Get-TenantRawKey -TenantKey $TenantKey).RawKeyHexString
+        $commandText = "
+            UPDATE [dbo].[Tenants] 
+            SET LastUpdated = CURRENT_TIMESTAMP
+            WHERE TenantId = $tenantHexId"
+    
+        Invoke-SqlAzureWithRetry `
+            -ServerInstance $Catalog.FullyQualifiedServerName `
+            -Database $Catalog.Database.DatabaseName `
+            -Query $commandText `
+            -UserName $config.CatalogAdminUserName `
+            -Password $config.CatalogAdminPassword
     }
 }
 
@@ -2317,6 +2335,20 @@ function Set-TenantOnline
     if ($tenantMapping.Status -eq "Offline")
     {
        ($Catalog.ShardMap).MarkMappingOnline($tenantMapping) >$null
+
+       # Update timestamp in catalog
+        $tenantHexId = (Get-TenantRawKey -TenantKey $TenantKey).RawKeyHexString
+        $commandText = "
+            UPDATE [dbo].[Tenants] 
+            SET LastUpdated = CURRENT_TIMESTAMP
+            WHERE TenantId = $tenantHexId"
+    
+        Invoke-SqlAzureWithRetry `
+            -ServerInstance $Catalog.FullyQualifiedServerName `
+            -Database $Catalog.Database.DatabaseName `
+            -Query $commandText `
+            -UserName $config.CatalogAdminUserName `
+            -Password $config.CatalogAdminPassword
     }
 }
 
@@ -2689,7 +2721,7 @@ function Update-TenantRecoveryState
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [validateset('startRecovery', 'endRecovery', 'startAliasUpdateToRecovery', 'endAliasUpdateToRecovery', 'startReset', 'endReset', 'startRepatriation', 'endRepatriation', 'startAliasUpdateToOrigin', 'endAliasUpdateToOrigin')]
+        [validateset('startRecovery', 'endRecovery', 'startAliasUpdateToRecovery', 'endAliasUpdateToRecovery', 'startReset', 'endReset', 'startRepatriation', 'endRepatriation', 'startAliasUpdateToOrigin', 'endAliasUpdateToOrigin', 'markError')]
         [string]$UpdateAction,
 
         [parameter(Mandatory=$true)]
@@ -2774,7 +2806,7 @@ function Update-TenantResourceRecoveryState
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [validateset('startRecovery', 'startFailover', 'cancelAndReset', 'endRecovery', 'startReset', 'endReset', 'startReplication', 'endReplication', 'startFailback', 'conclude')]
+        [validateset('startRecovery', 'startFailover', 'endFailover', 'cancelAndReset', 'endRecovery', 'startReset', 'endReset', 'startReplication', 'endReplication', 'startFailback', 'conclude', 'markError')]
         [string]$UpdateAction,
 
         [parameter(Mandatory=$true)]
@@ -2795,32 +2827,40 @@ function Update-TenantResourceRecoveryState
         n/a                     |   failingOver         |   startFailover      (start failover operations)
         complete                |   restoring           |   startRecovery      (start recovery operations)
         complete                |   failingOver         |   startFailover      (start failover operations)
+        errorState              |   restoring           |   startRecovery      (restart recovery operations)
+        errorState              |   failingOver         |   startFailover      (restart failover operations)
         --------------------------------------------------------------------------
         restoring               |   resetting           |   cancelAndReset     (reset back to origin if region comes back online during recovery operations)
         restored                |   resetting           |   startReset         (reset back to origin if data in recovery region is identical to origin region)        
         resetting               |   complete            |   endReset           (reset operations successfully completed)
+        resetting               |   errorState          |   markError          (reset operations failed)
         --------------------------------------------------------------------------
         restoring               |   restored            |   endRecovery        (recovery operations successfully completed)
         failingOver             |   failedOver          |   endFailover        (failover operations successfully completed)
+        restoring               |   errorState          |   markError          (recovery operations failed)
+        failingOver             |   errorState          |   markError          (failover operations failed)
         --------------------------------------------------------------------------
         restored                |   replicating         |   startReplication   (replicate changed data to origin)
         replicating             |   replicated          |   endReplication     (replication to origin successfully completed)
+        replicating             |   errorState          |   markError          (replication to origin failed)
         --------------------------------------------------------------------------
         replicated              |   repatriating        |   startFailback      (failback to origin)
         failedOver              |   repatriating        |   startFailback      (failback to origin)
         repatriating            |   complete            |   conclude           (failback to origin successfully completed)
+        repatriating            |   errorState          |   markError          (failback to origin failed)
     #>
 
 
     $config = Get-Configuration
-    
+   
     # Construct state transition dictionary for tenant object 
     $resourceRecoveryStates = @{
-        'startRecovery' = @{ "beginState" = ('n/a', 'complete'); "endState" = ('restoring') };
-        'startFailover' = @{ "beginState" = ('n/a', 'complete'); "endState" = ('failingOver') };
+        'startRecovery' = @{ "beginState" = ('n/a', 'complete', 'errorState'); "endState" = ('restoring') };
+        'startFailover' = @{ "beginState" = ('n/a', 'complete', 'errorState'); "endState" = ('failingOver') };
         'cancelAndReset' = @{ "beginState" = ('restoring'); "endState" = ('resetting') };
         'startReset' = @{ "beginState" = ('restored'); "endState" = ('resetting') };
         'endReset' = @{ "beginState" = ('resetting'); "endState" = ('complete') };
+        'markError' = @{ "beginState" = ('restoring', 'resetting', 'failingOver', 'replicating', 'repatriating'); "endState" = ('errorState')};
         'endRecovery' = @{ "beginState" = ('restoring'); "endState" = ('restored') };
         'endFailover' = @{ "beginState" = ('failingOver'); "endState" = ('failedOver') };        
         'startReplication' = @{ "beginState" = ('restored'); "endState" = ('replicating') };
@@ -2833,6 +2873,9 @@ function Update-TenantResourceRecoveryState
     $validInitialStates = $resourceRecoveryStates[$UpdateAction].beginState
     $validInitialStates = "'$($validInitialStates -join "','")'"
 
+    $serverNameStem = ($ServerName -split "$($config.OriginRoleSuffix)|$($config.RecoveryRoleSuffix)")[0]
+    $validServerNames = "'$serverNameStem$($config.OriginRoleSuffix)','$serverNameStem$($config.RecoveryRoleSuffix)'"
+
     if ($DatabaseName)
     {
         $commandText = "
@@ -2843,9 +2886,10 @@ function Update-TenantResourceRecoveryState
                 inserted.RecoveryState AS recoveryState,
                 deleted.RecoveryState AS oldRecoveryState,
                 inserted.LastUpdated AS updateTime
-        WHERE   ServerName = '$ServerName' AND DatabaseName = '$DatabaseName' AND RecoveryState IN ($validInitialStates)
+        WHERE   ServerName IN ($validServerNames) AND DatabaseName = '$DatabaseName' AND RecoveryState IN ($validInitialStates)
         "
     }
+    # Elastic pools cannot be failed over
     elseif ($ElasticPoolName -and ($UpdateAction -ne 'startFailover'))
     {
         $commandText = "
@@ -2856,9 +2900,10 @@ function Update-TenantResourceRecoveryState
                 inserted.RecoveryState AS recoveryState,
                 deleted.RecoveryState AS oldRecoveryState,
                 inserted.LastUpdated AS updateTime
-        WHERE   ServerName = '$ServerName' AND ElasticPoolName = '$ElasticPoolName' AND RecoveryState IN ($validInitialStates)
+        WHERE   ServerName IN ($validServerNames) AND ElasticPoolName = '$ElasticPoolName' AND RecoveryState IN ($validInitialStates)
         "
     }
+    # Servers cannot be failed over
     elseif ($ServerName -and ($UpdateAction -ne 'startFailover'))
     {
         $commandText = "
@@ -2869,7 +2914,7 @@ function Update-TenantResourceRecoveryState
                 inserted.RecoveryState AS recoveryState,
                 deleted.RecoveryState AS oldRecoveryState,
                 inserted.LastUpdated AS updateTime
-        WHERE   ServerName = '$ServerName' AND RecoveryState IN ($validInitialStates)
+        WHERE   ServerName IN ($validServerNames) AND RecoveryState IN ($validInitialStates)
         "
     }
     
