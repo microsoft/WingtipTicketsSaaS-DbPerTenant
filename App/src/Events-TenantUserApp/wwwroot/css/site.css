@@ -186,9 +186,10 @@ header {
 }
 
 #venueName {
-     width: 102%;
+     padding-right: 2%;
      height: 90px;
      padding-top: 2%;
+     margin-left: -2px;
 }
 #navbar-collapse {
     padding: 0;
@@ -440,7 +441,7 @@ a:hover {
 /* ========================================================================================== */
 
 .page-heading {
-    background-color: #FFFFFF;
+    background-color: #626262;
     color: #000000;
     height: 97px;
 }
@@ -1478,8 +1479,8 @@ input:-ms-input-placeholder { /* Internet Explorer 10-11 */
 }
 
 .maintenance #venueName {
-    width: 80%;
+    width: 65%;
     text-align: left;
-    margin-left: 3px;
     padding-top: 3%;
+    background-color: #626262;
 }

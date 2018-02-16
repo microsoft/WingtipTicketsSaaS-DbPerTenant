@@ -120,7 +120,7 @@ namespace Events_Tenant.Common.Utilities
                     };
 
                     _catalogRepository.Add(tenant);
-                }
+                }                
                 return true;
             }
             catch (Exception exception)

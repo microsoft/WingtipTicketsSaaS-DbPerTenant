@@ -167,6 +167,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CatalogDB\Databases.cs" />
+    <Compile Include="CatalogDB\ElasticPools.cs" />
+    <Compile Include="CatalogDB\Servers.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CatalogDB\Tenants.cs" />
     <Compile Include="CatalogDB\CatalogDbContext.cs" />

@@ -25,6 +25,7 @@
         "sqlEdition": "Standard",
         "databasePerTenantSuffix": "dpt",
         "originRoleSuffix": "-home",
+        "originLocation": "[resourceGroup().location]",
         "catalogDatabaseName": "tenantcatalog",
         "catalogServer": "[concat('catalog', '-', variables('databasePerTenantSuffix'), '-', variables('lowerCaseUser'), variables('originRoleSuffix'))]",
         "catalogServerAlias": "[concat('catalog','-', variables('lowerCaseUser'))]",
@@ -42,8 +43,8 @@
         "catalogDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/wingtipcatalogdb-synctables.bacpac",
         "baseTenantDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/wingtiptenantdb.bacpac",
         "wtpEventsAppTrafficManagerUniqueDnsName": "[concat('events.wingtip','-',variables('databasePerTenantSuffix'),'.',variables('lowerCaseUser'))]",
-        "wtpEventsApp": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'), variables('originRoleSuffix'))]",
-        "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage-v4.zip",
+        "wtpEventsApp": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('originLocation'),'-',variables('lowerCaseUser'))]",
+        "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage-v5.zip",
         "wtpEventsTrafficManagerProfileName": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'), '-', 'profiles')]"
     },
     "resources": [
@@ -418,6 +419,8 @@
                         "FabrikamJazzClubAlias": "[variables('fabrikamjazzclubAlias')]",
                         "DogwoodDojoAlias": "[variables('dogwooddojoAlias')]",
                         "LearnHowFooterUrl": "https://aka.ms/sqldbsaastutorial",
+                        "User": "[variables('lowerCaseUser')]",
+                        "APP_REGION": "[variables('originLocation')]",
                         "ASPNETCORE_ENVIRONMENT": "Production",
                         "WEBSITE_NODE_DEFAULT_VERSION": "4.2.3",
                         "DefaultRequestCulture": "en-US",

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace Events_TenantUserApp.Controllers
 {
@@ -15,7 +16,8 @@ namespace Events_TenantUserApp.Controllers
         private readonly ICatalogRepository _catalogRepository;
         private readonly ILogger _logger;
         private readonly DnsClient.ILookupClient _client;
-
+        private readonly IConfiguration _configuration;
+        private String _appRegion;
         #endregion
 
         #region Constructors
@@ -26,6 +28,8 @@ namespace Events_TenantUserApp.Controllers
             _tenantRepository = tenantRepository;
             _catalogRepository = catalogRepository;
             _client = client;
+            _configuration = configuration;
+            _appRegion = configuration["APP_REGION"];
         }
 
         #endregion
@@ -41,10 +45,22 @@ namespace Events_TenantUserApp.Controllers
                     var tenantDetails = await _catalogRepository.GetTenant(tenant);
                     if (tenantDetails != null)
                     {
-                        SetTenantConfig(tenantDetails.TenantId, tenantDetails.TenantIdInString);
+                        //get tenant servername from tenant alias
+                        var serverAliases = _client.Query(tenantDetails.TenantAlias, DnsClient.QueryType.A);
+                        String tenantServerName = serverAliases.Answers.ARecords().ElementAt(0).DomainName;
 
-                        var events = await _tenantRepository.GetEventsForTenant(tenantDetails.TenantId);
-                        return View(events);
+                        if (tenantServerName.Contains(_appRegion))
+                        {
+                            SetTenantConfig(tenantDetails.TenantId, tenantDetails.TenantIdInString);
+
+                            var events = await _tenantRepository.GetEventsForTenant(tenantDetails.TenantId);
+                            return View(events);
+                        }                                  
+                        else
+                        {
+                            String recoveryAppInstance = "https://events-wingtip-dpt-" + _appRegion + "-" + _configuration["User"] + ".azurewebsites.net/" + tenant;
+                            return Redirect(recoveryAppInstance);
+                        }
                     }
                     else
                     {
