@@ -16,7 +16,7 @@ $wtpUser = Get-UserConfig
 # The name of the tenant whose data will be deleted and restored 
 $TenantName = "Contoso Concert Hall"
 
-$DemoScenario = 2
+$DemoScenario = 1
 <# Select the scenario that will be run. It is recommended you run the scenarios below in order. 
    Scenario
       1    Delete last event (with no ticket sales)
@@ -34,7 +34,7 @@ if ($DemoScenario -eq 0)
   exit
 }
 
-### Delete event furthest in the future (with no ticket sales) 
+### Delete last event (with no ticket sales) 
 if ($DemoScenario -eq 1)
 {
   # Open the events page for the venue to track any changes that happen to the event listing 
