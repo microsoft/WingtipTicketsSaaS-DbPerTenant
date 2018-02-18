@@ -7,10 +7,9 @@ $DurationMinutes = 120
 # or if set to empty string ("") a random tenant database will be chosen.
 $SingleTenantDatabaseName = "contosoconcerthall"
 
-$DemoScenario = 1
-<# Select the demo scenario to run 
-    Demo    Scenario
-      0       None
+$DemoScenario = 0
+<# Select the scenario to run 
+   Scenario
       1       Provision a batch of tenants (do this before any of the load generation scenarios)
       2       Generate normal intensity load (approx 30 DTU) 
       3       Generate load with longer and more frequent bursts per database
