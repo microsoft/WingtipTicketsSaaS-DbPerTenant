@@ -9,8 +9,8 @@ $VenueType  = "motorracing"      # valid types: blues, classicalmusic, dance, ja
 $PostalCode = "98052"
 
 $DemoScenario = 1
-<# Select the demo scenario to run
-    Demo    Scenario
+<# Select the scenario to run
+   Scenario
       1       Provision a single tenant
       2       Remove a provisioned tenant
       3       Provision a batch of tenants
@@ -60,7 +60,7 @@ if ($DemoScenario -eq 1)
     Write-Output "Provisioning complete for tenant '$TenantName'"
 
     # Open the events page for the new venue
-    Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
+    Start-Process "http://events.wingtip-dpt.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
     
     exit
 }
