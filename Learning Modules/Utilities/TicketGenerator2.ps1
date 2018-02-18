@@ -378,7 +378,7 @@ foreach ($venue in $venues)
             [int]$ticketsToPurchase = Get-CurvedSalesForDay -Curve $eventCurve -Day $day -Seats $capacity.Capacity
             
             # Displaying the number of tickets bought on that day
-            if ($eventCurve.Curve -eq "MadRush"){Write-Output "tickets bought on day $day : $ticketsToPurchase"}
+            # if ($eventCurve.Curve -eq "MadRush"){Write-Output "tickets bought on day $day : $ticketsToPurchase"}
 
             # if no tickets to sell this day, skip this day
             if ($ticketsToPurchase -eq 0) 
