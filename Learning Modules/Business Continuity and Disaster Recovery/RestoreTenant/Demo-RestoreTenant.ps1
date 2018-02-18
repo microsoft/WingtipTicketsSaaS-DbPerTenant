@@ -13,17 +13,16 @@ Initialize-Subscription
 # Get the resource group and user names used when the WTP application was deployed from UserConfig.psm1.  
 $wtpUser = Get-UserConfig
 
-# The name of the tenant whose data will be restored 
+# The name of the tenant whose data will be deleted and restored 
 $TenantName = "Contoso Concert Hall"
 
-$DemoScenario = 0
-<# Select the demo scenario that will be run. It is recommended you run the scenarios below in order. 
-     Demo   Scenario
-      0       None
-      1       Delete events with no ticket sales (make sure tickets are bought first)
-      2       Restore a tenant in parallel 
-      3       Remove a restored tenant database 
-      4       Restore a tenant in place
+$DemoScenario = 2
+<# Select the scenario that will be run. It is recommended you run the scenarios below in order. 
+   Scenario
+      1    Delete last event (with no ticket sales)
+      2    Restore a tenant in parallel 
+      3    Remove a restored tenant database 
+      4    Restore a tenant in place
 #>
 
 ## ------------------------------------------------------------------------------------------------
@@ -35,16 +34,16 @@ if ($DemoScenario -eq 0)
   exit
 }
 
-### Delete events that have no ticket sales from a specified tenant venue 
+### Delete event furthest in the future (with no ticket sales) 
 if ($DemoScenario -eq 1)
 {
   # Open the events page for the venue to track any changes that happen to the event listing 
-  Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
+  Start-Process "http://events.wingtip-dpt.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
 
   # Record point in time before deletion to enable the database to be restored later to an earlier point(in UTC time) 
   $restorePoint = (Get-Date).AddMinutes(-5).ToUniversalTime()
 
-  Write-Output "Deleting unsold events from $TenantName ..."
+  Write-Output "Deleting last unsold event from $TenantName ..."
 
   # Delete one or more events in a venue. You can verify the event has been deleted by refreshing the events page in your browser
   $deletedEvent = & $PSScriptRoot\..\..\Utilities\Remove-UnsoldEventFromTenant.ps1 `
@@ -60,7 +59,7 @@ if ($DemoScenario -eq 1)
 ### Restore a tenant in parallel 
 if ($DemoScenario -eq 2)
 {
-  Write-Output "Running 'Restore tenant in parallel' scenario ..."
+  Write-Output "Restoring tenant $TenantName in parallel ..."
 
   # Exit script if an event has not been deleted
   if (!($restorePoint -and $deletedEvent))
@@ -78,9 +77,9 @@ if ($DemoScenario -eq 2)
       -NoEcho
 
   # Open the events page for the restored venue
-  Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)_old"
+  Start-Process "http://events.wingtip-dpt.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)_old"
 
-  Write-Output "'$deletedEvent' event restored to $TenantName"
+  Write-Output "'$deletedEvent' event restored to $(Get-NormalizedTenantName $TenantName)_old"
   exit
 }
 
@@ -88,7 +87,7 @@ if ($DemoScenario -eq 2)
 ### Remove a previously restored tenant 
 if ($DemoScenario -eq 3)
 {
-  Write-Output "Running 'Remove restored tenant' scenario ..."  
+  Write-Output "Removing the parallel copy of tenant $TenantName..."  
 
   # Remove the restored database when the tenant has finished using it
   & $PSScriptRoot\..\..\Utilities\Remove-RestoredTenant.ps1 `
@@ -103,12 +102,12 @@ if ($DemoScenario -eq 3)
 ### Restore a tenant in place 
 if ($DemoScenario -eq 4)
 {
-  Write-Output "Running 'Restore tenant in place scenario ..."
+  Write-Output "Restoring tenant $TenantName in place..."
 
   # Exit script if an event has not been deleted
   if (!($restorePoint -and $deletedEvent))
   {
-    Write-Output "No restore point selected. Please run the 'delete unsold events' scenario."
+    Write-Output "No restore point selected. Please run the 'Delete last event' scenario."
     exit
   }
 
@@ -122,7 +121,7 @@ if ($DemoScenario -eq 4)
       -NoEcho
 
   # Open the events page for the restored venue
-  Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
+  Start-Process "http://events.wingtip-dpt.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $TenantName)"
 
   Write-Output "'$deletedEvent' event restored to $TenantName"
   exit

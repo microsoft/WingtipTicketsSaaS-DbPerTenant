@@ -519,7 +519,7 @@ function Get-TenantDatabaseForRestorePoint
     # Throw error if no database found
     if ($restorePointDatabase -eq $null)
     {
-        throw "No tenant databases were found that were active at the specified restore point."
+        throw "Tenant database '$tenantDatabaseName' was recently created. `nDatabases must have existed for several minutes before they can be restored. `nWait a few minutes and try again `n "
     }
     else
     {

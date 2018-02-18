@@ -50,7 +50,7 @@ $tenantDatabaseName = $tenantMapping.Shard.Location.Database
 $fullyQualifiedTenantServerName = $tenantMapping.Shard.Location.Server
 
 # Get the first unsold event on the tenant database 
-$queryText = "SELECT TOP(1) EventName FROM EventsWithNoTickets"
+$queryText = "SELECT TOP(1) EventName FROM EventsWithNoTickets ORDER BY Date Desc"
 $eventName = Invoke-Sqlcmd `
                 -ServerInstance $fullyQualifiedTenantServerName `
                 -Username $config.TenantAdminuserName `
@@ -66,7 +66,7 @@ if ($eventName)
     # Delete the first unsold event on the tenant database 
     $queryText = "
             DECLARE @TargetEventID int
-            SET @TargetEventID = (SELECT TOP(1) EventId FROM EventsWithNoTickets)
+            SET @TargetEventID = (SELECT TOP(1) EventId FROM EventsWithNoTickets ORDER BY Date Desc)
             EXEC sp_DeleteEvent @TargetEventID
             "
     Invoke-Sqlcmd `
@@ -84,7 +84,7 @@ if ($eventName)
 }
 else 
 {
-    Write-Error "There are no unsold events to delete for tenant $TenantName. Run the ticket generator script to generate more events."
+    Write-Error "There are no unsold events that can be deleted for $TenantName. Rerunning the ticket generator will delete tickets for the last event."
     exit 
 }
 
