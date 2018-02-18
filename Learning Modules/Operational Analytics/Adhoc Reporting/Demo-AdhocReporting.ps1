@@ -1,9 +1,8 @@
 ﻿# Helper script for deploying and using adhoc reporting
 
 $DemoScenario = 2
-<# Select the demo scenario that will be run. It is recommended you run the scenarios below in order. 
-     Demo   Scenario
-      0       None
+<# Select the demo scenario that will be run.
+   Scenario
       1       Purchase tickets for events at all venues
       2       Deploy Ad-hoc reporting database 
 #>

@@ -119,9 +119,9 @@ BEGIN
     (
         [VenueId] INT NOT NULL,
         [VenueName] NVARCHAR (50) NOT NULL,
-        [VenueType] CHAR (30) NOT NULL,
-        [AdminEmail] VARCHAR (50) NOT NULL,
-        [PostalCode] CHAR (10) NULL,
+        [VenueType] NVARCHAR (30) NOT NULL,
+        [AdminEmail] VARCHAR (128) NOT NULL,
+        [PostalCode] NVARCHAR (20) NULL,
         [CountryCode] CHAR (3) NOT NULL,
         [Server] NVARCHAR(128) NOT NULL,
         [DatabaseName] NVARCHAR(128) NOT NULL
@@ -140,11 +140,11 @@ DROP TABLE IF EXISTS dbo.VenueTypes
 CREATE TABLE [dbo].[VenueTypes]
 (
     [VenueType] CHAR(30) NOT NULL,
-    [VenueTypeName] NCHAR(30) NOT NULL,  
+    [VenueTypeName] NVARCHAR(30) NOT NULL,  
     [EventTypeName] NVARCHAR(30) NOT NULL, 
     [EventTypeShortName] NVARCHAR(20) NOT NULL,
     [EventTypeShortNamePlural] NVARCHAR(20) NOT NULL,
-    [Language] CHAR(8) NOT NULL,
+    [Language] NVARCHAR(10) NOT NULL,
     PRIMARY KEY CLUSTERED ([VenueType] ASC)
 )
 GO
