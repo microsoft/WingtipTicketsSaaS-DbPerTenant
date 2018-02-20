@@ -2,11 +2,11 @@
 
 <#
 .SYNOPSIS
-  Creates an elastic job account and associated database   
+  Creates a job agent and associated database   
 
 .DESCRIPTION
-  Creates the Job account database and then the job account. Both are created in the resource group
-  created when the WTP application was deployed.
+  Creates the job agent database and then the job agent. Both are created in the resource group
+  created when the Wingtip Tickets application was deployed.
 
 #>
 param(
@@ -36,69 +36,69 @@ if(!$resourceGroup)
     throw "Resource group '$WtpResourceGroupName' does not exist.  Exiting..."
 }
 
-# Job account database is deployed to the catalog server with other singleton management databases in the Wingtip SaaS app 
+# Job Agent database is deployed to the catalog server with other singleton management databases in the Wingtip SaaS app 
 $catalogServerName = $config.catalogServerNameStem + $WtpUser
 $fullyQualifiedCatalogServerName = $catalogServerName + ".database.windows.net"
 
-$jobAccountDatabaseName = $config.JobAccountDatabaseName
+$jobAgentDatabaseName = $config.JobAgentDatabaseName
 
 # Check if current Azure subscription is signed up for Preview of Elastic jobs 
-$registrationStatus = Get-AzureRmProviderFeature -ProviderName Microsoft.Sql -FeatureName sqldb-JobAccounts
+$registrationStatus = Get-AzureRmProviderFeature -ProviderName Microsoft.Sql -FeatureName sqldb-Jobaccounts
 
 if ($registrationStatus.RegistrationState -ne "Registered")
 {
-    Write-Error "Your current subscription is not white-listed for the preview of Elastic jobs. Please contact Microsoft to white-list your subscription."
+    Write-Error "Your current subscription is not white-listed for the preview of Elastic Jobs. Please contact SaaSFeedback@microsoft.com to white-list your subscription."
     exit
 }
 
-# Check if the job account exists and a version of Azure PowerShell SDK containing the Elastic Jobs cmdlets is installed 
+# Check if the job agent exists and a version of Azure PowerShell SDK containing the Elastic Jobs cmdlets is installed 
 try 
 {
-    $jobaccount = Get-AzureRmSqlJobAccount `
+    $jobAgent = Get-AzureRmSqlJobAgent `
         -ResourceGroupName $WtpResourceGroupName `
         -ServerName $catalogServerName `
-        -JobAccountName $($config.JobAccount) 
+        -JobAgentName $($config.JobAgent) 
 
-    if ($jobAccount)
+    if ($jobAgent)
     {
-        Write-output "Job account already exists"
+        Write-output "Job agent already exists"
         exit
     }
 }
 catch 
 {
-    if ($_.Exception.Message -like "*'Get-AzureRmSqlJobAccount' is not recognized*")
+    if ($_.Exception.Message -like "*'Get-AzureRmSqlJobAgent' is not recognized*")
     {
-        Write-Error "'Get-AzureRmSqlJobAccount' not found. Download and install the Azure PowerShell SDK that includes support for Elastic Jobs: https://github.com/jaredmoo/azure-powershell/releases"
+        Write-Error "'Get-AzureRmSqlJobAgent' not found. Download and install the Azure PowerShell SDK that includes support for Elastic Jobs: https://github.com/jaredmoo/azure-powershell/releases"
         exit
     }
 }
 
 
-# Check if the job account database exists
+# Check if the job agent database exists
 $database = Get-AzureRmSqlDatabase `
     -ResourceGroupName $WtpResourceGroupName `
     -ServerName $catalogServerName `
-	-DatabaseName $jobAccountDatabaseName `
+	-DatabaseName $jobAgentDatabaseName `
 	-ErrorAction SilentlyContinue
 
-# Create the job account database if it doesn't exist
+# Create the job agent database if it doesn't exist
 try
 {
 	if (!$database)
 	{
-		Write-output "Deploying job account database on server '$catalogServerName'..."
+		Write-output "Deploying job agent database on server '$catalogServerName'..."
         
-		# Create the job account database
+		# Create the job agent database
 		New-AzureRmSqlDatabase `
 			-ResourceGroupName $WtpResourceGroupName `
 			-ServerName $catalogServerName `
-			-DatabaseName $jobAccountDatabaseName `
-			-RequestedServiceObjectiveName $($config.JobAccountDatabaseServiceObjective) `
+			-DatabaseName $jobAgentDatabaseName `
+			-RequestedServiceObjectiveName $($config.JobAgentDatabaseServiceObjective) `
             > $null	
 
-        # initialize the job account database credentials
-        $credentialName = $config.JobAccountCredentialName
+        # initialize the job Agent database credentials
+        $credentialName = $config.JobAgentCredentialName
         $commandText = "
             CREATE MASTER KEY;
             GO
@@ -113,13 +113,13 @@ try
             PRINT N'Database scoped credentials created.';
             "
 
-        Write-output "Initializing database scoped credentials in database '$jobAccountDatabaseName' ..."
+        Write-output "Initializing database scoped credentials in database '$jobAgentDatabaseName' ..."
 	  
 	    Invoke-SqlcmdWithRetry `
         -ServerInstance $fullyQualifiedCatalogServerName `
 	    -Username $config.CatalogAdminUserName `
         -Password $config.CatalogAdminPassword `
-	    -Database $jobAccountDatabaseName `
+	    -Database $jobAgentDatabaseName `
 	    -Query $commandText `
 	    -ConnectionTimeout 30 `
 	    -QueryTimeout 30 `
@@ -130,28 +130,28 @@ try
 catch
 {
 	Write-Error $_.Exception.Message
-	Write-Error "An error occured deploying the job account database"
+	Write-Error "An error occured deploying the job agent database"
 	throw
 }
 
-# Create the job account
+# Create the job agent
 try
 {
-	Write-output "Deploying job account ..."
+	Write-output "Deploying job agent ..."
 		
-	# Create the job account
-	New-AzureRmSqlJobAccount `
+	# Create the job agent
+	New-AzureRmSqlJobAgent `
         -ServerName $catalogServerName `
-		-JobAccountName $($config.JobAccount) `
-		-DatabaseName $jobAccountDatabaseName `
+		-JobAgentName $($config.JobAgent) `
+		-DatabaseName $jobAgentDatabaseName `
 		-ResourceGroupName $WtpResourceGroupName `
         > $null	
  }
 catch
 {
 	Write-Error $_.Exception.Message
-	Write-Error "An error occured deploying the job account"
+	Write-Error "An error occured deploying the job agent"
 	throw
 }
 	
-Write-Output "Deployment of job account database and job account is complete."
+Write-Output "Deployment of job agent database and job agent is complete."
