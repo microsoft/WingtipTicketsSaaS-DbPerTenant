@@ -1,4 +1,6 @@
-# Wingtip Tickets SaaS - Database per Tenant
+>**WARNING:** This is an experimental branch that is being used to test DR tutorials. Scripts from this branch will not work with a standard WingtipTicketsSaaS deployment. To use the scripts in this branch, create a new WingtipTicketsSaaS deployment by clicking the 'Deploy to Azure' button below. 
+
+# [PREVIEW:] Wingtip Tickets SaaS - Database per Tenant
 Sample multi-tenant SaaS application and management scripts built on SQL Database using a database-per-tenant model.
 
 ![Versions of Wingtip Tickets SaaS apps](./Documentation/AppVersions.PNG)
