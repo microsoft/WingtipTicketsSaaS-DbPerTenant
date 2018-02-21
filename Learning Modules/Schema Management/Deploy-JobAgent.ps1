@@ -79,25 +79,38 @@ catch
 $database = Get-AzureRmSqlDatabase `
     -ResourceGroupName $WtpResourceGroupName `
     -ServerName $catalogServerName `
-	-DatabaseName $jobAgentDatabaseName `
-	-ErrorAction SilentlyContinue
+    -DatabaseName $jobAgentDatabaseName `
+    -ErrorAction SilentlyContinue
 
 # Create the job agent database if it doesn't exist
 try
 {
-	if (!$database)
-	{
-		Write-output "Deploying job agent database on server '$catalogServerName'..."
+    if (!$database)
+    {
+        Write-output "Deploying job agent database on server '$catalogServerName'..."
         
-		# Create the job agent database
-		New-AzureRmSqlDatabase `
-			-ResourceGroupName $WtpResourceGroupName `
-			-ServerName $catalogServerName `
-			-DatabaseName $jobAgentDatabaseName `
-			-RequestedServiceObjectiveName $($config.JobAgentDatabaseServiceObjective) `
-            > $null	
+        # Create the job agent database
+        New-AzureRmSqlDatabase `
+            -ResourceGroupName $WtpResourceGroupName `
+            -ServerName $catalogServerName `
+            -DatabaseName $jobAgentDatabaseName `
+            -RequestedServiceObjectiveName $($config.JobAgentDatabaseServiceObjective) `
+            > $null 
+    }
 
-        # initialize the job Agent database credentials
+    # Initialize the job Agent database credentials if they don't exist
+    $commandText = "SELECT name, credential_id from sys.database_credentials"
+    $availableCredentials = Invoke-SqlcmdWithRetry `
+                                -ServerInstance $fullyQualifiedCatalogServerName `
+                                -Username $config.CatalogAdminUserName `
+                                -Password $config.CatalogAdminPassword `
+                                -Database $jobAgentDatabaseName `
+                                -Query $commandText `
+                                -ConnectionTimeout 30 `
+                                -QueryTimeout 30
+
+    if (!$availableCredentials)
+    {
         $credentialName = $config.JobAgentCredentialName
         $commandText = "
             CREATE MASTER KEY;
@@ -114,44 +127,43 @@ try
             "
 
         Write-output "Initializing database scoped credentials in database '$jobAgentDatabaseName' ..."
-	  
-	    Invoke-SqlcmdWithRetry `
-        -ServerInstance $fullyQualifiedCatalogServerName `
-	    -Username $config.CatalogAdminUserName `
-        -Password $config.CatalogAdminPassword `
-	    -Database $jobAgentDatabaseName `
-	    -Query $commandText `
-	    -ConnectionTimeout 30 `
-	    -QueryTimeout 30 `
-        > $null  
 
-	}
- }
+        Invoke-SqlcmdWithRetry `
+            -ServerInstance $fullyQualifiedCatalogServerName `
+            -Username $config.CatalogAdminUserName `
+            -Password $config.CatalogAdminPassword `
+            -Database $jobAgentDatabaseName `
+            -Query $commandText `
+            -ConnectionTimeout 30 `
+            -QueryTimeout 30 `
+            > $null
+    }
+}
 catch
 {
-	Write-Error $_.Exception.Message
-	Write-Error "An error occured deploying the job agent database"
-	throw
+    Write-Error $_.Exception.Message
+    Write-Error "An error occured deploying the job agent database"
+    throw
 }
 
 # Create the job agent
 try
 {
-	Write-output "Deploying job agent ..."
-		
-	# Create the job agent
-	New-AzureRmSqlJobAgent `
+    Write-output "Deploying job agent ..."
+        
+    # Create the job agent
+    New-AzureRmSqlJobAgent `
         -ServerName $catalogServerName `
-		-JobAgentName $($config.JobAgent) `
-		-DatabaseName $jobAgentDatabaseName `
-		-ResourceGroupName $WtpResourceGroupName `
-        > $null	
+        -JobAgentName $($config.JobAgent) `
+        -DatabaseName $jobAgentDatabaseName `
+        -ResourceGroupName $WtpResourceGroupName `
+        > $null 
  }
 catch
 {
-	Write-Error $_.Exception.Message
-	Write-Error "An error occured deploying the job agent"
-	throw
+    Write-Error $_.Exception.Message
+    Write-Error "An error occured deploying the job agent"
+    throw
 }
-	
+    
 Write-Output "Deployment of job agent database and job agent is complete."
