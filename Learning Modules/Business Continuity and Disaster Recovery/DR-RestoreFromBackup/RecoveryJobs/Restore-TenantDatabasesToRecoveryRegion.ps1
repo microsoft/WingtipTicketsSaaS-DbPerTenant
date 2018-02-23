@@ -15,6 +15,9 @@
 .PARAMETER PoolBatchMax
   Maximum number of tenant databases that can be restored into an elastic pool in parallel in a batch.
 
+.PARAMETER ConcurrentBatchMax
+  Maximum number of batches that can be run concurrently
+
 .EXAMPLE
   [PS] C:\>.\Restore-TenantDatabasesToRecoveryRegion.ps1 -WingtipRecoveryResourceGroup "sampleRecoveryResourceGroup"
 #>
@@ -27,12 +30,19 @@ param (
     [int] $TotalBatchMax=15,
 
     [parameter(Mandatory=$false)]
-    [int] $PoolBatchMax=5 
+    [int] $PoolBatchMax=5,
+
+    [parameter(Mandatory=$false)]
+    [int] $ConcurrentBatchMax=5
 )
 
 Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -Force
 Import-Module "$using:scriptPath\..\..\WtpConfig" -Force
 Import-Module "$using:scriptPath\..\..\UserConfig" -Force
+
+# Import-Module "$PSScriptRoot\..\..\..\Common\CatalogAndDatabaseManagement" -Force
+# Import-Module "$PSScriptRoot\..\..\..\WtpConfig" -Force
+# Import-Module "$PSScriptRoot\..\..\..\UserConfig" -Force
 
 # Stop execution on error 
 $ErrorActionPreference = "Stop"
@@ -45,158 +55,96 @@ if (!$credentialLoad)
 }
 
 # Get deployment configuration  
+$sleepInterval = 10
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
 $currentSubscriptionId = Get-SubscriptionId
 
-# Get the recovery region resource group
-$recoveryResourceGroup = Get-AzureRmResourceGroup -Name $WingtipRecoveryResourceGroup
+# Initialize database recovery variables
+$batchNumber = 0
+$deploymentQueue = @()
 
-# Get the tenant catalog in the recovery region
-$tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
-while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup.ResourceGroupName)
+# -------------------- Helper Functions -----------------------------------------
+<#
+ .SYNOPSIS  
+  Returns the highest priority tenants per elastic pool.
+  Tenants are grouped into a batch until the 'PoolBatchMax' limit is reached
+#>
+function Select-HighestPriorityPoolTenants
 {
-  Start-Sleep 10
-  # Get the active tenant catalog
-  $tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
-}
+  param
+  (
+    [Parameter(Mandatory=$true)]
+    [array]$InputDatabaseList    
+  )
 
-# Get list of tenant databases to be recovered. 
-[array]$tenantDatabaseConfigurations = @()
-$tenantDatabases = @()
-$tenantDatabases += Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$")}
-$tenantPriorityList = Get-ExtendedTenant -Catalog $tenantCatalog -SortTenants | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$")}
-
-# Add tenant priority to tenant databases 
-foreach ($database in $tenantDatabases)
-{
-  $databasePriority = ($tenantPriorityList | Where-Object {($_.ServerName -eq $database.ServerName) -and ($_.DatabaseName -eq $database.DatabaseName)}).ServicePlan
-  $database | Add-Member "ServicePlan" $databasePriority
-}
-
-$tenantDatabaseCount = $tenantDatabases.length 
-$recoveredDatabaseCount = 0
-$recoveryBatch = 0
-$sleepInterval = 10
-$pastDeploymentWaitTime = 0
-
-# Wait until all elastic pools have been restored to start restoring databases
-# This ensures that all required container resources have been acquired before database recovery begins 
-$nonRecoveredPoolList = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$") -and ($_.RecoveryState -NotIn 'restored')}
-while ($nonRecoveredPoolList)
-{
-  Start-Sleep $sleepInterval
-  $nonRecoveredPoolList = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$") -and ($_.RecoveryState -NotIn 'restored')}
-}
-
-# Restore tenant databases while there are databases to restore
-while ($recoveredDatabaseCount -lt $tenantDatabaseCount)
-{
-  # Find any previous database recovery operations to get most current state of recovered resources 
-  # This allows the script to be re-run if an error during deployment 
-  $pastDeployment = Get-AzureRmResourceGroupDeployment -ResourceGroupName $WingtipRecoveryResourceGroup -Name "TenantDatabaseRecovery-Pri$recoveryBatch" -ErrorAction SilentlyContinue 2>$null
-
-  # Wait for past deployment to complete if it's still active 
-  while (($pastDeployment) -and ($pastDeployment.ProvisioningState -NotIn "Succeeded", "Failed", "Canceled"))
-  {
-    # Wait for no more than 5 minutes (300 secs) for previous deployment to complete
-    if ($pastDeploymentWaitTime -lt 300)
-    {
-        Write-Output "Waiting for previous deployment to complete ..."
-        Start-Sleep $sleepInterval
-        $pastDeploymentWaitTime += $sleepInterval
-        $pastDeployment = Get-AzureRmResourceGroupDeployment -ResourceGroupName $WingtipRecoveryResourceGroup -Name "TenantDatabaseRecovery-Pri$recoveryBatch" -ErrorAction SilentlyContinue 2>$null    
-    }
-    else
-    {
-        Stop-AzureRmResourceGroupDeployment -ResourceGroupName $WingtipRecoveryResourceGroup -Name "TenantDatabaseRecovery-Pri$recoveryBatch" -ErrorAction SilentlyContinue 1>$null 2>$null
-        break
-    }
-    
+  $databaseBatch = @()
+  $tenantPriorityOrder = "Premium", "Standard", "Free"
+  $tenantSortFunction = {
+    $rank = $tenantPriorityOrder.IndexOf($($_.ServicePlan.ToLower()))
+    if ($rank -ne -1) { $rank } else { [System.Double]::PositiveInfinity }
   }
 
-  # Get databases to be recovered 
-  $recoveryQueue = $tenantDatabases | Where-Object {$_.RecoveryState -In 'n/a','restoring','complete'}
-  $restoredDatabases = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases"
-  $restoredDatabaseNames = (($restoredDatabases.Name) -split ".+/") | ?{$_}
+  # Select eligible databases for recovery
+  $recoveryQueue = $InputDatabaseList | Where-Object {$_.RecoveryState -In 'n/a', 'errorState', 'complete'}
 
-  # Check to make sure databases in queue have not already been recovered
-  foreach ($database in $recoveryQueue)
+  # Group databases by elastic pool
+  $recoveryQueueByPool = $recoveryQueue | group {($_.ServerName + '/' + $_.ElasticPoolName)} -AsHashTable -AsString
+
+  if ($recoveryQueueByPool.Count -gt 0)
   {
-    if ($restoredDatabaseNames -contains $database.DatabaseName)
-    {
-      $restoredServerName = ($database.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix
-
-      # Enable change tracking on tenant database. This tracks any changes to tenant data that will need to be repatriated when the primary region is available once more. 
-      Enable-ChangeTrackingForTenant -Catalog $tenantCatalog -TenantServerName $restoredServerName -TenantDatabaseName $database.DatabaseName -RetentionPeriod 10
-
-      # Mark database as restored 
-      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
-     
-      # Remove database from queue 
-      $recoveryQueue = $recoveryQueue -ne $database
-    }
-  }
-  
-  # Output recovery progress 
-  $recoveredDatabaseCount = $tenantDatabaseCount - $recoveryQueue.Length
-  $DatabaseRecoveryPercentage = [math]::Round($recoveredDatabaseCount/$tenantDatabaseCount,2)
-  $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-  Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"
-
-  # Select the highest priority tenant databases up to batch max. 
-  # If the databases will be recovered into a pool, they are also subject to a pool batch in order to not exhaust elastic pool limits
-  if ($recoveryQueue.Count -gt 0)
-  {
-    $databaseBatch = @()
-    $tenantPriorityOrder = "Premium", "Standard", "Free"
-    $tenantSort = {
-      $rank = $tenantPriorityOrder.IndexOf($($_.ServicePlan.ToLower()))
-      if ($rank -ne -1) { $rank }
-      else { [System.Double]::PositiveInfinity }
-    }
-
-    # Group databases to be restored by elastic pool names 
-    $recoveryQueueByPool = $recoveryQueue | group {($_.ServerName + '/' + $_.ElasticPoolName)} -AsHashTable -AsString 
-
-    # Grab databases to be recovered (up to poolMax variable) from each available pool
     foreach ($pool in $recoveryQueueByPool.Keys)
     {
-      $databasePriorityList = $recoveryQueueByPool[$pool] | sort $tenantSort
-      if ($databaseBatch.Length -lt $TotalBatchMax)
+      # Sort databases in pool by tenant priority
+      $poolPriorityList = $recoveryQueueByPool[$pool] | sort $tenantSortFunction
+        
+      # Add highest priority tenants in a batch till batch limit is reached
+      if (($databaseBatch.Length + $PoolBatchMax) -lt $TotalBatchMax)
       {
-        if (($databaseBatch.Length + $PoolBatchMax) -lt $TotalBatchMax)
-        {
-          $endIndex = $PoolBatchMax -1
-          $databaseBatch += $databasePriorityList[0..$endIndex]
-        }
-        else
-        {
-          $endIndex = $TotalBatchMax - $databaseBatch.Length -1
-          $databaseBatch += $databasePriorityList[0..$endIndex]
-        }        
+        $endIndex = $PoolBatchMax -1
+        $databaseBatch += $poolPriorityList[0..$endIndex]
       }
+      elseif ($databaseBatch.Length -lt $TotalBatchMax)
+      {
+        $endIndex = $TotalBatchMax - $databaseBatch.Length -1
+        $databaseBatch += $poolPriorityList[0..$endIndex]
+      }    
     }
+    return $databaseBatch
+  }
+  else
+  {
+    return $null
+  } 
+}
 
-    # Add any available standalone databases to the recovery batch if the batch is not completely full
-    $standalonePool = $recoveryQueueByPool.Keys -match "^[a-zA-Z0-9_.-]+/$"
-    if (($databaseBatch.Length -lt $TotalBatchMax) -and $standalonePool)
-    {
-      $databasePriorityList = $recoveryQueueByPool[$standalonePool] | sort $tenantSort
-      $currentIndex = 0
-      while (($databaseBatch.Length -ne $TotalBatchMax) -and ($currentIndex -le $databasePriorityList.Length))
-      {
-        $currentDatabase = $databasePriorityList[$currentIndex]
-        if ($databaseBatch -notcontains $currentDatabase)
-        {
-          $databaseBatch += $currentDatabase
-        }
-        $currentIndex += 1
-      }
-    }
-    
+<#
+ .SYNOPSIS  
+  Submits an ARM deployment to restore input databases into recovery region.
+  This function creates a background job that is used to track the status of the deployment in the main script.
+#>
+function Start-RecoveryBatch
+{
+  param
+  (
+    [Parameter(Mandatory=$true)]
+    [int]$BatchNumber,
+
+    [Parameter(Mandatory=$true)]
+    [array]$OfflineDatabaseList       
+  )
+
+  [array]$DatabaseProperties = @()
+  $deploymentId = $null
+
+  # Select databases that will be grouped in current recovery batch
+  $recoveryBatch = Select-HighestPriorityPoolTenants -InputDatabaseList $offlineDatabaseList
+  
+  # Deploy recovery databases when applicable
+  if ($recoveryBatch.Count -gt 0)
+  {
     # Record database configuration of tenant databases in batch 
-    foreach ($tenantDatabase in $databaseBatch)
+    foreach ($tenantDatabase in $recoveryBatch)
     {
       $recoveredServerName = ($tenantDatabase.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix
       $recoveredServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceNameEquals $recoveredServerName
@@ -207,54 +155,243 @@ while ($recoveredDatabaseCount -lt $tenantDatabaseCount)
           $serviceObjective = $tenantDatabase.ServiceObjective
       }
 
-      [array]$tenantDatabaseConfigurations += @{
-          ServerName = "$($recoveredServer.Name)"
-          Location = "$($recoveredServer.Location)"
-          DatabaseName = "$($tenantDatabase.DatabaseName)"
-          ServiceObjective = "$serviceObjective"
-          ElasticPoolName = "$($tenantDatabase.ElasticPoolName)"         
-          SourceDatabaseId = "$databaseId"
-      }
-        
+      $databaseConfiguration = @{}
+      $databaseConfiguration.Add("ServerName", "$($recoveredServer.Name)")
+      $databaseConfiguration.Add("Location", "$($recoveredServer.Location)")
+      $databaseConfiguration.Add("DatabaseName", "$($tenantDatabase.DatabaseName)")
+      $databaseConfiguration.Add("ServiceObjective", "$serviceObjective")
+      $databaseConfiguration.Add("ElasticPoolName", "$($tenantDatabase.ElasticPoolName)")
+      $databaseConfiguration.Add("SourceDatabaseId", "$databaseId")
+
+      [array]$DatabaseProperties += $databaseConfiguration
+              
       # Update tenant database recovery state 
       $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -ServerName $tenantDatabase.ServerName -DatabaseName $tenantDatabase.DatabaseName
     }
+  
+    # Deploy tenant recovery databases in background job
+    $deploymentId = New-AzureRmResourceGroupDeployment `
+                      -Name "TenantDatabaseRecovery-Pri$BatchNumber" `
+                      -ResourceGroupName $WingtipRecoveryResourceGroup `
+                      -TemplateFile ("$using:scriptPath\..\RecoveryTemplates\" + $config.TenantDatabaseRestoreBatchTemplate) `
+                      -TemplateParameterObject @{"DatabaseConfigurationObjects"=$DatabaseProperties} `
+                      -ErrorAction Stop `
+                      -AsJob                      
   }
+  
+  return $deploymentId
+}
 
-  if ($databaseBatch.Count -gt 0)
+## -------------------------------- Main Script ------------------------------------------------
+
+# Get the recovery region resource group
+$recoveryResourceGroup = Get-AzureRmResourceGroup -Name $WingtipRecoveryResourceGroup
+
+# Get the tenant catalog in the recovery region
+$tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
+while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup.ResourceGroupName)
+{
+  # Sleep for 10s to allow DNS alias for catalog to update to recovery region
+  Start-Sleep $sleepInterval
+  # Get the active tenant catalog
+  $tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
+}
+
+# Wait until all elastic pools have been restored to start restoring databases
+# This ensures that all required container resources have been acquired before database recovery begins 
+$nonRecoveredPoolList = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$") -and ($_.RecoveryState -NotIn 'restored')}
+while ($nonRecoveredPoolList)
+{
+  Start-Sleep $sleepInterval
+  $nonRecoveredPoolList = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$") -and ($_.RecoveryState -NotIn 'restored')}
+}
+
+# Find previous deployments that are not yet complete
+# This allows the script to be re-run if an error occurs during deployment
+$recoveringDatabases = @()
+$recoveringDatabases += Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {($_.RecoveryState -eq "restoring")}
+if ($recoveringDatabases.Count -gt 0)
+{
+  # Find any ongoing ARM deployments for database recovery operations
+  $ongoingDeployments = @()
+  $ongoingDeployments += Get-AzureRmResourceGroupDeployment -ResourceGroupName $WingtipRecoveryResourceGroup | Where-Object {(($_.DeploymentName -Match "TenantDatabaseRecovery*") -and ($_.ProvisioningState -NotIn "Succeeded", "Failed", "Canceled"))}
+
+  if ($ongoingDeployments.Count -gt 0)
   {
-    # Restore tenant databases in batch (blocking call)
-    $deployment = New-AzureRmResourceGroupDeployment `
-                    -Name "TenantDatabaseRecovery-Pri$recoveryBatch" `
-                    -ResourceGroupName $recoveryResourceGroup.ResourceGroupName `
-                    -TemplateFile ("$using:scriptPath\RecoveryTemplates\" + $config.TenantDatabaseRestoreBatchTemplate) `
-                    -DatabaseConfigurationObjects $tenantDatabaseConfigurations `
-                    -ErrorAction Stop
-
-    # Mark databases as restored 
-    foreach ($tenantDatabase in $databaseBatch)
+    # Add ongoing deployments to queue of background jobs that will be monitored
+    foreach ($deployment in $ongoingDeployments)
     {
-      $restoredServerName = ($tenantDatabase.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix
+      $jobObject = @{
+        Id = -100
+        Name = $deployment.DeploymentName
+        State = $deployment.ProvisioningState
+      }     
 
-      # Enable change tracking on tenant database. This tracks any changes to tenant data that will need to be repatriated when the primary region is available once more. 
-      Enable-ChangeTrackingForTenant -Catalog $tenantCatalog -TenantServerName $restoredServerName -TenantDatabaseName $tenantDatabase.DatabaseName -RetentionPeriod 10
-
-      # Update tenant database recovery state
-      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $tenantDatabase.ServerName -DatabaseName $tenantDatabase.DatabaseName
+      $deploymentQueue += $jobObject
     }
 
-    $recoveredDatabaseCount += $databaseBatch.Count
-    $recoveryBatch += 1    
   }
+  else
+  {
+    # Get all tenant databases that have been restored into the recovery region 
+    $recoveredDatabaseInstances = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants*"
 
-  # Output recovery progress 
-  $DatabaseRecoveryPercentage = [math]::Round($recoveredDatabaseCount/$tenantDatabaseCount,2)
-  $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-  Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"
+    # Update recovery state of databases
+    foreach ($database in $recoveringDatabases)
+    {
+      if ($recoveredDatabaseInstances.Name -match $database.DatabaseName)
+      {
+        # Enable change tracking on tenant database. This tracks any changes to tenant data that will need to be repatriated when the primary region is available once more. 
+        $restoredServerName = ($database.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix
+        Enable-ChangeTrackingForTenant -Catalog $tenantCatalog -TenantServerName $restoredServerName -TenantDatabaseName $database.DatabaseName -RetentionPeriod 10
+
+        # Mark database as restored 
+        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
+      }
+      else
+      {
+        # Mark errorState for databases that have not been recovered 
+        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
+      }
+    }
+  }
+}
+
+# Construct list of tenant databases to be recovered 
+$tenantDatabases = @()
+$tenantDatabases += Get-ExtendedDatabase -Catalog $tenantCatalog
+$offlineTenantDatabases = $tenantDatabases | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$")}
+
+# Add 'service plan' property to tenant database list. 
+# This will be used to calculate database recovery priority
+$tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
+foreach ($database in $offlineTenantDatabases)
+{
+  $databaseServicePlan = ($tenantList | Where-Object {($_.ServerName -eq $database.ServerName) -and ($_.DatabaseName -eq $database.DatabaseName)}).ServicePlan
+  $database | Add-Member "ServicePlan" $databaseServicePlan
 }
 
 # Output recovery progress 
-$DatabaseRecoveryPercentage = [math]::Round($tenantDatabaseCount/$tenantDatabaseCount,2)
+$tenantDatabaseCount = $tenantDatabases.length 
+$recoveredDatabaseCount = $tenantDatabaseCount - $offlineTenantDatabases.length
+$DatabaseRecoveryPercentage = [math]::Round($recoveredDatabaseCount/$tenantDatabaseCount,2)
 $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-Write-Output "$DatabaseRecoveryPercentage% ($($tenantDatabaseCount) of $tenantDatabaseCount)"
+Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"
 
+# Restore tenant databases in batches using ARM templates
+for ($batch=0; $batch -lt $ConcurrentBatchMax; $batch++)
+{
+  $batchNumber = $batch
+  
+  # Deploy tenant recovery databases in background job
+  $deploymentId = Start-RecoveryBatch -BatchNumber $batchNumber -OfflineDatabaseList $offlineTenantDatabases
+
+  if ($deploymentId)
+  {
+    $deploymentQueue += $deploymentId
+    
+    # Fetch most recent database recovery status
+    $offlineTenantDatabases = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$")}    
+  }
+  else 
+  {
+    # There are no databases eligible for recovery     
+    break
+  }
+}
+
+# Check on status of database recovery deployments 
+while ($deploymentQueue.Count -gt 0)
+{
+  foreach($recoveryJob in $deploymentQueue)
+  {
+    # Monitor the status of previous ongoing deployments
+    if ($recoveryJob.Id -eq -100)
+    {
+      $deploymentDetails = Get-AzureRmResourceGroupDeployment -ResourceGroupName $WingtipRecoveryResourceGroup -DeploymentName $recoveryJob.Name
+
+      if ($deploymentDetails.ProvisioningState -eq "Completed")
+      {
+        # Get list of databases in batch 
+        $databaseObjects = ($deploymentDetails.databaseConfigurationObjects.Value.ToString() | ConvertFrom-Json)
+
+        foreach ($tenantDatabase in $databaseObjects)
+        {
+          $restoredServerName = ($tenantDatabase.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix
+
+          # Enable change tracking on tenant database. This tracks any changes to tenant data that will need to be repatriated when the primary region is available once more. 
+          Enable-ChangeTrackingForTenant -Catalog $tenantCatalog -TenantServerName $restoredServerName -TenantDatabaseName $tenantDatabase.DatabaseName -RetentionPeriod 10
+
+          # Update tenant database recovery state
+          $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $tenantDatabase.ServerName -DatabaseName $tenantDatabase.DatabaseName
+
+          # Output recovery progress 
+          $recoveredDatabaseCount+= 1
+          $DatabaseRecoveryPercentage = [math]::Round($recoveredDatabaseCount/$tenantDatabaseCount,2)
+          $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
+          Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"
+        }
+
+        # Remove completed job from queue for polling
+        $deploymentQueue = $deploymentQueue -ne $recoveryJob 
+      }
+      elseif ($deploymentDetails.ProvisioningState -eq "Failed")
+      {
+        $deploymentQueue = $deploymentQueue -ne $recoveryJob
+      }      
+    }
+    elseif ($recoveryJob.State -eq "Completed")
+    {
+      # Start new recovery batch if there are any databases left to recover
+      $recoveryBatch = Select-HighestPriorityPoolTenants -InputDatabaseList $offlineTenantDatabases
+      if ($recoveryBatch.Count -gt 0)
+      {
+        $batchNumber+= 1
+        $deploymentId = Start-RecoveryBatch -BatchNumber $batchNumber -OfflineDatabaseList $offlineTenantDatabases
+        $deploymentQueue += $deploymentId
+
+        # Fetch most recent database recovery status
+        $offlineTenantDatabases = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$")}      
+      }
+      
+      # Get recovery job details
+      $recoveryJobDetails = Receive-Job $recoveryJob
+      $deploymentName = $recoveryJobDetails.DeploymentName
+      
+      # Get list of databases in batch 
+      $deploymentDetails = Get-AzureRmResourceGroupDeployment -ResourceGroupName $WingtipRecoveryResourceGroup -DeploymentName $deploymentName
+      $databaseObjects = ($deploymentDetails.Parameters.databaseConfigurationObjects.Value.ToString() | ConvertFrom-Json)
+
+      foreach ($tenantDatabase in $databaseObjects)
+      {
+        $originServerName = ($tenantDatabase.ServerName -split $config.RecoveryRoleSuffix)[0] + $config.OriginRoleSuffix
+        $restoredServerName = $tenantDatabase.ServerName
+
+        # Enable change tracking on tenant database. This tracks any changes to tenant data that will need to be repatriated when the primary region is available once more. 
+        Enable-ChangeTrackingForTenant -Catalog $tenantCatalog -TenantServerName $restoredServerName -TenantDatabaseName $tenantDatabase.DatabaseName -RetentionPeriod 10
+
+        # Update tenant database recovery state
+        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $originServerName -DatabaseName $tenantDatabase.DatabaseName
+
+        # Output recovery progress 
+        $recoveredDatabaseCount+= 1
+        $DatabaseRecoveryPercentage = [math]::Round($recoveredDatabaseCount/$tenantDatabaseCount,2)
+        $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
+        Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"
+      }
+
+      # Remove completed job from queue for polling
+      $deploymentQueue = $deploymentQueue -ne $recoveryJob         
+    }
+    elseif ($recoveryJob.State -eq "Failed")
+    {
+      # Remove completed job from queue for polling
+      $deploymentQueue = $deploymentQueue -ne $recoveryJob
+    }
+  }
+}
+
+# Output recovery progress 
+$DatabaseRecoveryPercentage = [math]::Round($recoveredDatabaseCount/$tenantDatabaseCount,2)
+$DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
+Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"
