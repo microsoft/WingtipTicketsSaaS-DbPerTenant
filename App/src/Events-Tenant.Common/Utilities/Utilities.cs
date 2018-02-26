@@ -59,7 +59,7 @@ namespace Events_Tenant.Common.Utilities
                 else
                 {
                     var wingtipUser = tenantServerConfig.TenantServer.Split('-')[2];
-                    tenantAlias = tenant + "-" + wingtipUser;
+                    tenantAlias = tenant + "-" + wingtipUser + ".database.windows.net";
                 }
 
                 var result = await Sharding.RegisterNewShard(tenant, tenantId, tenantAlias, tenantServerConfig.TenantServer, databaseConfig.DatabaseServerPort, catalogConfig.ServicePlan);

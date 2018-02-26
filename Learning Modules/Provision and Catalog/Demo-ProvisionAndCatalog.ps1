@@ -8,7 +8,7 @@ $TenantName = "Red Maple Racing" # name of the venue to be added/removed as a te
 $VenueType  = "motorracing"      # valid types: blues, classicalmusic, dance, jazz, judo, motorracing, multipurpose, opera, rockmusic, soccer 
 $PostalCode = "98052"
 
-$DemoScenario = 1
+$DemoScenario = 3
 <# Select the demo scenario to run
     Demo    Scenario
       1       Provision a single tenant

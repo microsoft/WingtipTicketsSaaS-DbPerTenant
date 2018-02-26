@@ -90,7 +90,7 @@ foreach ($newTenant in $NewTenants)
 
     $allNewTenants += $newTenantObj
 
-    $tenantKey = Get-TenantKey -TenantName $newTenantName
+    $tenantKey = Get-TenantKey -TenantName $normalizedNewTenantName
     
     # Check if a tenant with this key is aleady registered in the catalog
     if (Test-TenantKeyInCatalog -Catalog $catalog -TenantKey $tenantKey)
