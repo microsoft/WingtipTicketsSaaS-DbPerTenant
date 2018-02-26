@@ -113,7 +113,7 @@ if ($DemoScenario -eq 2)
                 $selectedTenantName = $TenantNames[$selectedRow - 1].TenantName
 
                 # Open the events page for the new venue to verify it's working correctly
-                Start-Process "http://events.wtp.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $selectedTenantName)"
+                Start-Process "http://events.wingtip-dpt.$($wtpUser.Name).trafficmanager.net/$(Get-NormalizedTenantName $selectedTenantName)"
 
                 # open the database blade in the portal to review performance
                 Open-TenantResourcesInPortal `

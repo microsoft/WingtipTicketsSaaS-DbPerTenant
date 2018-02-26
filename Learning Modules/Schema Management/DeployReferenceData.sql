@@ -111,7 +111,7 @@ SELECT
     SUM(CASE WHEN lifecycle = 'Succeeded' THEN 1 ELSE 0 END) AS Succeeded,
     SUM(CASE WHEN lifecycle = 'Failed' THEN 1 ELSE 0 END) AS Failed
     FROM [jobs].[job_executions] 
-WHERE job_name = 'Reference Data Deployment' AND (target_group_name IS NULL)
+WHERE job_name = 'Reference Data Deployment'
 GROUP BY job_execution_id, step_id
 ORDER BY EndTime DESC
 
