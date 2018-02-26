@@ -3,14 +3,13 @@
 # Duration of the load generation sessions. Some activity may continue after this time. 
 $DurationMinutes = 120
 
-# If the SingleTenant scenario used, this is the tenant database that will have the high load applied, 
-# or if set to empty string ("") a random tenant database will be chosen.
+# For the Single Tenant scenario (5), this is the tenant database that will have the high load applied.
 $SingleTenantDatabaseName = "contosoconcerthall"
 
 $DemoScenario = 0
 <# Select the scenario to run 
    Scenario
-      1       Provision a batch of tenants (do this before any of the load generation scenarios)
+      1       Provision a batch of tenants (if not done already, do this before any of the load generation scenarios)
       2       Generate normal intensity load (approx 30 DTU) 
       3       Generate load with longer and more frequent bursts per database
       4       Generate load with higher DTU bursts per database (approx 70 DTU)  
