@@ -119,6 +119,26 @@ namespace Events_Tenant.Common.Utilities
             return normalized;
         }
 
+        /// <summary>
+        /// Gets the status of the tenant mapping in the catalog.
+        /// </summary>
+        public String GetTenantStatus(int TenantId)
+        {
+            try
+            {
+                int mappingStatus = (int)Sharding.ShardMap.GetMappingForKey(TenantId).Status;
+
+                if (mappingStatus > 0)
+                    return "Online";
+                else
+                    return "Offline";
+            }
+            catch
+            {
+               throw;
+            }
+        }
+
         #endregion
 
         #region Private methods

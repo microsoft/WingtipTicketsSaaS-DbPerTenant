@@ -17,17 +17,19 @@ namespace Events_TenantUserApp.Controllers
         private readonly ILogger _logger;
         private readonly DnsClient.ILookupClient _client;
         private readonly IConfiguration _configuration;
+        private readonly IUtilities _utilities;
         private String _appRegion;
         #endregion
 
         #region Constructors
 
-        public EventsController(ITenantRepository tenantRepository, ICatalogRepository catalogRepository, IStringLocalizer<BaseController> baseLocalizer, ILogger<EventsController> logger, IConfiguration configuration, DnsClient.ILookupClient client) : base(baseLocalizer, tenantRepository, configuration, client)
+        public EventsController(ITenantRepository tenantRepository, ICatalogRepository catalogRepository, IStringLocalizer<BaseController> baseLocalizer, ILogger<EventsController> logger, IConfiguration configuration, DnsClient.ILookupClient client, IUtilities utilities) : base(baseLocalizer, tenantRepository, configuration, client)
         {
             _logger = logger;
             _tenantRepository = tenantRepository;
             _catalogRepository = catalogRepository;
             _client = client;
+            _utilities = utilities;
             _configuration = configuration;
             _appRegion = configuration["APP_REGION"];
         }
@@ -49,13 +51,20 @@ namespace Events_TenantUserApp.Controllers
                         var serverAliases = _client.Query(tenantDetails.TenantAlias, DnsClient.QueryType.A);
                         String tenantServerName = serverAliases.Answers.ARecords().ElementAt(0).DomainName;
 
-                        if (tenantServerName.Contains(_appRegion))
+                        //Get tenant status
+                        String tenantStatus = _utilities.GetTenantStatus(tenantDetails.TenantId);
+
+                        if ((tenantServerName.Contains(_appRegion)) && (tenantStatus == "Online"))
                         {
                             SetTenantConfig(tenantDetails.TenantId, tenantDetails.TenantIdInString);
 
                             var events = await _tenantRepository.GetEventsForTenant(tenantDetails.TenantId);
                             return View(events);
-                        }                                  
+                        }
+                        else if (tenantStatus == "Offline")
+                        {
+                            return View("TenantOffline", tenantDetails.TenantName);
+                        }                                
                         else
                         {
                             String recoveryAppInstance = "https://events-wingtip-dpt-" + _appRegion + "-" + _configuration["User"] + ".azurewebsites.net/" + tenant;
