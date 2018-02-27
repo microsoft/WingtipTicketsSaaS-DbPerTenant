@@ -35,13 +35,13 @@
   },
   "variables": {
       "lowerCaseUser": "[toLower(parameters('wtpUser'))]",
+      "recoveryLocation": "[resourceGroup().location]",
       "catalogDatabaseName": "tenantcatalog",
       "catalogAliasName": "[concat('catalog-',variables('lowerCaseUser'))]",
       "databasePerTenantSuffix": "dpt",
       "originRoleSuffix": "-home",
       "trafficManagerInstance": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'), '-', 'profiles')]",
-      "trafficManagerRecoveryProfileName": "[concat('events-wingtip-', variables('databasePerTenantSuffix'), '-', variables('lowerCaseUser'), parameters('recoverySuffix'))]",
-      "recoveryLocation": "[resourceGroup().location]",
+      "trafficManagerRecoveryProfileName": "[concat('events-wingtip-', variables('databasePerTenantSuffix'), '-', variables('recoveryLocation'), '-', variables('lowerCaseUser'))]",      
       "recoveryWebAppSku": "Standard",
       "wtpEventsRecoveryApp": "[concat('events-wingtip-', variables('databasePerTenantSuffix'), '-', variables('recoveryLocation'), '-', variables('lowerCaseUser'))]",
       "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage-v5.zip"

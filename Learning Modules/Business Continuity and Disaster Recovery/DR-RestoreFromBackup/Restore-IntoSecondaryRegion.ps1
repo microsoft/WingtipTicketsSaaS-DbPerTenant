@@ -59,7 +59,7 @@ $startTime = Get-Date
 # Disable traffic manager web app endpoint in primary region (idempotent)
 Write-Output "Disabling traffic manager endpoint for Wingtip events app..."
 $profileName = $config.EventsAppNameStem + $wtpUser.Name + '-profiles'
-$webAppEndpoint = $config.EventsAppNameStem + $wtpUser.name + $config.OriginRoleSuffix
+$webAppEndpoint = $config.EventsAppNameStem + $primaryLocation + '-' + $wtpUser.name
 Disable-AzureRmTrafficManagerEndpoint -Name $webAppEndpoint -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -Force -ErrorAction SilentlyContinue > $null
 
 try
@@ -188,7 +188,7 @@ while ($true)
   if (($newTenantProvisioningJob.State -eq "Completed") -and ($appRecoveryJob.State -eq "Completed"))
   {
     $profileName = $config.EventsAppNameStem + $wtpUser.Name + '-profiles'
-    $endpointName = $config.EventsAppNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix
+    $endpointName = $config.EventsAppNameStem + $recoveryLocation + '-' + $wtpUser.Name
 
     $webAppEndpoint = Get-AzureRmTrafficManagerEndpoint -Name $endpointName -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName
     

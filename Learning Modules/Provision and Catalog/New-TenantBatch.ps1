@@ -146,6 +146,7 @@ if ($batchDatabaseNames.Count -gt 0)
     catch
     {
         Write-Error "An error occurred during template deployment. One or more databases in the batch may not have deployed and databases are not yet initialized. Rerun the script to complete processing of the batch."
+        Write-Error $_.Exception.Message
         throw
     }
 }

@@ -33,9 +33,10 @@ if (!$credentialLoad)
 # Get deployment configuration  
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
+$recoveryLocation = (Get-AzureRmResourceGroup -ResourceGroupName $WingtipRecoveryResourceGroup).Location
 
 # Get Wingtip web app if it exists
-$recoveryWebAppName = $config.EventsAppNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix
+$recoveryWebAppName = $config.EventsAppNameStem + $recoveryLocation + '-' + $wtpUser.Name
 $wingtipRecoveryApp = Find-AzureRmResource `
                         -ResourceType "Microsoft.Web/sites" `
                         -ResourceGroupNameEquals $WingtipRecoveryResourceGroup `

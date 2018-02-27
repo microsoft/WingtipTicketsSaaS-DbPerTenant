@@ -6,18 +6,18 @@
 
 Import-Module $PSScriptRoot\SubscriptionManagement -Force
 
-# Configure path of libraries
+# Get Sql Fluent library if it exists
 $ErrorActionPreference = "Stop"
-$scriptDir = Split-Path -parent $MyInvocation.MyCommand.Path
+$libPath = "$(Split-Path -parent $MyInvocation.MyCommand.Path)\Lib"
 $sqlFluentLib = 'Microsoft.Azure.Management.Sql.Fluent.dll'
-$sqlFluentLibPath = "$scriptDir\$sqlFluentLib"
-$resourceManagerLib = 'Microsoft.Azure.Management.ResourceManager.Fluent.dll'
-$resourceManagerLibPath = "$scriptDir\$resourceManagerLib"
+$sqlFluentPath = "$libPath\$sqlFluentLib"
 
-# Download and install libraries from nuget if missing
-if (-not $(Test-Path $sqlFluentLibPath))
+# Install Sql Fluent API nuget package if it is not present.
+# The code below assumes that all dependencies are installed if Sql Fluent library is present. Install other required dependencies if this is not the case
+if (!$(Test-Path $sqlFluentPath))
 {
-    $message = "'$sqlFluentLib' was not found."
+    # Download and install libraries from nuget if missing
+    $message = "'$sqlFluentLib' was not found in libary folder."
     $question = "Would you like to download it from NuGet?"
     
     $choices = New-Object Collections.ObjectModel.Collection[Management.Automation.Host.ChoiceDescription]
@@ -28,14 +28,15 @@ if (-not $(Test-Path $sqlFluentLibPath))
     
     if ($decision -eq 0) # User chose Yes
     {
-        $sqlFluentPackage = 'Microsoft.Azure.Management.Sql.Fluent'
+        $nugetPackageLocation = "$Env:UserProfile\.nuget\packages"
+        $sqlFluentPackageName = 'Microsoft.Azure.Management.Sql.Fluent'
+
         if ($PSVersionTable.PSVersion.Major -ge 5 -and $(Get-PackageProvider -Name nuget -ErrorAction Ignore) -ne $null)
         {
             # Download the package using OneGet
             # For nuget source on package manager, if on api v3, set to api v2: Set-PackageSource -name nuget.org -NewLocation https://www.nuget.org/api/v2
-            $package = Find-Package -Name $sqlFluentPackage -ProviderName nuget -Source nuget.org
-            $null = $package | Install-Package -Destination $scriptDir
-            $null = Copy-Item "$scriptDir\$sqlFluentPackage.$($package.Version)\lib\net452\$sqlFluentLib" $sqlFluentLibPath 
+            $package = Find-Package -Name $sqlFluentPackageName -ProviderName nuget -Source nuget.org
+            $null = $package | Install-Package -Destination $nugetPackageLocation           
         }
         else
         {
@@ -45,50 +46,48 @@ if (-not $(Test-Path $sqlFluentLibPath))
             {
                 Invoke-WebRequest 'https://www.nuget.org/nuget.exe' -OutFile $nugetExePath
             }
-            $null = &$nugetExePath install $sqlFluentPackage -OutputDirectory $scriptDir -ExcludeVersion
-            $null = Copy-Item "$scriptDir\$sqlFluentPackage\lib\net452\$sqlFluentLib" $sqlFluentLibPath
-        }
+            $null = &$nugetExePath install $sqlFluentPackageName -OutputDirectory $nugetPackageLocation -ExcludeVersion
+        } 
+
+        $jsonPackageName = 'NewtonSoft.Json'
+        $restClientRuntimePackageName = 'Microsoft.Rest.ClientRuntime'
+        $sqlFluentPackageName = 'Microsoft.Azure.Management.Sql.Fluent'
+        $azureRestClientRuntimePackageName = 'Microsoft.Rest.ClientRuntime.Azure'
+        $resManagerFluentPackageName = 'Microsoft.Azure.Management.ResourceManager.Fluent'
+        $activeDirectoryModelPackageName = 'Microsoft.IdentityModel.Clients.ActiveDirectory'
+        $azureRestClientAuthenticationPackageName = 'Microsoft.Rest.ClientRuntime.Azure.Authentication'
+
+        # Get package install locations
+        $jsonPackageLocation = Split-Path "$((Get-Package -Name $jsonPackageName -MinimumVersion 6.0.8).Source)" -Parent
+        $restClientRuntimePackageLocation = Split-Path "$((Get-Package -Name $restClientRuntimePackageName -MinimumVersion 2.3.9 -MaximumVersion 3.0.0).Source)" -Parent
+        $sqlFluentPackageLocation = Split-Path "$((Get-Package -Name $sqlFluentPackageName -MinimumVersion 1.6.0).Source)" -Parent
+        $azureRestClientRuntimePackageLocation = Split-Path "$((Get-Package -Name $azureRestClientRuntimePackageName -MinimumVersion 3.3.10).Source)" -Parent
+        $resManagerPackageLocation = Split-Path "$((Get-Package -Name $resManagerFluentPackageName -MinimumVersion 1.6.0).Source)" -Parent
+        $activeDirectoryModelPackageLocation = Split-Path "$((Get-Package -Name $activeDirectoryModelPackageName -MinimumVersion 2.28.3 -MaximumVersion 4.0.0).Source)" -Parent
+        $azureRestClientAuthenticationPackageLocation = Split-Path "$((Get-Package -Name $azureRestClientAuthenticationPackageName -MinimumVersion 2.3.2).Source)" -Parent
+
+        # Add required DLLs to library folder
+        # Note: The locations below are for the .NET framework and not .NET standard
+        $null = Copy-Item "$jsonPackageLocation\lib\net45\$jsonPackageName.dll" -Destination $libPath
+        $null = Copy-Item "$restClientRuntimePackageLocation\lib\net452\$restClientRuntimePackageName.dll" -Destination $libPath
+        $null = Copy-Item "$sqlFluentPackageLocation\lib\net452\$sqlFluentPackageName.dll" -Destination $libPath
+        $null = Copy-Item "$azureRestClientRuntimePackageLocation\lib\net452\$azureRestClientRuntimePackageName.dll" -Destination $libPath
+        $null = Copy-Item "$resManagerPackageLocation\lib\net452\$resManagerFluentPackageName.dll" -Destination $libPath
+        $null = Copy-Item "$activeDirectoryModelPackageLocation\lib\net45\$activeDirectoryModelPackageName.dll" -Destination $libPath
+        $null = Copy-Item "$azureRestClientAuthenticationPackageLocation\lib\net452\$azureRestClientAuthenticationPackageName.dll" -Destination $libPath
     }    
-}
-elseif (-not $(Test-Path $resourceManagerLibPath))
-{
-    $message = "'$resourceManagerLib' was not found."
-    $question = "Would you like to download it from NuGet?"
-    
-    $choices = New-Object Collections.ObjectModel.Collection[Management.Automation.Host.ChoiceDescription]
-    $choices.Add((New-Object Management.Automation.Host.ChoiceDescription -ArgumentList '&Yes'))
-    $choices.Add((New-Object Management.Automation.Host.ChoiceDescription -ArgumentList '&No'))
-    
-    $decision = $Host.UI.PromptForChoice($message, $question, $choices, 1 <# Default is No #>)
-    
-    if ($decision -eq 0) # User chose Yes
-    {
-        $resManagerPackage = 'Microsoft.Azure.Management.ResourceManager.Fluent'
-        if ($PSVersionTable.PSVersion.Major -ge 5 -and $(Get-PackageProvider -Name nuget -ErrorAction Ignore) -ne $null)
-        {
-            # Download the package using OneGet
-            # For nuget source on package manager, if on api v3, set to api v2: Set-PackageSource -name nuget.org -NewLocation https://www.nuget.org/api/v2
-            $package = Find-Package -Name $resManagerPackage -ProviderName nuget -Source nuget.org
-            $null = $package | Install-Package -Destination $scriptDir
-            $null = Copy-Item "$scriptDir\$resManagerPackage.$($package.Version)\lib\net452\$resourceManagerLib" $resourceManagerLibPath 
-        }
-        else
-        {
-            # Download https://www.nuget.org/nuget.exe and use that to download the package 
-            $nugetExePath = "$scriptDir\nuget.exe"
-            if (-not $(Test-Path $nugetExePath))
-            {
-                Invoke-WebRequest 'https://www.nuget.org/nuget.exe' -OutFile $nugetExePath
-            }
-            $null = &$nugetExePath install $resManagerPackage -OutputDirectory $scriptDir -ExcludeVersion
-            $null = Copy-Item "$scriptDir\$resManagerPackage\lib\net452\$resourceManagerLib" $resourceManagerLibPath
-        }
-    }
 }
 
 # Add assemblies containing Sql Fluent API related types
-Add-Type -Path $resourceManagerLibPath
-Add-Type -Path $sqlFluentLibPath
+try 
+{
+    Add-Type -Path $sqlFluentPath
+}
+catch [System.Reflection.ReflectionTypeLoadException]
+{
+    Write-Host "Error Message: $($_.Exception.Message)"
+    Write-Error "LoaderExceptions: $($_.Exception.LoaderExceptions[0])"
+}
 
 ## ---------------------------------------Helper Functions----------------------------------------------
 
