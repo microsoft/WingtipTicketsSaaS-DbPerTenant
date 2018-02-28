@@ -100,7 +100,10 @@ function Select-HighestPriorityUnrecoveredTenantPerPool
       $poolPriorityList = $recoveryQueueByPool[$pool] | Sort-Object $tenantSortFunction
         
       # Select highest priority tenant for current pool
-      $highestPriorityTenants.Add($pool, $poolPriorityList[0])     
+      if (!$highestPriorityTenants.ContainsKey($pool))
+      {
+        $highestPriorityTenants.Add($pool, $poolPriorityList[0])
+      }
     }
     return $highestPriorityTenants
   }
@@ -136,23 +139,23 @@ function Start-AsynchronousDatabaseRecovery
     # Geo-restore tenant database into an elastic pool
     $taskObject = Invoke-AzureSQLDatabaseGeoRestoreAsync `
                     -AzureContext $AzureContext `
-                    -ResourceGroupName $WingtipRecoveryResourceGroup
-                    -Location $recoveredServer.Location
-                    -ServerName $recoveredServerName
-                    -DatabaseName $TenantDatabase.DatabaseName
-                    -SourceDatabaseId $databaseId
+                    -ResourceGroupName $WingtipRecoveryResourceGroup `
+                    -Location $recoveredServer.Location `
+                    -ServerName $recoveredServerName `
+                    -DatabaseName $TenantDatabase.DatabaseName `
+                    -SourceDatabaseId $databaseId `
                     -ElasticPoolName $TenantDatabase.ElasticPoolName
   }
   else
   {
     # Geo-restore tenant database into a standalone database
     $taskObject = GeoRestore-AzureSQLDatabaseAsync `
-                  -AzureContext $AzureContext
-                  -ResourceGroupName $WingtipRecoveryResourceGroup
-                  -Location $recoveredServer.Location
-                  -ServerName $recoveredServerName
-                  -DatabaseName $TenantDatabase.DatabaseName
-                  -SourceDatabaseId $databaseId
+                  -AzureContext $AzureContext `
+                  -ResourceGroupName $WingtipRecoveryResourceGroup `
+                  -Location $recoveredServer.Location `
+                  -ServerName $recoveredServerName `
+                  -DatabaseName $TenantDatabase.DatabaseName `
+                  -SourceDatabaseId $databaseId `
                   -RequestedServiceObjectiveName $TenantDatabase.ServiceObjective
   }  
   return $taskObject
@@ -170,7 +173,7 @@ function Complete-AsynchronousDatabaseRecovery
     [String]$RecoveryJobId
   )
 
-  $databaseDetails = $operationQueueMap[$recoveryJobId]
+  $databaseDetails = $operationQueueMap[$RecoveryJobId]
   $originServerName = $databaseDetails.ServerName
   $restoredServerName = ($databaseDetails.ServerName -split $config.OriginRoleSuffix)[0] + $config.OriginRoleSuffix
 
@@ -218,9 +221,20 @@ $recoveringDatabases = @()
 $recoveringDatabases += Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {($_.RecoveryState -eq "restoring")}
 if ($recoveringDatabases.Count -gt 0)
 {
-  # Find any ongoing database recovery operations
-  $ongoingDeployments = @()
-  $ongoingDeployments += Get-AzureRmLog -ResourceGroup $WingtipRecoveryResourceGroup -StartTime (Get-Date).AddDays(-1) | Where-Object {(($_.OperationName.Value -eq 'Microsoft.Sql/servers/databases/write') -and ($_.Status.Value -NotIn 'Succeeded', 'Failed', 'Canceled'))}
+  # Get past database operations that occurred in the recovery resource group
+  $operationsLog = Get-AzureRmLog -ResourceGroupName $WingtipRecoveryResourceGroup -StartTime (Get-Date).AddDays(-1) -MaxRecord 200 3>$null | Where-Object {($_.OperationName.Value -eq 'Microsoft.Sql/servers/databases/write')}
+  $operationsLog = $operationsLog | Group-Object -Property 'CorrelationId'
+
+  # Find all ongoing database recovery operations
+  $ongoingDeployments = @()  
+  foreach ($operationSequence in $operationsLog)
+  {
+    if ($operationSequence.Group.EventName.Value -notcontains "EndRequest")
+    {
+      $operation = $operationSequence.Group | Where-Object {$_.EventName.Value -eq "BeginRequest"}
+      $ongoingDeployments += $operation
+    }
+  }
 
   if ($ongoingDeployments.Count -gt 0)
   {
@@ -243,35 +257,35 @@ if ($recoveringDatabases.Count -gt 0)
         "ElasticPoolName" = $null
       }     
 
-      $operationQueue += $jobObject
-      $operationQueueMap.Add($jobObject.Id, $databaseDetails)      
-    }
-
-  }
-  else
-  {
-    # Get all tenant databases that have been restored into the recovery region 
-    $recoveredDatabaseInstances = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants*"
-
-    # Update recovery state of databases
-    foreach ($database in $recoveringDatabases)
-    {
-      if ($recoveredDatabaseInstances.Name -match $database.DatabaseName)
+      if (!$operationQueueMap.ContainsKey($jobObject.Id))
       {
+        $operationQueue += $jobObject
+        $operationQueueMap.Add($jobObject.Id, $databaseDetails)
+      }
+    }
+  }
+  
+  # Get all tenant databases that have been restored into the recovery region 
+  $recoveredDatabaseInstances = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
+
+  # Update recovery state of databases
+  foreach ($database in $recoveringDatabases)
+  {
+    if ($recoveredDatabaseInstances.Name -match $database.DatabaseName)
+    {
         # Enable change tracking on tenant database. This tracks any changes to tenant data that will need to be repatriated when the primary region is available once more. 
         $restoredServerName = ($database.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix
         Enable-ChangeTrackingForTenant -Catalog $tenantCatalog -TenantServerName $restoredServerName -TenantDatabaseName $database.DatabaseName -RetentionPeriod 10
 
         # Mark database as restored 
         $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
-      }
-      else
-      {
+    }
+    else
+    {
         # Mark errorState for databases that have not been recovered 
         $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
-      }
     }
-  }
+  }  
 }
 
 # Get list of tenant databases to be recovered 
@@ -311,8 +325,11 @@ while($operationQueue.Count -le $MaxConcurrentRestoreOperations)
       }
 
       # Add operation object to queue for tracking later
-      $operationQueue += $operationObject
-      $operationQueueMap.Add($operationObject.Id, $databaseDetails)      
+      if (!$operationQueueMap.ContainsKey($operationObject.Id))
+      {
+        $operationQueue += $operationObject
+        $operationQueueMap.Add($operationObject.Id, $databaseDetails)      
+      }
     }  
   }  
   else 
@@ -330,7 +347,7 @@ while ($operationQueue.Count -gt 0)
     # Monitor the status of previous ongoing deployments
     if ($recoveryJob.GetType().Name -eq 'PSCustomObject')
     {
-      $operationDetails = Get-AzureRmLog -ResourceGroup $WingtipRecoveryResourceGroup -CorrelationId $recoveryJob.Id
+      $operationDetails = Get-AzureRmLog -CorrelationId $recoveryJob.Id 3>$null
 
       if ($operationDetails.Status.Value -eq "Succeeded")
       {
@@ -353,8 +370,11 @@ while ($operationQueue.Count -gt 0)
           }
 
           # Add operation object to queue for tracking later
-          $operationQueue += $operationObject
-          $operationQueueMap.Add($operationObject.Id, $databaseDetails) 
+          if (!$operationQueueMap.ContainsKey($operationObject.Id))
+          {
+            $operationQueue += $operationObject
+            $operationQueueMap.Add($operationObject.Id, $databaseDetails) 
+          }
         }
 
         # Update tenant database recovery state
@@ -397,8 +417,11 @@ while ($operationQueue.Count -gt 0)
         }
 
         # Add operation object to queue for tracking later
-        $operationQueue += $operationObject
-        $operationQueueMap.Add($operationObject.Id, $databaseDetails) 
+        if (!$operationQueueMap.ContainsKey($operationObject.Id))
+        {
+          $operationQueue += $operationObject
+          $operationQueueMap.Add($operationObject.Id, $databaseDetails) 
+        }
       }
 
       # Update tenant database recovery state

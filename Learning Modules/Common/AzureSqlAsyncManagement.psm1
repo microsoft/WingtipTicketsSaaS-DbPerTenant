@@ -97,15 +97,8 @@ catch [System.Reflection.ReflectionTypeLoadException]
 #>
 function Get-RestAPIContext
 {
-    [OutputType([Microsoft.Azure.Management.Sql.Fluent.SqlManager])]
-    param (
-        # NoEcho stops the output of the signed in user to prevent double echo  
-        [parameter(Mandatory=$false)]
-        [switch] $NoEcho
-    )
-
     # Get Azure credentials if not already logged on
-    Initialize-Subscription -NoEcho:$NoEcho.IsPresent
+    Initialize-Subscription -NoEcho >$null
 
     # Get PowerShell credentails object
     $context = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile.DefaultContext
@@ -115,9 +108,7 @@ function Get-RestAPIContext
     $client = [Microsoft.Azure.Management.ResourceManager.Fluent.Core.RestClient]::Configure().WithCredentials($credentials).WithEnvironment([Microsoft.Azure.Management.ResourceManager.Fluent.AzureEnvironment]::AzureGlobalCloud).Build()
 
     # Authenticate to Fluent API SDK
-    $azure = [Microsoft.Azure.Management.Sql.Fluent.SqlManager]::Authenticate($client, $context.Subscription.Id)
- 
-    return $azure
+    return [Microsoft.Azure.Management.Sql.Fluent.SqlManager]::Authenticate($client, $context.Subscription.Id) 
 }
 
 <#
@@ -129,7 +120,7 @@ function New-AzureSQLDatabaseAsync
 {
     param(
         [parameter(Mandatory=$true)]
-        [object]$AzureContext,
+        [Microsoft.Azure.Management.Sql.Fluent.SqlManager]$AzureContext,
 
         [parameter(Mandatory=$true)]
         [string]$ResourceGroupName,
@@ -176,7 +167,7 @@ function Invoke-AzureSQLDatabaseGeoRestoreAsync
 {
     param(
         [parameter(Mandatory=$true)]
-        [object]$AzureContext,
+        [Microsoft.Azure.Management.Sql.Fluent.SqlManager]$AzureContext,
 
         [parameter(Mandatory=$true)]
         [string]$ResourceGroupName,
@@ -228,7 +219,7 @@ function Invoke-AzureSQLDatabaseFailoverAsync
 {
     param(
         [parameter(Mandatory=$true)]
-        [object]$AzureContext,
+        [Microsoft.Azure.Management.Sql.Fluent.SqlManager]$AzureContext,
 
         [parameter(Mandatory=$true)]
         [string]$ResourceGroupName,
@@ -258,11 +249,3 @@ function Invoke-AzureSQLDatabaseFailoverAsync
     }
     return $jobObject
 }
-
-# # Get db properties if job is complete 
-# if ($jobObject.IsCompleted)
-# {
-#     $dbObject = $jobObject.Result.Body
-# }
-
-
