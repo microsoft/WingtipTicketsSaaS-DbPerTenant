@@ -290,7 +290,7 @@ if ($recoveringDatabases.Count -gt 0)
 
 # Get list of tenant databases to be recovered 
 $tenantDatabases = @()
-$tenantDatabases += Get-ExtendedDatabase -Catalog $tenantCatalog
+$tenantDatabases += Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {($_.ServerName -notmatch "$($config.RecoveryRoleSuffix)$")}
 $offlineTenantDatabases = $tenantDatabases | Where-Object {(($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$") -and ($_.RecoveryState -NotIn 'restored', 'failedOver', 'complete'))}
 
 # Output recovery progress 

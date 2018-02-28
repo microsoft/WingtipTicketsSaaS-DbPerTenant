@@ -81,7 +81,7 @@ while ($true)
     $restoredTenantDatabases = @()
     $originTenantDatabases += Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.ResourceGroupName -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
     $restoredTenantDatabases += Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
-    $databaseRecoveryStatuses = Get-ExtendedDatabase -Catalog $tenantCatalog
+    $databaseRecoveryStatuses = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {$_.ServerName -notmatch "$($config.RecoveryRoleSuffix)$"}
 
     # Output recovery progress 
     $TenantRecoveryPercentage = [math]::Round($onlineTenantCount/$tenantCount,2)
