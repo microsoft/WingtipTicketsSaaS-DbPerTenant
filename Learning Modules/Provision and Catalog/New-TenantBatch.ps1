@@ -139,7 +139,7 @@ if ($batchDatabaseNames.Count -gt 0)
             -ServerNames $batchServerNames `
             -DatabaseNames $batchDatabaseNames `
             -ElasticPoolNames $batchElasticPoolNames `
-            -WingtipDeploymentUser $WtpUser
+            -WingtipDeploymentUser $WtpUser `
             -ErrorAction Stop `
             -Verbose                 
     }

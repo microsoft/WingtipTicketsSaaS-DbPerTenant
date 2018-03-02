@@ -2098,29 +2098,52 @@ function Set-ExtendedDatabase {
     )
     $config = Get-Configuration
 
-    $commandText = "SELECT @@DBTS"
-    $recoveryRowVersion =  Invoke-SqlAzureWithRetry `
-                            -ServerInstance "$($Database.ServerName).database.windows.net" `
-                            -Database $Database.DatabaseName `
-                            -Query $commandText `
-                            -UserName $config.TenantAdminUserName `
-                            -Password $config.TenantAdminPassword    
+    if ($Database.ServerName -match "$($config.RecoveryRoleSuffix)$")
+    {
+        $commandText = "SELECT @@DBTS AS Value"
+        $rawValueBytes =  Invoke-SqlAzureWithRetry `
+                                -ServerInstance "$($Database.ServerName).database.windows.net" `
+                                -Database $Database.DatabaseName `
+                                -Query $commandText `
+                                -UserName $config.TenantAdminUserName `
+                                -Password $config.TenantAdminPassword
+        $rawValueString = [BitConverter]::ToString($rawValueBytes.Value)
+        $recoveryRowVersion = "0x" + $rawValueString.Replace("-", "")  
     
-    $commandText = "
-        MERGE INTO [dbo].[Databases] AS [target]
-        USING (VALUES
-            ('$($Database.ServerName)', '$($Database.DatabaseName)', '$($Database.CurrentServiceObjectiveName)', '$($Database.ElasticPoolName)', CURRENT_TIMESTAMP))
-        AS [source]
-            (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, LastUpdated)
-        ON target.ServerName = source.ServerName AND target.DatabaseName = source.DatabaseName 
-        WHEN MATCHED THEN
-            UPDATE SET
-                ServiceObjective = source.ServiceObjective,
-                ElasticPoolName = source.ElasticPoolName,
-                LastUpdated = source.LastUpdated
-        WHEN NOT MATCHED THEN
-            INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, RecoveryState, RecoveryRowVersion, LastUpdated)
-            VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', 'n/a', $recoveryRowVersion, LastUpdated);"
+        $commandText = "
+            MERGE INTO [dbo].[Databases] AS [target]
+            USING (VALUES
+                ('$($Database.ServerName)', '$($Database.DatabaseName)', '$($Database.CurrentServiceObjectiveName)', '$($Database.ElasticPoolName)', CURRENT_TIMESTAMP))
+            AS [source]
+                (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, LastUpdated)
+            ON target.ServerName = source.ServerName AND target.DatabaseName = source.DatabaseName 
+            WHEN MATCHED THEN
+                UPDATE SET
+                    ServiceObjective = source.ServiceObjective,
+                    ElasticPoolName = source.ElasticPoolName,
+                    LastUpdated = source.LastUpdated
+            WHEN NOT MATCHED THEN
+                INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, RecoveryState, RecoveryRowVersion, LastUpdated)
+                VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', 'n/a', $recoveryRowVersion, LastUpdated);"
+    }
+    else
+    {
+        $commandText = "
+            MERGE INTO [dbo].[Databases] AS [target]
+            USING (VALUES
+                ('$($Database.ServerName)', '$($Database.DatabaseName)', '$($Database.CurrentServiceObjectiveName)', '$($Database.ElasticPoolName)', CURRENT_TIMESTAMP))
+            AS [source]
+                (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, LastUpdated)
+            ON target.ServerName = source.ServerName AND target.DatabaseName = source.DatabaseName 
+            WHEN MATCHED THEN
+                UPDATE SET
+                    ServiceObjective = source.ServiceObjective,
+                    ElasticPoolName = source.ElasticPoolName,
+                    LastUpdated = source.LastUpdated
+            WHEN NOT MATCHED THEN
+                INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, RecoveryState, LastUpdated)
+                VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', 'n/a', LastUpdated);"
+    }
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `

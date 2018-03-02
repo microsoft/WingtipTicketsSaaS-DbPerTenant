@@ -174,14 +174,21 @@ function Complete-AsynchronousDatabaseRecovery
   )
 
   $databaseDetails = $operationQueueMap[$RecoveryJobId]
-  $originServerName = $databaseDetails.ServerName
-  $restoredServerName = ($databaseDetails.ServerName -split $config.OriginRoleSuffix)[0] + $config.OriginRoleSuffix
-
-  # Update tenant database recovery state
-  $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $originServerName -DatabaseName $databaseDetails.DatabaseName
-  if (!$dbState)
+  if ($databaseDetails)
   {
-    Write-Verbose "Could not update recovery state for database: '$originServerName/$($databaseDetails.DatabaseName)'"
+    $originServerName = $databaseDetails.ServerName
+    $restoredServerName = ($databaseDetails.ServerName -split $config.OriginRoleSuffix)[0] + $config.OriginRoleSuffix
+
+    # Update tenant database recovery state
+    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $originServerName -DatabaseName $databaseDetails.DatabaseName
+    if (!$dbState)
+    {
+      Write-Verbose "Could not update recovery state for database: '$originServerName/$($databaseDetails.DatabaseName)'"
+    }
+  }
+  else
+  {
+    Write-Verbose "Could not find database details for recovery job with Id: '$RecoveryJobId'"
   }
 
   # Remove completed job from queue for polling
@@ -321,7 +328,7 @@ while($operationQueue.Count -le $MaxConcurrentRestoreOperations)
       if (!$operationQueueMap.ContainsKey($operationObject.Id))
       {
         $operationQueue += $operationObject
-        $operationQueueMap.Add($operationObject.Id, $databaseDetails)      
+        $operationQueueMap.Add("$operationObject.Id", $databaseDetails)      
       }
     }  
   }  
@@ -363,7 +370,7 @@ while ($operationQueue.Count -gt 0)
           }
 
           # Add operation object to queue for tracking later
-          if (!$operationQueueMap.ContainsKey($operationObject.Id))
+          if (!$operationQueueMap.ContainsKey("$operationObject.Id"))
           {
             $operationQueue += $operationObject
             $operationQueueMap.Add($operationObject.Id, $databaseDetails) 
@@ -410,10 +417,10 @@ while ($operationQueue.Count -gt 0)
         }
 
         # Add operation object to queue for tracking later
-        if (!$operationQueueMap.ContainsKey($operationObject.Id))
+        if (!$operationQueueMap.ContainsKey("$operationObject.Id"))
         {
           $operationQueue += $operationObject
-          $operationQueueMap.Add($operationObject.Id, $databaseDetails) 
+          $operationQueueMap.Add("$operationObject.Id", $databaseDetails) 
         }
       }
 
