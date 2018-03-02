@@ -224,7 +224,7 @@ while ($true)
     Remove-Item -Path "$env:TEMP\profile.json" -ErrorAction SilentlyContinue
 
     #Reset web app in recovery region
-    $recoveryAppName = $config.EventsAppNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix
+    $recoveryAppName = $config.EventsAppNameStem + $recoveryLocation + '-' + $wtpUser.Name
     Restart-AzureRmWebApp -ResourceGroupName $recoveryResourceGroupName -Name $recoveryAppName >$null
     break
   }

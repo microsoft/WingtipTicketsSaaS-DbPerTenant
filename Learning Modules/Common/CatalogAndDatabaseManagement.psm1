@@ -2097,6 +2097,14 @@ function Set-ExtendedDatabase {
         [object]$Database    
     )
     $config = Get-Configuration
+
+    $commandText = "SELECT @@DBTS"
+    $recoveryRowVersion =  Invoke-SqlAzureWithRetry `
+                            -ServerInstance "$($Database.ServerName).database.windows.net" `
+                            -Database $Database.DatabaseName `
+                            -Query $commandText `
+                            -UserName $config.TenantAdminUserName `
+                            -Password $config.TenantAdminPassword    
     
     $commandText = "
         MERGE INTO [dbo].[Databases] AS [target]
@@ -2111,8 +2119,8 @@ function Set-ExtendedDatabase {
                 ElasticPoolName = source.ElasticPoolName,
                 LastUpdated = source.LastUpdated
         WHEN NOT MATCHED THEN
-            INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, RecoveryState, LastUpdated)
-            VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', 'n/a', LastUpdated);"
+            INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, RecoveryState, RecoveryRowVersion, LastUpdated)
+            VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', 'n/a', $recoveryRowVersion, LastUpdated);"
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `

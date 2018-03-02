@@ -81,7 +81,7 @@ while ($true)
     $restoredTenantDatabases = @()
     $originTenantDatabases += Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.ResourceGroupName -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
     $restoredTenantDatabases += Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
-    $databaseRecoveryStatuses = Get-ExtendedDatabase -Catalog $tenantCatalog
+    $databaseRecoveryStatuses = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {$_.ServerName -notmatch "$($config.RecoveryRoleSuffix)$"}
 
     # Output recovery progress 
     $TenantRecoveryPercentage = [math]::Round($onlineTenantCount/$tenantCount,2)
@@ -146,13 +146,21 @@ while ($true)
         $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0] 
         $originTenantServer = $originTenantDatabase.Name.Split('/')[0]
                
-        # Update tenant alias to point to recovered database        
-        Set-DnsAlias `
-          -ResourceGroupName $WingtipRecoveryResourceGroup `
-          -ServerName $restoredTenantServer `
-          -ServerDNSAlias $tenantAliasName `
-          -OldServerName $originTenantServer `
-          -OldResourceGroupName $wtpUser.ResourceGroupName
+        # Update tenant alias to point to recovered database if applicable
+        $aliasInRecoveryRegion = Get-AzureRmSqlServerDnsAlias `
+                                    -ResourceGroupName $WingtipRecoveryResourceGroup `
+                                    -ServerName $restoredTenantServer `
+                                    -DnsAliasName $tenantAliasName `
+                                    -ErrorAction SilentlyContinue
+        if (!$aliasInRecoveryRegion)
+        {
+          Set-DnsAlias `
+            -ResourceGroupName $WingtipRecoveryResourceGroup `
+            -ServerName $restoredTenantServer `
+            -ServerDNSAlias $tenantAliasName `
+            -OldServerName $originTenantServer `
+            -OldResourceGroupName $wtpUser.ResourceGroupName
+        }
       }
       elseif (($tenantDatabaseRecoveryStatus.RecoveryState -In ('restored', 'failedOver')) -and ($tenantRecoveryState -eq 'UpdatingTenantAliasToRecovery'))
       {
