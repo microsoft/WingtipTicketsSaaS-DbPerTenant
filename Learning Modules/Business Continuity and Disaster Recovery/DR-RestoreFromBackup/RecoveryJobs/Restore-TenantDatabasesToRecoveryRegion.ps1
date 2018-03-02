@@ -177,9 +177,6 @@ function Complete-AsynchronousDatabaseRecovery
   $originServerName = $databaseDetails.ServerName
   $restoredServerName = ($databaseDetails.ServerName -split $config.OriginRoleSuffix)[0] + $config.OriginRoleSuffix
 
-  # Enable change tracking on tenant database. This tracks any changes to tenant data that will need to be repatriated when the primary region is available once more. 
-  Enable-ChangeTrackingForTenant -Catalog $tenantCatalog -TenantServerName $restoredServerName -TenantDatabaseName $databaseDetails.DatabaseName -RetentionPeriod 10
-
   # Update tenant database recovery state
   $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $originServerName -DatabaseName $databaseDetails.DatabaseName
   if (!$dbState)
@@ -273,10 +270,6 @@ if ($recoveringDatabases.Count -gt 0)
   {
     if ($recoveredDatabaseInstances.Name -match $database.DatabaseName)
     {
-        # Enable change tracking on tenant database. This tracks any changes to tenant data that will need to be repatriated when the primary region is available once more. 
-        $restoredServerName = ($database.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix
-        Enable-ChangeTrackingForTenant -Catalog $tenantCatalog -TenantServerName $restoredServerName -TenantDatabaseName $database.DatabaseName -RetentionPeriod 10
-
         # Mark database as restored 
         $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
     }
