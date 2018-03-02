@@ -69,7 +69,4 @@
     <Build Include="dbo\Tables\ElasticPools.sql" />
     <Build Include="dbo\Tables\Servers.sql" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="WingtipCatalogDB.publish.xml" />
-  </ItemGroup>
 </Project>
