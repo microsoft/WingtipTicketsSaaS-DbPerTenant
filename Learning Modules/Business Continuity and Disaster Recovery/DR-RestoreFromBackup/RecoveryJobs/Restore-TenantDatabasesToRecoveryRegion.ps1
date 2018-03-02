@@ -191,8 +191,6 @@ function Complete-AsynchronousDatabaseRecovery
     Write-Verbose "Could not find database details for recovery job with Id: '$RecoveryJobId'"
   }
 
-  # Remove completed job from queue for polling
-  $operationQueue = $operationQueue -ne $recoveryJob  
 }
 
 ## -------------------------------- Main Script ------------------------------------------------
@@ -261,10 +259,11 @@ if ($recoveringDatabases.Count -gt 0)
         "ElasticPoolName" = $null
       }     
 
-      if (!$operationQueueMap.ContainsKey($jobObject.Id))
+      $jobId = $jobObject.Id
+      if (!$operationQueueMap.ContainsKey("$jobId"))
       {
         $operationQueue += $jobObject
-        $operationQueueMap.Add($jobObject.Id, $databaseDetails)
+        $operationQueueMap.Add("$jobId", $databaseDetails)
       }
     }
   }
@@ -325,10 +324,11 @@ while($operationQueue.Count -le $MaxConcurrentRestoreOperations)
       }
 
       # Add operation object to queue for tracking later
-      if (!$operationQueueMap.ContainsKey($operationObject.Id))
+      $operationId = $operationObject.Id
+      if (!$operationQueueMap.ContainsKey("$operationId"))
       {
         $operationQueue += $operationObject
-        $operationQueueMap.Add("$operationObject.Id", $databaseDetails)      
+        $operationQueueMap.Add("$operationId", $databaseDetails)      
       }
     }  
   }  
@@ -349,7 +349,7 @@ while ($operationQueue.Count -gt 0)
     {
       $operationDetails = Get-AzureRmLog -CorrelationId $recoveryJob.Id 3>$null
 
-      if ($operationDetails.Status.Value -eq "Succeeded")
+      if ($operationDetails.Status.Value -contains "Succeeded")
       {
         # Start new restore operation if there are any databases left to recover
         $tenantListPerPool = Select-HighestPriorityUnrecoveredTenantPerPool -Catalog $tenantCatalog
@@ -370,15 +370,19 @@ while ($operationQueue.Count -gt 0)
           }
 
           # Add operation object to queue for tracking later
-          if (!$operationQueueMap.ContainsKey("$operationObject.Id"))
+          $operationId = $operationObject.Id
+          if (!$operationQueueMap.ContainsKey("$operationId"))
           {
             $operationQueue += $operationObject
-            $operationQueueMap.Add($operationObject.Id, $databaseDetails) 
+            $operationQueueMap.Add("$operationId", $databaseDetails) 
           }
         }
 
         # Update tenant database recovery state
-        Complete-AsynchronousDatabaseRecovery -RecoveryJobId $recoveryJob.Id     
+        Complete-AsynchronousDatabaseRecovery -RecoveryJobId $recoveryJob.Id 
+
+        # Remove completed job from queue for polling
+        $operationQueue = $operationQueue -ne $recoveryJob      
 
         # Output recovery progress 
         $recoveredDatabaseCount+= 1
@@ -417,15 +421,19 @@ while ($operationQueue.Count -gt 0)
         }
 
         # Add operation object to queue for tracking later
-        if (!$operationQueueMap.ContainsKey("$operationObject.Id"))
+        $operationId = $operationObject.Id
+        if (!$operationQueueMap.ContainsKey("$operationId"))
         {
           $operationQueue += $operationObject
-          $operationQueueMap.Add("$operationObject.Id", $databaseDetails) 
+          $operationQueueMap.Add("$operationId", $databaseDetails) 
         }
       }
 
       # Update tenant database recovery state
-      Complete-AsynchronousDatabaseRecovery -RecoveryJobId $recoveryJob.Id     
+      Complete-AsynchronousDatabaseRecovery -RecoveryJobId $recoveryJob.Id 
+
+      # Remove completed job from queue for polling
+      $operationQueue = $operationQueue -ne $recoveryJob      
 
       # Output recovery progress 
       $recoveredDatabaseCount+= 1
