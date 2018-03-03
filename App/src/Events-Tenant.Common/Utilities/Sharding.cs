@@ -16,6 +16,7 @@ namespace Events_Tenant.Common.Utilities
         private static IUtilities _utilities;
         private static ICatalogRepository _catalogRepository;
         private static ITenantRepository _tenantRepository;
+        private static String _shardMapConnectionString;
         #endregion
 
         #region Public Properties
@@ -45,6 +46,7 @@ namespace Events_Tenant.Common.Utilities
                 _catalogRepository = catalogRepository;
                 _tenantRepository = tenantRepository;
                 _utilities = utilities;
+                _shardMapConnectionString = connectionString;
 
                 // Deploy shard map manager
                 // if shard map manager exists, refresh content, else create it, then add content
@@ -127,6 +129,28 @@ namespace Events_Tenant.Common.Utilities
             {
                 Trace.TraceError(exception.Message, "Error in registering new shard.");
                 return false;
+            }
+
+        }
+
+        /// <summary>
+        /// Resolves any mapping differences between the global shard map in the catalog and the local shard map located a tenant database
+        /// </summary>
+        /// <param name="tenantId">The tenant identifier.</param>
+        /// <param name="UseGlobalShardMap">Specifies if the global shard map or the local shard map should be used as the source of truth for resolution.</param>       
+        public static void ResolveMappingDifferences(int TenantId, bool UseGlobalShardMap = false)
+        {
+            var shardMapManager = ShardMapManagerFactory.GetSqlShardMapManager(_shardMapConnectionString, ShardMapManagerLoadPolicy.Lazy);
+            var recoveryManager = shardMapManager.GetRecoveryManager();
+            var tenantMapping = ShardMap.GetMappingForKey(TenantId);
+            var mappingDifferencesList = recoveryManager.DetectMappingDifferences(tenantMapping.Shard.Location, ShardMap.Name);
+
+            foreach(var mismatch in mappingDifferencesList)
+            {
+                if (!UseGlobalShardMap)
+                    recoveryManager.ResolveMappingDifferences(mismatch, Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution.KeepShardMapping);       
+                else
+                    recoveryManager.ResolveMappingDifferences(mismatch, Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution.KeepShardMapMapping);
             }
 
         }

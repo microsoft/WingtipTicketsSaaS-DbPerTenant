@@ -14,6 +14,7 @@ namespace Events_TenantUserApp.Controllers
         private readonly ICatalogRepository _catalogRepository;
         private readonly ITenantRepository _tenantRepository;
         private readonly ILogger _logger;
+        private readonly IUtilities _utilities;
 
         #endregion
 
@@ -25,11 +26,13 @@ namespace Events_TenantUserApp.Controllers
         /// <param name="catalogRepository">The tenants repository.</param>
         /// <param name="tenantRepository">The venues repository.</param>
         /// <param name="logger">The logger.</param>
-        public HomeController(ICatalogRepository catalogRepository, ITenantRepository tenantRepository, ILogger<HomeController> logger)
+        /// <param name="utilities">The utilities class.</param>
+        public HomeController(ICatalogRepository catalogRepository, ITenantRepository tenantRepository, ILogger<HomeController> logger, IUtilities utilities)
         {
             _catalogRepository = catalogRepository;
             _tenantRepository = tenantRepository;
             _logger = logger;
+            _utilities = utilities;
         }
 
         #endregion
@@ -57,7 +60,26 @@ namespace Events_TenantUserApp.Controllers
                         }
                         catch (Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementException ex)
                         {
-                            _logger.LogError(0, ex, "Tenant '" + tenant.TenantName + "' is unavailable in the catalog");                           
+                            if (ex.ErrorCode == Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementErrorCode.MappingIsOffline)
+                            {
+                                _logger.LogInformation(0, ex, "Tenant is offline: {tenant}", tenant.TenantName);                       
+                            }
+                            else if (ex.ErrorCode == Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementErrorCode.MappingDoesNotExist)
+                            {
+                                //Fix mapping irregularities
+                                _utilities.ResolveMappingDifferences(tenant.TenantId);
+
+                                //Get venue details
+                                String tenantStatus = _utilities.GetTenantStatus(tenant.TenantId);
+                                if (tenantStatus == "Online")
+                                {
+                                    venue = await _tenantRepository.GetVenueDetails(tenant.TenantId);
+                                }
+                            }
+                            else
+                            {
+                                _logger.LogError(0, ex.Message, "Mapping unavailable for tenant: {tenant}", tenant.TenantName);
+                            }                                                    
                         }
                                                     
                         if (venue != null)

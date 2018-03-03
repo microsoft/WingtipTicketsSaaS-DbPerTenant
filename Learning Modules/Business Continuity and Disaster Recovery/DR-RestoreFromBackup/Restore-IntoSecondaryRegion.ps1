@@ -58,7 +58,7 @@ $startTime = Get-Date
 
 # Disable traffic manager web app endpoint in primary region (idempotent)
 Write-Output "Disabling traffic manager endpoint for Wingtip events app..."
-$profileName = $config.EventsAppNameStem + $wtpUser.Name + '-profiles'
+$profileName = $config.EventsAppNameStem + $wtpUser.Name
 $webAppEndpoint = $config.EventsAppNameStem + $primaryLocation + '-' + $wtpUser.name
 Disable-AzureRmTrafficManagerEndpoint -Name $webAppEndpoint -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -Force -ErrorAction SilentlyContinue > $null
 
@@ -139,7 +139,7 @@ if (!($runningScripts -like "*Sync-TenantConfiguration*"))
 # Get list of tenants registered in catalog
 $tenantList = Get-Tenants -Catalog $tenantCatalog -ErrorAction Stop
 
-# Mark all non-recovered tenants as unavailable in the catalog
+# Mark all non-recovered tenants as unavailable in the recovery catalog
 Write-Output "Marking non-recovered tenants offline in the catalog..."
 foreach ($tenant in $tenantList)
 {
@@ -191,7 +191,7 @@ while ($true)
   # This signals that the app is ready to receive traffic and can process new tenant registrations while recovery operations are underway
   if (($newTenantProvisioningJob.State -eq "Completed") -and ($appRecoveryJob.State -eq "Completed"))
   {
-    $profileName = $config.EventsAppNameStem + $wtpUser.Name + '-profiles'
+    $profileName = $config.EventsAppNameStem + $wtpUser.Name
     $endpointName = $config.EventsAppNameStem + $recoveryLocation + '-' + $wtpUser.Name
 
     $webAppEndpoint = Get-AzureRmTrafficManagerEndpoint -Name $endpointName -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName

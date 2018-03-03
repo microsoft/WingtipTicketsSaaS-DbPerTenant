@@ -45,7 +45,7 @@
         "wtpEventsAppTrafficManagerUniqueDnsName": "[concat('events.wingtip','-',variables('databasePerTenantSuffix'),'.',variables('lowerCaseUser'))]",
         "wtpEventsApp": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('originLocation'),'-',variables('lowerCaseUser'))]",
         "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage-v5.zip",
-        "wtpEventsTrafficManagerProfileName": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'), '-', 'profiles')]"
+        "wtpEventsTrafficManagerProfileName": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'))]"
     },
     "resources": [
         {

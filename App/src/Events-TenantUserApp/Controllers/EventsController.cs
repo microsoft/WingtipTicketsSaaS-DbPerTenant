@@ -67,7 +67,8 @@ namespace Events_TenantUserApp.Controllers
                         }                                
                         else
                         {
-                            String recoveryAppInstance = "https://events-wingtip-dpt-" + _appRegion + "-" + _configuration["User"] + ".azurewebsites.net/" + tenant;
+                            var pairedRegion = (tenantServerName.Split('-'))[0].Split('1')[0];
+                            String recoveryAppInstance = "https://events-wingtip-dpt-" + pairedRegion + "-" + _configuration["User"] + ".azurewebsites.net/" + tenant;
                             return Redirect(recoveryAppInstance);
                         }
                     }
