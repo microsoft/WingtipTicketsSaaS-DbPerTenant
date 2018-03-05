@@ -270,7 +270,8 @@ namespace Events_TenantUserApp
                 UserID = DatabaseConfig.DatabaseUser,
                 Password = DatabaseConfig.DatabasePassword,
                 ApplicationName = "EntityFramework",
-                ConnectTimeout = DatabaseConfig.ConnectionTimeOut
+                ConnectTimeout = DatabaseConfig.ConnectionTimeOut,
+                LoadBalanceTimeout = 15
             };
 
             return connStrBldr.ConnectionString;

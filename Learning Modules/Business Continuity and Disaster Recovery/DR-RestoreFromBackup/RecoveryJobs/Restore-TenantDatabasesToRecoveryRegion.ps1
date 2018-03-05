@@ -276,7 +276,8 @@ if ($recoveringDatabases.Count -gt 0)
   {
     if ($recoveredDatabaseInstances.Name -match $database.DatabaseName)
     {
-        # Mark database as restored 
+        # Mark database as restored
+        $recoveredDatabaseCount +=1 
         $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
     }
     else

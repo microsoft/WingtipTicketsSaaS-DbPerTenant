@@ -86,6 +86,24 @@ namespace Events_TenantUserApp.Controllers
                     _logger.LogInformation(0, ex, "Tenant is offline: {tenant}", tenantModel.TenantName);
                     return View("TenantOffline", tenantModel.TenantName);
                 }
+                else if (ex.ErrorCode == Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementErrorCode.MappingDoesNotExist)
+                {
+                    var tenantModel = await _catalogRepository.GetTenant(tenant);
+                    //Fix mapping irregularities
+                    _utilities.ResolveMappingDifferences(tenantModel.TenantId);
+
+                    //Get venue details
+                    String tenantStatus = _utilities.GetTenantStatus(tenantModel.TenantId);
+                    if (tenantStatus == "Online")
+                    {
+                        var events = await _tenantRepository.GetEventsForTenant(tenantModel.TenantId);
+                        return View(events);
+                    }
+                    else
+                    {
+                        return View("TenantOffline", tenantModel.TenantName);
+                    }
+                }
                 else
                 {
                     _logger.LogError(0, ex, "Tenant shard was unavailable for tenant: {tenant}", tenant);
