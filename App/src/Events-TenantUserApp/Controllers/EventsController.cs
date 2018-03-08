@@ -47,30 +47,37 @@ namespace Events_TenantUserApp.Controllers
                     var tenantDetails = await _catalogRepository.GetTenant(tenant);
                     if (tenantDetails != null)
                     {
-                        //get tenant servername from tenant alias
-                        var serverAliases = _client.Query(tenantDetails.TenantAlias, DnsClient.QueryType.A);
-                        String tenantServerName = serverAliases.Answers.ARecords().ElementAt(0).DomainName;
-
                         //Get tenant status
                         String tenantStatus = _utilities.GetTenantStatus(tenantDetails.TenantId);
 
-                        if ((tenantServerName.Contains(_appRegion)) && (tenantStatus == "Online"))
-                        {
-                            SetTenantConfig(tenantDetails.TenantId, tenantDetails.TenantIdInString);
-
-                            var events = await _tenantRepository.GetEventsForTenant(tenantDetails.TenantId);
-                            return View(events);
-                        }
-                        else if (tenantStatus == "Offline")
+                        if (tenantStatus == "Offline")
                         {
                             return View("TenantOffline", tenantDetails.TenantName);
-                        }                                
+                        }
                         else
                         {
-                            var pairedRegion = (tenantServerName.Split('-'))[0].Split('1')[0];
-                            String recoveryAppInstance = "https://events-wingtip-dpt-" + pairedRegion + "-" + _configuration["User"] + ".azurewebsites.net/" + tenant;
-                            return Redirect(recoveryAppInstance);
-                        }
+                            var venueInfo = await _tenantRepository.GetVenueDetails(tenantDetails.TenantId);
+
+                            //Get region of tenant database server using DNS
+                            var dnsQuery = _client.Query(venueInfo.DatabaseServerName, DnsClient.QueryType.A);
+                            String serverRegion = dnsQuery.Answers.ARecords().ElementAt(0).DomainName;
+
+                            //Display events if tenant database is located in same region as app
+                            if (serverRegion.Contains(_appRegion) && tenantStatus == "Online")
+                            {
+                                SetTenantConfig(tenantDetails.TenantId, tenantDetails.TenantIdInString);
+
+                                var events = await _tenantRepository.GetEventsForTenant(tenantDetails.TenantId);
+                                return View(events);
+                            }
+                            //Redirect to different app instance if tenant database is located in different region from app
+                            else
+                            {
+                                var pairedRegion = (serverRegion.Split('-'))[0].Split('1')[0];
+                                String recoveryAppInstance = "https://events-wingtip-dpt-" + pairedRegion + "-" + _configuration["User"] + ".azurewebsites.net/" + tenant;
+                                return Redirect(recoveryAppInstance);
+                            }
+                        }                       
                     }
                     else
                     {

@@ -29,9 +29,6 @@ function Add-ExtendedTenantMetaDataToCatalog
         [parameter(Mandatory=$true)]
         [string]$TenantName,
 
-        [parameter(Mandatory=$true)]
-        [string]$TenantAlias,
-
         [parameter(Mandatory=$false)]
         [string]$TenantServicePlan = 'standard'
     )
@@ -46,8 +43,8 @@ function Add-ExtendedTenantMetaDataToCatalog
     # Add the tenant name into the Tenants table
     $commandText = "
         MERGE INTO Tenants as [target]
-        USING (VALUES ($rawkeyHexString, '$TenantName', '$TenantAlias', '$TenantServicePlan', CURRENT_TIMESTAMP)) AS source
-            (TenantId, TenantName, TenantAlias, ServicePlan, LastUpdated)
+        USING (VALUES ($rawkeyHexString, '$TenantName', '$TenantServicePlan', CURRENT_TIMESTAMP)) AS source
+            (TenantId, TenantName, ServicePlan, LastUpdated)
         ON target.TenantId = source.TenantId
         WHEN MATCHED THEN
             UPDATE SET 
@@ -55,8 +52,8 @@ function Add-ExtendedTenantMetaDataToCatalog
                 ServicePlan = source.ServicePlan,
                 LastUpdated = source.LastUpdated
         WHEN NOT MATCHED THEN
-            INSERT (TenantId, TenantName, TenantAlias, ServicePlan, RecoveryState, LastUpdated)
-            VALUES (source.TenantId, source.TenantName, source.TenantAlias, source.ServicePlan, 'n/a', CURRENT_TIMESTAMP);"
+            INSERT (TenantId, TenantName, ServicePlan, RecoveryState, LastUpdated)
+            VALUES (source.TenantId, source.TenantName, source.ServicePlan, 'n/a', CURRENT_TIMESTAMP);"
 
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -71,7 +68,7 @@ function Add-ExtendedTenantMetaDataToCatalog
 
 <#
 .SYNOPSIS
-    Registers the tenant database in the catalog using the input alias. Additionally, the tenant name is stored as extended tenant meta data.
+    Registers the tenant database in the catalog. Additionally, the tenant name is stored as extended tenant meta data.
 #>
 function Add-TenantDatabaseToCatalog
 {
@@ -89,24 +86,24 @@ function Add-TenantDatabaseToCatalog
         [object]$TenantDatabase,
 
         [parameter(Mandatory=$true)]
-        [string]$TenantAlias,
+        [string]$TenantServerName,
 
         [parameter(Mandatory=$false)]
         [string]$TenantServicePlan = 'standard'
     )
 
-    $fullyQualifiedTenantServerAlias = $TenantAlias + ".database.windows.net"
+    $fullyQualifiedTenantServerName = $TenantServerName + ".database.windows.net"
     
     # Add the database to the catalog shard map (idempotent)
     Add-Shard -ShardMap $Catalog.ShardMap `
-        -SqlServerName $fullyQualifiedTenantServerAlias `
+        -SqlServerName $fullyQualifiedTenantServerName `
         -SqlDatabaseName $TenantDatabase.DatabaseName
 
     # Add the tenant-to-database mapping to the catalog (idempotent)
     Add-ListMapping `
         -KeyType $([int]) `
         -ListShardMap $Catalog.ShardMap `
-        -SqlServerName $fullyQualifiedTenantServerAlias `
+        -SqlServerName $fullyQualifiedTenantServerName `
         -SqlDatabaseName $TenantDatabase.DatabaseName `
         -ListPoint $TenantKey
 
@@ -115,7 +112,6 @@ function Add-TenantDatabaseToCatalog
         -Catalog $Catalog `
         -TenantKey $TenantKey `
         -TenantName $TenantName `
-        -TenantAlias $fullyQualifiedTenantServerAlias `
         -TenantServicePlan $TenantServicePlan
 
     # Add server details to catalog as extended meta data (idempotent)
@@ -156,7 +152,7 @@ function Disable-ChangeTrackingForTenant
     $adminPassword = $config.TenantAdminPassword
    
     $tenantObject = Get-Tenant -Catalog $Catalog -TenantName $TenantName
-    $fullyQualifiedTenantAlias = $tenantObject.Alias + ".database.windows.net"
+    $fullyQualifiedServerName = $tenantObject.Database.ServerName + ".database.windows.net"
 
     $queryText = "
             SELECT      schm.name AS schemaName, 
@@ -170,7 +166,7 @@ function Disable-ChangeTrackingForTenant
     $trackedTables = Invoke-SqlAzureWithRetry `
         -Username $adminUserName `
         -Password $adminPassword `
-        -ServerInstance $fullyQualifiedTenantAlias `
+        -ServerInstance $fullyQualifiedServerName `
         -Database $tenantObject.Database.DatabaseName `
         -ConnectionTimeout 45 `
         -Query $queryText `
@@ -186,7 +182,7 @@ function Disable-ChangeTrackingForTenant
     $commandOutput = Invoke-SqlAzureWithRetry `
         -Username $adminUserName `
         -Password $adminPassword `
-        -ServerInstance $fullyQualifiedTenantAlias `
+        -ServerInstance $fullyQualifiedServerName `
         -Database $tenantObject.Database.DatabaseName `
         -ConnectionTimeout 45 `
         -Query $queryText `
@@ -305,7 +301,6 @@ function Find-TenantNames
 <#
 .SYNOPSIS
     Initializes and returns a catalog object based on the active catalog database. 
-    The catalog database can be restored to a different server during disaster recovery and this function uses a catalog alias to get the active catalog.
     The returned catalog object contains the initialized shard map manager and shard map, which can be used to access
     the associated databases (shards) and tenant key mappings.
 #>
@@ -321,25 +316,20 @@ function Get-Catalog
     )
     $config = Get-Configuration
 
-    # Get DNS alias for catalog server 
-    $catalogAlias = "catalog-" + $WtpUser + ".database.windows.net"
-    
-    # Resolve alias to current catalog server 
-    $catalogServerName = Get-ServerNameFromAlias $catalogAlias
-
     # Find catalog server in Azure 
-    $catalogServer = Find-AzureRmResource -ResourceNameEquals $catalogServerName -ResourceType "Microsoft.Sql/servers"
+    $catalogServer = Find-AzureRmResource -ResourceNameContains $config.CatalogServerNameStem -ResourceType "Microsoft.Sql/servers" -ResourceGroupNameEquals $ResourceGroupName
+    $fullyQualifiedServerName = $catalogServer.Name + ".database.windows.net"
 
     # Check catalog database exists
     $catalogDatabase = Get-AzureRmSqlDatabase `
         -ResourceGroupName $catalogServer.ResourceGroupName `
-        -ServerName $catalogServerName `
+        -ServerName $catalogServer.Name `
         -DatabaseName $config.CatalogDatabaseName `
         -ErrorAction Stop
 
     # Initialize shard map manager from catalog database
     [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMapManager]$shardMapManager = Get-ShardMapManager `
-        -SqlServerName $catalogAlias `
+        -SqlServerName $fullyQualifiedServerName `
         -UserName $config.CatalogAdminUserName `
         -Password $config.CatalogAdminPassword `
         -SqlDatabaseName $config.CatalogDatabaseName
@@ -364,7 +354,7 @@ function Get-Catalog
         $catalog = New-Object PSObject -Property @{
             ShardMapManager=$shardMapManager
             ShardMap=$shardMap
-            FullyQualifiedServerName = $catalogAlias
+            FullyQualifiedServerName = $fullyQualifiedServerName
             Database = $catalogDatabase
             }
 
@@ -391,8 +381,7 @@ function Get-DatabasesForTenant
     $tenantDatabaseList = @()
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($tenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerAlias = $tenantMapping.Shard.Location.Server 
-    $tenantServerName = Get-ServerNameFromAlias $tenantServerAlias
+    $tenantServerName = $tenantMapping.Shard.Location.Server 
 
     # Find tenant server in Azure 
     $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
@@ -592,7 +581,7 @@ function Get-ExtendedTenant
 
     $config = Get-Configuration
 
-    $commandText = "SELECT TenantId, TenantName, TenantStatus, ServicePlan, TenantAlias, ServerName, DatabaseName, TenantRecoveryState, Location, LastUpdated FROM [dbo].[TenantsExtended]" 
+    $commandText = "SELECT TenantId, TenantName, TenantStatus, ServicePlan, ServerName, DatabaseName, TenantRecoveryState, Location, LastUpdated FROM [dbo].[TenantsExtended]" 
     
     if($TenantKey)
     {
@@ -667,8 +656,7 @@ function Get-Tenant
         throw "Tenant '$TenantName' not found in catalog."
     }
 
-    $tenantAlias = $tenantShard.Shard.Location.Server
-    $tenantServerName = Get-ServerNameFromAlias $tenantAlias
+    $tenantServerName = $tenantShard.Shard.Location.Server
     $tenantDatabaseName = $tenantShard.Shard.Location.Database
 
     # Find tenant server in Azure 
@@ -683,7 +671,6 @@ function Get-Tenant
         Name = $TenantName
         Key = $tenantKey
         Database = $tenantDatabase
-        Alias = $tenantAlias
     }
 
     return $tenant            
@@ -692,7 +679,7 @@ function Get-Tenant
 <#
 .SYNOPSIS
     Returns an array of all tenants registered in the catalog.
-    The returned array contains the TenantName, TenantKey, and alias of all registered tenants
+    The returned array contains the TenantName, TenantKey of all registered tenants
 #>
 function Get-Tenants
 {
@@ -706,11 +693,9 @@ function Get-Tenants
 
     foreach ($tenantShard in $tenantShards)
     {
-        $tenantAlias = $tenantShard.Shard.Location.Server.Split('.',2)[0]
         $tenant = New-Object PSObject -Property @{
             Name = $tenantShard.Shard.Location.Database
             Key = $tenantShard.Value
-            Alias = $tenantAlias
         }
 
         # store tenant object in array
@@ -718,39 +703,6 @@ function Get-Tenants
     }
 
     return $registeredTenants            
-}
-
-<#
-.SYNOPSIS
-    Returns a unique DNS alias that points to the server a tenant's data is stored in
-#>
-function Get-TenantAlias
-{
-    [cmdletbinding()]
-    param
-    (
-        [Parameter(Mandatory=$true)]
-        [string]$WtpUser,
-
-        [parameter(Mandatory=$true)]
-        [string]$TenantName    
-    )
-
-    $requestedTenantAlias = $null
-    $requestedTenantAlias = (Get-NormalizedTenantName $TenantName) + "-" + $WtpUser
-    $fullyQualifiedTenantAlias = $requestedTenantAlias + ".database.windows.net"
-
-    # Check if input alias exists
-    $aliasExists = Test-IfDnsAlias $fullyQualifiedTenantAlias    
-    if ($aliasExists)
-    {
-        return $requestedTenantAlias
-    }    
-    else
-    {
-        Write-Error "No alias exists for tenant '$TenantName'. Use the Set-TenantAlias function to create one."
-        return $null
-    }
 }
 
 <#
@@ -806,8 +758,7 @@ function Get-TenantDatabaseForRestorePoint
     $restorePointDatabase = $null 
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($tenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantAlias = $tenantMapping.Shard.Location.Server
-    $tenantServerName = Get-ServerNameFromAlias $tenantAlias
+    $tenantServerName = $tenantMapping.Shard.Location.Server
 
     # Find tenant server in Azure 
     $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
@@ -1052,21 +1003,13 @@ function Initialize-TenantFromBufferDatabase
             -PostalCode $PostalCode `
             -CountryCode $CountryCode
 
-    # Create alias for tenant database
-    $wtpUser = $serverName.Split("-")[-1] 
-    $tenantAlias = Get-TenantAlias `
-        -ResourceGroupName $Catalog.Database.ResourceGroupName `
-        -WtpUser $wtpUser `
-        -TenantName $TenantName `
-        -TenantServerName $serverName
-
     # register the tenant and database in the catalog
     Add-TenantDatabaseToCatalog `
         -Catalog $Catalog `
         -TenantName $TenantName `
         -TenantKey $tenantKey `
         -TenantDatabase $tenantDatabase `
-        -TenantAlias $tenantAlias
+        -TenantServerName $serverName
 
     return $tenantKey
 }
@@ -1401,19 +1344,12 @@ function New-Tenant
         -PostalCode $PostalCode `
         -WtpUser $WtpUser
 
-    # Create alias for tenant database 
-    $tenantAlias = Set-TenantAlias `
-        -ResourceGroupName $WtpResourceGroupName `
-        -WtpUser $WtpUser `
-        -TenantName $TenantName `
-        -TenantServerName $ServerName        
-
     # Register the tenant and database in the catalog
     Add-TenantDatabaseToCatalog -Catalog $catalog `
         -TenantName $TenantName `
         -TenantKey $tenantKey `
         -TenantDatabase $tenantDatabase `
-        -TenantAlias $tenantAlias `
+        -TenantServerName $ServerName `
         -TenantServicePlan $ServicePlan
 
     return $tenantKey
@@ -1494,9 +1430,6 @@ function New-TenantDatabase
         $catalogServerName = $config.CatalogServerNameStem + $WtpUser + $config.OriginRoleSuffix 
         $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$ResourceGroupName/providers/Microsoft.Sql/servers/$catalogServerName/databases/$($config.GoldenTenantDatabaseName)"
 
-        # Compose tenant alias name 
-        $tenantAlias = $normalizedTenantName + "-" + $WtpUser
-
         # Use an ARM template to create the tenant database by copying the 'golden' database
         $deployment = New-AzureRmResourceGroupDeployment `
             -TemplateFile ($PSScriptRoot + "\" + $config.TenantDatabaseCopyTemplate) `
@@ -1506,7 +1439,6 @@ function New-TenantDatabase
             -ServerName $ServerName `
             -DatabaseName $normalizedTenantName `
             -ElasticPoolName $ElasticPoolName `
-            -TenantAlias $tenantAlias `
             -ErrorAction Stop `
             -Verbose
     }
@@ -1784,7 +1716,7 @@ function Remove-Tenant
 
     $tenantMapping = $Catalog.ShardMap.GetMappingForKey($TenantKey)
     $tenantShardLocation = $tenantMapping.Shard.Location
-    $tenantServerName = Get-ServerNameFromAlias $tenantShardLocation.Server
+    $tenantServerName = $tenantShardLocation.Server
 
     # Find tenant server in Azure 
     $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
@@ -1825,22 +1757,7 @@ function Remove-Tenant
         -Catalog $Catalog `
         -TenantKey $TenantKey `
         -ServerName $tenantServerName `
-        -DatabaseName $tenantShard.Location.Database 
-
-    # Delete tenant database alias
-    $tenantAliasName = ($tenantShard.Location.Server).Split('.')[0]
-    if ($tenantAliasName -notmatch "-home$|-recovery$")
-    {
-        Remove-AzureRMSqlServerDNSAlias –ResourceGroupName $tenantServer.ResourceGroupName `
-            -DnsAliasName $tenantAliasName `
-            -ServerName $tenantServerName `
-            -ErrorAction SilentlyContinue `
-            -Force `
-            >$null 
-    }
-
-    # Clear local DNS cache to remove tenant alias 
-    Clear-DnsClientCache >$null    
+        -DatabaseName $tenantShard.Location.Database    
 }
 
 
@@ -1864,8 +1781,7 @@ function Remove-TenantDatabaseForRestore
     $deletedTenantDatabase = $null
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantAlias = $tenantMapping.Shard.Location.Server 
-    $tenantServerName = Get-ServerNameFromAlias $tenantAlias
+    $tenantServerName = $tenantMapping.Shard.Location.Server 
 
     # Find tenant server in Azure 
     $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
@@ -1971,8 +1887,7 @@ function Rename-TenantDatabase
     # Get active tenant database location
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantAlias = $tenantMapping.Shard.Location.Server
-    $tenantServerName = Get-ServerNameFromAlias $tenantAlias
+    $tenantServerName = $tenantMapping.Shard.Location.Server
 
     # Find tenant server in Azure 
     $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
@@ -2720,7 +2635,7 @@ function Update-TenantShardInfo
     $tenantMapping = $Catalog.ShardMap.GetMappingForKey($tenantKey)
     $tenantShard = $tenantMapping.Shard
     $tenantShardLocation = $tenantShard.Location
-    $tenantServer = Get-ServerNameFromAlias $tenantShardLocation.Server
+    $tenantServer = $tenantShardLocation.Server
 
     if (($tenantServer -ne $FullyQualifiedTenantServerName) -or ($tenantShardLocation.Database -ne $TenantDatabaseName))
     {
@@ -2747,7 +2662,7 @@ function Update-TenantRecoveryState
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [validateset('startRecovery', 'endRecovery', 'startAliasUpdateToRecovery', 'endAliasUpdateToRecovery', 'startReset', 'endReset', 'startRepatriation', 'endRepatriation', 'startAliasUpdateToOrigin', 'endAliasUpdateToOrigin', 'markError')]
+        [validateset('startRecovery', 'endRecovery', 'startShardUpdateToRecovery', 'endShardUpdateToRecovery', 'startReset', 'endReset', 'startRepatriation', 'endRepatriation', 'startShardUpdateToOrigin', 'endShardUpdateToOrigin', 'markError')]
         [string]$UpdateAction,
 
         [parameter(Mandatory=$true)]
@@ -2766,34 +2681,34 @@ function Update-TenantRecoveryState
         -------------------------------------------------------------------------------------------------
         RestoringTenantData             |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
         RestoredTenantData              |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
-        UpdatingTenantAliasToRecovery   |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
+        UpdatingTenantShardToRecovery   |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
         OnlineInRecovery                |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
-        ResettingTenantToOrigin         |   ResetTenantToOrigin             |   endReset                    (tenant resources successfully reset back to origin)
+        ResettingTenantToOrigin         |   ResetTenantDataToOrigin         |   endReset                    (tenant resources successfully reset back to origin)
         --------------------------------------------------------------------------------------------------
         RestoringTenantData             |   RestoredTenantData              |   endRecovery                 (tenant resources successfully restored in recovery region)
-        RestoredTenantData              |   UpdatingTenantAliasToRecovery   |   startAliasUpdateToRecovery  (update tenant alias to bring tenant online in recovery region)
-        UpdatingTenantAliasToRecovery   |   OnlineInRecovery                |   endAliasUpdateToRecovery    (tenant alias update successful and tenant is online in recovery region)
+        RestoredTenantData              |   UpdatingTenantShardToRecovery   |   startShardUpdateToRecovery  (update tenant shard details to bring tenant online in recovery region)
+        UpdatingTenantShardToRecovery   |   OnlineInRecovery                |   endShardUpdateToRecovery    (tenant shard update successful and tenant is online in recovery region)
         --------------------------------------------------------------------------------------------------
         OnlineInRecovery                |   RepatriatingTenantData          |   startRepatriation           (tenant resources in the process of migrating back to origin)
         RepatriatingTenantData          |   RepatriatedTenantData           |   endRepatriation             (tenant resources successfully migrated back to origin)
         --------------------------------------------------------------------------------------------------
-        ResetTenantToOrigin             |   UpdatingTenantAliasToOrigin     |   startAliasUpdateToOrigin    (update tenant alias to bring tenant online in origin region)
-        RepatriatedTenantData           |   UpdatingTenantAliasToOrigin     |   startAliasUpdateToOrigin    (update tenant alias to bring tenant online in origin region)
-        UpdatingTenantAliasToOrigin     |   OnlineInOrigin                  |   endAliasUpdateToOrigin      (tenant alias update successful and tenant is back online in origin region)
+        ResetTenantDataToOrigin         |   UpdatingTenantShardToOrigin     |   startShardUpdateToOrigin    (update tenant shard details to bring tenant online in origin region)
+        RepatriatedTenantData           |   UpdatingTenantShardToOrigin     |   startShardUpdateToOrigin    (update tenant shard details to bring tenant online in origin region)
+        UpdatingTenantShardToOrigin     |   OnlineInOrigin                  |   endShardUpdateToOrigin      (tenant shard update successful and tenant is back online in origin region)
     #>
     
     # Construct state transition dictionary for tenant object 
     $tenantRecoveryStates = @{
         'startRecovery' = @{ "beginState" = ('n/a', 'OnlineInOrigin'); "endState" = ('RestoringTenantData') };
-        'startReset' = @{ "beginState" = ('RestoringTenantData', 'RestoredTenantData', 'UpdatingTenantAliasToRecovery', 'OnlineInRecovery'); "endState" = ('ResettingTenantToOrigin') };
-        'endReset' = @{ "beginState" = ('ResettingTenantToOrigin'); "endState" = ('ResetTenantToOrigin') };
+        'startReset' = @{ "beginState" = ('RestoringTenantData', 'RestoredTenantData', 'UpdatingTenantShardToRecovery', 'OnlineInRecovery'); "endState" = ('ResettingTenantToOrigin') };
+        'endReset' = @{ "beginState" = ('ResettingTenantToOrigin'); "endState" = ('ResetTenantDataToOrigin') };
         'endRecovery' = @{ "beginState" = ('RestoringTenantData'); "endState" = ('RestoredTenantData') };
-        'startAliasUpdateToRecovery' = @{ "beginState" = ('RestoredTenantData'); "endState" = ('UpdatingTenantAliasToRecovery')};
-        'endAliasUpdateToRecovery' = @{ "beginState" = ('UpdatingTenantAliasToRecovery'); "endState" = "OnlineInRecovery"};
+        'startShardUpdateToRecovery' = @{ "beginState" = ('RestoredTenantData'); "endState" = ('UpdatingTenantShardToRecovery')};
+        'endShardUpdateToRecovery' = @{ "beginState" = ('UpdatingTenantShardToRecovery'); "endState" = "OnlineInRecovery"};
         'startRepatriation' = @{ "beginState" = ('OnlineInRecovery'); "endState" = ('RepatriatingTenantData') };        
         'endRepatriation' = @{ "beginState" = ('RepatriatingTenantData'); "endState" = ('RepatriatedTenantData') };
-        'startAliasUpdateToOrigin' = @{ "beginState" = ('ResetTenantToOrigin', 'RepatriatedTenantData'); "endState" = ('UpdatingTenantAliasToOrigin')};
-        'endAliasUpdateToOrigin' = @{ "beginState" = ('UpdatingTenantAliasToOrigin'); "endState" = ('OnlineInOrigin')};
+        'startShardUpdateToOrigin' = @{ "beginState" = ('ResetTenantDataToOrigin', 'RepatriatedTenantData'); "endState" = ('UpdatingTenantShardToOrigin')};
+        'endShardUpdateToOrigin' = @{ "beginState" = ('UpdatingTenantShardToOrigin'); "endState" = ('OnlineInOrigin')};
     }    
 
     $requestedState = $tenantRecoveryStates[$UpdateAction].endState

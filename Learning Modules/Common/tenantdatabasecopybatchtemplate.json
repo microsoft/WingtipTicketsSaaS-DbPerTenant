@@ -46,8 +46,7 @@
                 "sourceDatabaseId": {"value": "[parameters('sourceDatabaseId')]" 
                 },
                 "elasticPoolName": {"value": "[parameters('elasticPoolNames')[copyIndex()]]"
-                },
-                "tenantAlias": {"value": "[concat(parameters('databaseNames')[copyIndex()],'-',parameters('wingtipDeploymentUser'))]"}
+                }                
             }
         }
     } 

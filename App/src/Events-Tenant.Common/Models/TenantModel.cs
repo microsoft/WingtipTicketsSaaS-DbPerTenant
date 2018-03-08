@@ -7,7 +7,6 @@
         public string ServicePlan { get; set; }
         public string VenueName { get; set; }
         public string TenantIdInString { get; set; }
-        public string TenantAlias { get; set; }
         public string RecoveryState { get; set; }
         public System.DateTime LastUpdated { get; set; }
     }

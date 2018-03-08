@@ -85,7 +85,6 @@ foreach ($newTenant in $NewTenants)
         NormalizedName = $normalizedNewTenantName
         VenueType = $newTenantVenueType
         PostalCode = $newTenantPostalCode
-        Alias = ($normalizedNewTenantName + '-' + $WtpUser)
         }
 
     $allNewTenants += $newTenantObj
@@ -180,8 +179,7 @@ foreach($tenant in $allNewTenants)
     Add-TenantDatabaseToCatalog -Catalog $catalog `
         -TenantName $tenant.Name `
         -TenantKey $tenantKey `
-        -TenantDatabase $tenantDatabase `
-        -TenantAlias $tenant.Alias
+        -TenantDatabase $tenantDatabase
 
     Write-Output "Tenant '$($tenant.Name)' initialized and registered in the catalog."
 } 

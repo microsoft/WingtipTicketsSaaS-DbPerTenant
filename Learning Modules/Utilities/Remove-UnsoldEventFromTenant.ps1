@@ -47,8 +47,7 @@ $tenantMapping = ($catalog.ShardMap).GetMappingForKey($tenantKey)
 
 # Get tenant database and server names 
 $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-$tenantAlias = $tenantMapping.Shard.Location.Server 
-$fullyQualifiedTenantServerName = (Get-ServerNameFromAlias $tenantAlias) + ".database.windows.net"
+$fullyQualifiedTenantServerName = $tenantMapping.Shard.Location.Server + ".database.windows.net"
 
 # Get the first unsold event on the tenant database 
 $queryText = "SELECT TOP(1) EventName FROM EventsWithNoTickets"

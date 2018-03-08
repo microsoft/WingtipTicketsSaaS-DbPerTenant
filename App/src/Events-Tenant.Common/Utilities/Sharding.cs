@@ -84,12 +84,12 @@ namespace Events_Tenant.Common.Utilities
         /// <param name="databaseServerPort">The database server port.</param>
         /// <param name="servicePlan">The service plan.</param>
         /// <returns></returns>
-        public static async Task<bool> RegisterNewShard(string tenantName, int tenantId, string tenantAlias, string tenantServer, int databaseServerPort, string servicePlan)
+        public static async Task<bool> RegisterNewShard(string tenantName, int tenantId, string tenantServer, int databaseServerPort, string servicePlan)
         {
             try
             {
                 Shard shard;
-                ShardLocation shardLocation = new ShardLocation(tenantAlias, tenantName, SqlProtocol.Tcp, databaseServerPort);
+                ShardLocation shardLocation = new ShardLocation(tenantServer, tenantName, SqlProtocol.Tcp, databaseServerPort);
 
                 if (!ShardMap.TryGetShard(shardLocation, out shard))
                 {
@@ -114,7 +114,6 @@ namespace Events_Tenant.Common.Utilities
                     var tenant = new Tenants
                     {
                         ServicePlan = servicePlan,
-                        TenantAlias = tenantAlias,
                         TenantId = key,
                         TenantName = venueDetails.VenueName,
                         RecoveryState = "n/a",

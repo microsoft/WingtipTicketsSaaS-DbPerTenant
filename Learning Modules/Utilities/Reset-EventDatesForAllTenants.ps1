@@ -29,8 +29,7 @@ $commandText = "EXEC sp_ResetEventDates"
 foreach ($dbLocation in $databaseLocations)
 { 
     Write-Output "Resetting event dates for '$($dblocation.Location.Database)'."
-    $dbAlias = $dbLocation.Location.Server 
-    $fullyQualifiedDBServer = (Get-ServerNameFromAlias $dbAlias) + ".database.windows.net"
+    $fullyQualifiedDBServer = $dbLocation.Location.Server + ".database.windows.net"
 
     Invoke-Sqlcmd `
         -ServerInstance $fullyQualifiedDBServer `

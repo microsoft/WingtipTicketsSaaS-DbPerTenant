@@ -199,14 +199,7 @@ function Complete-AsynchronousDatabaseRecovery
 $recoveryResourceGroup = Get-AzureRmResourceGroup -Name $WingtipRecoveryResourceGroup
 
 # Get the tenant catalog in the recovery region
-$tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
-while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup.ResourceGroupName)
-{
-  # Sleep for 10s to allow DNS alias for catalog to update to recovery region
-  Start-Sleep $sleepInterval
-  # Get the active tenant catalog
-  $tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
-}
+$tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
 
 # Wait until all elastic pools have been restored to start restoring databases
 # This ensures that all required container resources have been acquired before database recovery begins 

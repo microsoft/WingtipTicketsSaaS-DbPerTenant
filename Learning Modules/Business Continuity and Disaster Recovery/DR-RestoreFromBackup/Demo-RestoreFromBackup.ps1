@@ -11,7 +11,7 @@ Import-Module "$PSScriptRoot\..\..\WtpConfig" -Force
 # Get Azure credentials if not already logged on,  Use -Force to select a different subscription 
 Initialize-Subscription
 
-$DemoScenario = 0
+$DemoScenario = 1
 <# Select the demo scenario that will be run. It is recommended you run the scenarios below in order. 
      Demo   Scenario
       0       None

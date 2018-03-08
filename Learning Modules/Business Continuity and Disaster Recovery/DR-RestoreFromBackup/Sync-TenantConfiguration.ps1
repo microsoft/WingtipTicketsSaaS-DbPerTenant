@@ -1,10 +1,14 @@
 <#
 .SYNOPSIS
-  Synchronizes tenant server and pool configuration into the catalog database 
+  Synchronizes tenant resource configuration into the catalog database 
 
 .DESCRIPTION
   This script ensures that the Wingtip tenant catalog has the most current record of configuration of tenant servers, pools and databases.
   This enables disaster recovery to a recovery region with mirror servers and pools that match the initial configuration. 
+
+.PARAMETER CatalogResourceGroupName
+  The resource group where the catalog database that will be synced to is located. 
+  If no resource group name is specified, the resource group which contains the Wingtip deployment will be used as default.
 
 .PARAMETER Interval
   The catalog sync interval in seconds
@@ -14,6 +18,9 @@
 #>
 [cmdletbinding()]
 param (
+    [parameter(Mandatory=$false)]
+    [String] $CatalogResourceGroupName,
+
     [parameter(Mandatory=$false)]
     [int] $Interval = 60,
 
@@ -35,6 +42,11 @@ $ErrorActionPreference = "Stop"
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
 
+if (!$CatalogResourceGroupName)
+{
+    $CatalogResourceGroupName = $wtpUser.ResourceGroupName
+}
+
 # Get Azure credentials
 $credentialLoad = Import-AzureRmContext -Path "$env:TEMP\profile.json"
 if (!$credentialLoad)
@@ -42,16 +54,8 @@ if (!$credentialLoad)
     Initialize-Subscription -NoEcho:$NoEcho.IsPresent
 }
 
-# Get the active tenant catalog 
-$catalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
-
-# Initialize catalog database sync tables
-& $PSScriptRoot\..\..\Utilities\Initialize-CatalogSyncTables.ps1 `
-    -WtpResourceGroupName $wtpUser.ResourceGroupName `
-    -WtpUser $wtpUser.Name 
-
-# Get the ARM location from the catalog database; assumes tenants deployed in the same region
-# $location = $catalog.Database.Location.ToLower() -replace '\s',''
+# Get the tenant catalog 
+$catalog = Get-Catalog -ResourceGroupName $CatalogResourceGroupName -WtpUser $wtpUser.Name
 
 Write-Output "Synchronizing tenant resources with catalog at $interval second intervals..."
 
@@ -59,8 +63,8 @@ Write-Output "Synchronizing tenant resources with catalog at $interval second in
 while (1 -eq 1)
 {
     # Get the active tenant catalog 
-    $catalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
-    Write-Output "Acquired active tenant catalog: '$($catalog.Database.ServerName)/$($catalog.Database.DatabaseName)'"
+    $catalog = Get-Catalog -ResourceGroupName $CatalogResourceGroupName -WtpUser $wtpUser.Name
+    Write-Output "Acquired tenant catalog: '$($catalog.Database.ServerName)/$($catalog.Database.DatabaseName)'"
     
     $loopStart = (Get-Date).ToUniversalTime()
     $tenantShardLocations = (Get-TenantDatabaseLocations $catalog).Location | Select -Property "Server", "Database"
@@ -70,30 +74,20 @@ while (1 -eq 1)
     Write-Output "Synchronizing tenant servers..."
     
     $servers = @()
-    $dnsRetry = $false 
 
     # Get tenant servers 
     foreach ($tenantShard in $tenantShardLocations)
     {
-        try
-        {
-            # Resolve tenant server name from alias stored in shard 
-            $tenantServerName = Get-ServerNameFromAlias $tenantShard.Server
-            $tenantDatabaseName = $tenantShard.Database
-            $tenantResources += New-Object PSObject -Property @{ServerName = $tenantServerName; DatabaseName = $tenantDatabaseName}
+        $tenantServerName = $tenantShard.Server
+        $tenantDatabaseName = $tenantShard.Database
+        $tenantResources += New-Object PSObject -Property @{ServerName = $tenantServerName; DatabaseName = $tenantDatabaseName}
 
-            # Add tenant server to server list if not previously seen 
-            if ($servers.ServerName -notcontains $tenantServerName)
-            {
-                $serverResourceGroup = (Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers").ResourceGroupName
-                $servers += Get-AzureRMSqlServer -ResourceGroupName $serverResourceGroup -ServerName $tenantServerName
-            }   
-        }
-        catch
+        # Add tenant server to server list if not previously seen 
+        if ($servers.ServerName -notcontains $tenantServerName)
         {
-            #Retry DNS query at later time to resolve tenant server name from alias
-            $dnsRetry = $true 
-        } 
+            $serverResourceGroup = (Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers").ResourceGroupName
+            $servers += Get-AzureRMSqlServer -ResourceGroupName $serverResourceGroup -ServerName $tenantServerName
+        }         
     }
     
     $servers = $servers | sort ServerName 
@@ -116,7 +110,7 @@ while (1 -eq 1)
     foreach ($syncedTenantServer in $syncedTenantServers)
     {
         # Do not remove servers that will be used for disaster recovery 
-        if (($servers.ServerName -notcontains $syncedTenantServer.ServerName) -and ($syncedTenantServer.RecoveryState -notmatch 'restored$|complete$') -and (!$dnsRetry))
+        if (($servers.ServerName -notcontains $syncedTenantServer.ServerName) -and ($syncedTenantServer.RecoveryState -notmatch 'restored$|complete$'))
         {
             # remove the entry from the catalog
             Remove-ExtendedServer -Catalog $catalog -ServerName $syncedTenantServer.ServerName

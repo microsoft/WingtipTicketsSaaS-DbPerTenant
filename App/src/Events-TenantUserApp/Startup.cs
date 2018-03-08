@@ -222,7 +222,6 @@ namespace Events_TenantUserApp
 
             CatalogConfig = new CatalogConfig
             {
-                CatalogAlias = Configuration["CatalogAlias"],
                 ServicePlan = Configuration["ServicePlan"],
                 CatalogDatabase = Configuration["CatalogDatabase"],
                 CatalogServer = Configuration["CatalogServer"] + ".database.windows.net"
@@ -230,10 +229,7 @@ namespace Events_TenantUserApp
 
             TenantServerConfig = new TenantServerConfig
             {
-                TenantServer = Configuration["TenantServer"] + ".database.windows.net",
-                ContosoConcertHallServerAlias = Configuration["ContosoConcertHallAlias"] + ".database.windows.net",
-                FabrikamJazzClubServerAlias = Configuration["FabrikamJazzClubAlias"] + ".database.windows.net",
-                DogwoodDojoServerAlias = Configuration["DogwoodDojoAlias"] + ".database.windows.net"
+                TenantServer = Configuration["TenantServer"] + ".database.windows.net"               
             };
 
             bool isResetEventDatesEnabled = false;

@@ -147,13 +147,9 @@ namespace Events_TenantUserApp.Controllers
 
                 //get the venue details and populate in config settings
                 var venueDetails = (_tenantRepository.GetVenueDetails(tenantId)).Result;
-                var venueTypeDetails =
-                    (_tenantRepository.GetVenueType(venueDetails.VenueType, tenantId)).Result;
-                var countries = (_tenantRepository.GetAllCountries(tenantId)).Result;
-
-                //get servername from tenant alias
-                var serverAliases = _client.Query(venueDetails.DatabaseServerName, DnsClient.QueryType.CNAME);
-                var tenantServerName = serverAliases.Answers.CnameRecords().ElementAt(0).CanonicalName;
+                var venueTypeDetails = (_tenantRepository.GetVenueType(venueDetails.VenueType, tenantId)).Result;
+                var countries = (_tenantRepository.GetAllCountries(tenantId)).Result;                           
+                var tenantServerName = venueDetails.DatabaseServerName;
 
                 //get country language from db 
                 var country = (_tenantRepository.GetCountry(venueDetails.CountryCode, tenantId)).Result;
@@ -167,7 +163,6 @@ namespace Events_TenantUserApp.Controllers
                     BlobImagePath = blobPath + venueTypeDetails.VenueType + "-user.jpg",
                     EventTypeNamePlural = venueTypeDetails.EventTypeShortNamePlural.ToUpper(),
                     TenantId = tenantId,
-                    TenantAlias = venueDetails.DatabaseServerName.Split('.')[0],
                     TenantName = venueDetails.DatabaseName,
                     Currency = regionalInfo.CurrencySymbol,
                     TenantCulture =

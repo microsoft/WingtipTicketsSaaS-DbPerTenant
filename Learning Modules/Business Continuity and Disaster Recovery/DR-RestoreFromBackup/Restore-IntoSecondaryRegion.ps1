@@ -117,11 +117,7 @@ if ($activeCatalogServerName -ne $recoveryCatalogServerName)
 }
 
 # Get catalog object
-$tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
-while($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroupName)
-{
-  $tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
-}
+$tenantCatalog = Get-Catalog -ResourceGroupName $recoveryResourceGroupName -WtpUser $wtpUser.Name
 Write-Output "Acquired tenant catalog in recovery region..."
 
 

@@ -37,7 +37,7 @@ $wtpUser = Get-UserConfig
 $config = Get-Configuration
 
 # Get the active tenant catalog 
-$tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
+$tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
 
 # Find any previous tenant resource update operations to get most current state of recovered resources 
 # This allows the script to be re-run if an error during deployment 

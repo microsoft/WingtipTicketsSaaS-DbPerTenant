@@ -41,8 +41,7 @@ foreach ($shard in $Shards)
 {
 
     Write-Output "Applying script to database '$($shard.Location.Database)' on server '$($shard.Location.Server)'."
-    $tenantAlias = $shard.Location.Server
-    $tenantServer = (Get-ServerNameFromAlias $tenantAlias) + ".database.windows.net"
+    $tenantServer = $shard.Location.Server + ".database.windows.net"
 
     Invoke-SqlcmdWithRetry `
         -Username $adminUserName `

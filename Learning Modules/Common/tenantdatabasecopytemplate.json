@@ -16,10 +16,7 @@
     },
     "elasticPoolName": {
       "type": "string"
-    },
-    "tenantAlias": {
-      "type": "string"
-    }
+    }    
   },
   "resources": [
     {
@@ -32,12 +29,6 @@
         "elasticPoolName": "[parameters('elasticPoolName')]"
       },
       "type": "Microsoft.Sql/servers/databases"
-    },
-    {
-      "apiVersion": "2017-03-01-preview",
-      "name": "[concat(parameters('serverName'), '/', parameters('tenantAlias'))]",
-      "type": "Microsoft.Sql/servers/dnsAliases",
-      "properties":  {}
-    }
+    }   
   ]
 }

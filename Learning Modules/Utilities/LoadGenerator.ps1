@@ -120,8 +120,7 @@ while (1 -eq 1)
     $ServerNames = @()
     foreach ($shard in $Shards)
     {
-        $serverAlias = $shard.Location.Server
-        $serverName = Get-ServerNameFromAlias $serverAlias
+        $serverName = $shard.Location.Server
         $ServerNames += $serverName
     }
 
