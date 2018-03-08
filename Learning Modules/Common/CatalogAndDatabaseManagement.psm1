@@ -446,7 +446,7 @@ function Get-ExtendedDatabase{
 
     $config = Get-Configuration
 
-    $commandText = "SELECT DatabaseName, ServerName, ServiceObjective, ElasticPoolName, State, RecoveryState FROM [dbo].[Databases]"        
+    $commandText = "SELECT DatabaseName, ServerName, ServiceObjective, ElasticPoolName, State, RecoveryState, RecoveryRowVersion, LastUpdated FROM [dbo].[Databases]"        
 
     # Qualify query if ServerName is specified
     if($ServerName)
@@ -2453,7 +2453,7 @@ function Stop-TenantRestoreOperation
 
 <#
 .SYNOPSIS
-    Checks if the tenant data has been updated. This function is dependent on enabling change tracking on a tenant database.
+    Checks if the tenant data has been updated. 
     It is primarily used to check if a tenant database should be repatriated back to the primary region during the course of a recovery operation
 #>
 function Test-IfTenantDataChanged
@@ -2464,42 +2464,37 @@ function Test-IfTenantDataChanged
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [string]$TenantName,
-
-        # Tracking version number that will be used for comparison. The default value checks if there were any changes made after a tenant database was created.
-        [parameter(Mandatory=$false)]
-        [int32] $TrackingVersionNumber = 0        
+        [string]$TenantName              
     )
 
     $config = Get-Configuration
-    $tenantObject = Get-Tenant -Catalog $Catalog -TenantName $TenantName
+    $tenantProperties = Get-ExtendedTenant -Catalog $Catalog -TenantKey (Get-TenantKey $TenantName) 
+    $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $Catalog -ServerName $tenantProperties.ServerName -DatabaseName $tenantProperties.DatabaseName
+    $recoveryRowVersion = $tenantDatabaseProperties.RecoveryRowVersion
 
-    $fullyQualifiedTenantServer = $tenantObject.Database.ServerName + ".database.windows.net"
-    $queryText = "SELECT TableVersion = CHANGE_TRACKING_CURRENT_VERSION();"
-
-    $currentVersion = Invoke-SqlAzureWithRetry `
-                        -ServerInstance $fullyQualifiedTenantServer `
-                        -Database $tenantObject.Database.DatabaseName `
-                        -Query $queryText `
-                        -UserName $config.TenantAdminUserName `
-                        -Password $config.TenantAdminPassword
-
-    if ([DBNull]::Value.Equals($currentVersion.TableVersion))
-    {
-        throw "Change tracking has not been enabled for tenant '$TenantName'."
-    }
-    elseif ($currentVersion.TableVersion -gt $TrackingVersionNumber)
-    {
-        return $true
-    }
-    elseif ($currentVersion.TableVersion -eq $TrackingVersionNumber)
+    # Return false if tenant database has not been recovered
+    if (!$recoveryRowVersion)
     {
         return $false
     }
+
+    # Retrieve current tenant database rowversion
+    $commandText = "SELECT @@DBTS AS Value"
+    $currRowVersion =  Invoke-SqlAzureWithRetry `
+                            -ServerInstance "$($tenantProperties.ServerName).database.windows.net" `
+                            -Database $tenantProperties.DatabaseName `
+                            -Query $commandText `
+                            -UserName $config.TenantAdminUserName `
+                            -Password $config.TenantAdminPassword
+    
+    if ($currRowVersion.Value -eq $recoveryRowVersion)
+    {
+        return $true
+    }
     else
     {
-        throw "Error state: current tracking version '$($currentVersion.TableVersion)' is less than input tracking version '$TrackingVersionNumber'."    
-    }
+        return $false
+    }   
 }
 
 
@@ -2665,10 +2660,45 @@ function Test-IfDnsAlias
 
 <#
 .SYNOPSIS
-    Update tenant servername or service plan in the catalog database.
-    The name of a tenant cannot be updated.
+    Update service plan of a tenant
 #>
-function Update-TenantEntryInCatalog
+function Update-TenantServicePlan
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$true)]
+        [string]$TenantName,
+       
+        [parameter(Mandatory=$true)]
+        [string]$RequestedTenantServicePlan        
+    )
+
+    $config = Get-Configuration
+    $tenantObject = Get-Tenant -Catalog $Catalog -TenantName $TenantName    
+    $tenantHexId = (Get-TenantRawKey -TenantKey $tenantObject.Key).RawKeyHexString        
+    $commandText = "
+        UPDATE [dbo].[Tenants] 
+        SET ServicePlan = '$RequestedTenantServicePlan', LastUpdated = CURRENT_TIMESTAMP
+        WHERE TenantId = $tenantHexId"
+    
+    $result = Invoke-SqlAzureWithRetry `
+                -ServerInstance $Catalog.FullyQualifiedServerName `
+                -Database $Catalog.Database.DatabaseName `
+                -Query $commandText `
+                -UserName $config.CatalogAdminUserName `
+                -Password $config.CatalogAdminPassword
+
+    return $result    
+}
+
+<#
+.SYNOPSIS
+    Update servername and/or databasename stored in the catalog for a tenant. 
+    This is particularly useful after disaster recovery when the identity of a tenant database has changed to a recovery instance.
+#>
+function Update-TenantShardInfo
 {
     param(
         [parameter(Mandatory=$true)]
@@ -2677,68 +2707,33 @@ function Update-TenantEntryInCatalog
         [parameter(Mandatory=$true)]
         [string]$TenantName,
 
-        [parameter(Mandatory=$false)]
-        [string]$RequestedTenantServerName,
+        [parameter(Mandatory=$true)]
+        [string]$FullyQualifiedTenantServerName,
 
-        [parameter(Mandatory=$false)]
-        [string]$RequestedTenantServicePlan        
+        [parameter(Mandatory=$true)]
+        [string]$TenantDatabaseName        
     )
 
     $config = Get-Configuration
-    $tenantObject = Get-Tenant -Catalog $Catalog -TenantName $TenantName
+    $tenantKey = Get-TenantKey $TenantName
+    $recoveryManager = ($Catalog.ShardMapManager).getRecoveryManager()
+    $tenantMapping = $Catalog.ShardMap.GetMappingForKey($tenantKey)
+    $tenantShard = $tenantMapping.Shard
+    $tenantShardLocation = $tenantShard.Location
+    $tenantServer = Get-ServerNameFromAlias $tenantShardLocation.Server
 
-    # Update tenant service plan if applicable 
-    if ($RequestedTenantServicePlan)
+    if (($tenantServer -ne $FullyQualifiedTenantServerName) -or ($tenantShardLocation.Database -ne $TenantDatabaseName))
     {
-        $tenantHexId = (Get-TenantRawKey -TenantKey $tenantObject.Key).RawKeyHexString        
-        $commandText = "
-            UPDATE [dbo].[Tenants] 
-            SET ServicePlan = '$RequestedTenantServicePlan', LastUpdated = CURRENT_TIMESTAMP
-            WHERE TenantId = $tenantHexId"
-    
-        Invoke-SqlAzureWithRetry `
-            -ServerInstance $Catalog.FullyQualifiedServerName `
-            -Database $Catalog.Database.DatabaseName `
-            -Query $commandText `
-            -UserName $config.CatalogAdminUserName `
-            -Password $config.CatalogAdminPassword
-    }
+        $recoveryShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($FullyQualifiedTenantServerName, $TenantDatabaseName, 'tcp', '1433')
+        $recoveryManager.DetachShard($tenantShardLocation)
+        $recoveryManager.AttachShard($recoveryShardLocation)
 
-    if ($RequestedTenantServerName)
-    {
-        # Get current service plan of tenant
-        $servicePlan = (Get-TenantServicePlan -Catalog $Catalog -TenantName $TenantName).ServicePlan.ToLower()
-
-        # Remove tenant entry from catalog database
-        Remove-Tenant -Catalog $Catalog -TenantKey $tenantObject.Key -KeepTenantDatabase
-
-        # Remove entry from tenant database 
-        Remove-CatalogInfoFromTenantDatabase -TenantKey $tenantObject.Key -TenantDatabase $tenantObject.Database
-
-        # Add updated entry to tenant database and catalog 
-        $fullyQualifiedTenantServerName = "$RequestedTenantServerName.database.windows.net"
-
-        Add-Shard `
-            -ShardMap $Catalog.ShardMap `
-            -SqlServerName $fullyQualifiedTenantServerName `
-            -SqlDatabaseName $tenantObject.Database.DatabaseName
-
-        Add-ListMapping `
-            -KeyType $([int]) `
-            -ListShardMap $Catalog.ShardMap `
-            -SqlServerName $fullyQualifiedTenantServerName `
-            -SqlDatabaseName $tenantObject.Database.DatabaseName `
-            -ListPoint $tenantObject.Key
-
-        Add-ExtendedTenantMetaDataToCatalog `
-            -Catalog $Catalog `
-            -TenantKey $tenantObject.Key `
-            -TenantName $TenantName `
-            -TenantAlias $fullyQualifiedTenantServerName `
-            -TenantServicePlan $servicePlan
-    }
-
-
+        $mappingDifferences = $recoveryManager.DetectMappingDifferences($recoveryShardLocation)
+        foreach ($diff in $mappingDifferences)
+        {
+            $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
+        }
+    }    
 }
 
 <#

@@ -249,3 +249,32 @@ function Invoke-AzureSQLDatabaseFailoverAsync
     }
     return $jobObject
 }
+
+<#
+.SYNOPSIS
+    Issues an asynchronous call to cancel an ongoing Azure SQL database operation.
+    Returns a .NET Task object that can be used to track the response of the call.
+#>
+function Invoke-CancelAzureSqlDatabaseOperation
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [Microsoft.Azure.Management.Sql.Fluent.SqlManager]$AzureContext,
+
+        [parameter(Mandatory=$true)]
+        [string]$ResourceGroupName,
+
+        [parameter(Mandatory=$true)]
+        [string]$ServerName,
+
+        [parameter(Mandatory=$true)]
+        [string]$DatabaseName,
+
+        [parameter(Mandatory=$true)]
+        [Guid]$OperationId      
+    )
+
+    # Cancel database operation
+    $jobObject = $AzureContext.Inner.Databases.CancelWithHttpMessagesAsync($ResourceGroupName, $ServerName, $DatabaseName, $OperationId)
+    return $jobObject
+}

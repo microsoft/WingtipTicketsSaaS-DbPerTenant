@@ -54,6 +54,7 @@ function Get-Configuration
         CatalogManagementAppWorkerSize = 0
         ServicePrincipalPassword = "P@ssword1"
         NewTenantResourcesProvisioningTemplate = "newtenantresourcestemplate.json"
+        ReconfigureTenantResourcesTemplate = "updatetenantresourcestemplate.json"
         JobAccount = "jobaccount"
         JobAccountDatabaseName = "jobaccount"
         JobAccountDatabaseServiceObjective = "S2"
