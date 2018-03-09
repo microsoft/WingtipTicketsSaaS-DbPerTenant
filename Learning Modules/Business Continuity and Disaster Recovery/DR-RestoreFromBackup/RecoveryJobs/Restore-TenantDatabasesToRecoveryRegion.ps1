@@ -200,6 +200,10 @@ $recoveryResourceGroup = Get-AzureRmResourceGroup -Name $WingtipRecoveryResource
 
 # Get the tenant catalog in the recovery region
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
+while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup)
+{
+  $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
+}
 
 # Wait until all elastic pools have been restored to start restoring databases
 # This ensures that all required container resources have been acquired before database recovery begins 

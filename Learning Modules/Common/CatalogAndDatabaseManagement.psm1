@@ -316,8 +316,12 @@ function Get-Catalog
     )
     $config = Get-Configuration
 
+    # Resolve DNS alias to get current catalog server
+    $catalogAlias = $config.CatalogServerNameStem + $WtpUser + ".database.windows.net"
+    $catalogServerName = Get-ServerNameFromAlias $catalogAlias
+
     # Find catalog server in Azure 
-    $catalogServer = Find-AzureRmResource -ResourceNameContains $config.CatalogServerNameStem -ResourceType "Microsoft.Sql/servers" -ResourceGroupNameEquals $ResourceGroupName
+    $catalogServer = Find-AzureRmResource -ResourceNameEquals $catalogServerName -ResourceType "Microsoft.Sql/servers"
     $fullyQualifiedServerName = $catalogServer.Name + ".database.windows.net"
 
     # Check catalog database exists
@@ -354,9 +358,10 @@ function Get-Catalog
         $catalog = New-Object PSObject -Property @{
             ShardMapManager=$shardMapManager
             ShardMap=$shardMap
+            CatalogAlias = $catalogAlias
             FullyQualifiedServerName = $fullyQualifiedServerName
             Database = $catalogDatabase
-            }
+        }
 
         return $catalog
     }

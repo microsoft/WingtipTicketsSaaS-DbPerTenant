@@ -41,6 +41,10 @@ $recoveryResourceGroup = Get-AzureRmResourceGroup -Name $WingtipRecoveryResource
 
 # Get the tenant catalog in the recovery region
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
+while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup)
+{
+  $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
+}
 
 # Get list of tenant elastic pools to be recovered 
 $tenantElasticPools = @()
