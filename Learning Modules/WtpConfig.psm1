@@ -38,7 +38,7 @@ function Get-Configuration
         TenantServerNameStem = "tenants1-dpt-"
         RecoveryRoleSuffix = "-recovery"
         TenantPoolNameStem = "Pool"
-        ActiveCatalogAliasStem = "activecatalog-dpt"
+        ActiveCatalogAliasStem = "activecatalog-dpt-"
         NewTenantAliasStem = "newtenants-dpt-"
         CatalogShardMapName = "tenantcatalog"
         CatalogRecoveryTemplate = "tenantcatalogrecoverytemplate.json"

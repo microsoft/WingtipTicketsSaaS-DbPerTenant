@@ -99,7 +99,7 @@ catch
 }
 
 # Get DNS alias for catalog server 
-$catalogAliasName = "catalog-" + $wtpUser.Name
+$catalogAliasName = $config.ActiveCatalogAliasStem + $wtpUser.Name
 $fullyQualifiedCatalogAlias = $catalogAliasName + ".database.windows.net"
 $activeCatalogServerName = Get-ServerNameFromAlias $fullyQualifiedCatalogAlias -ErrorAction Stop  
 
@@ -196,6 +196,19 @@ while ($true)
     {
       Write-Output "Enabling traffic manager endpoint for Wingtip events app in recovery region..."
       Enable-AzureRmTrafficManagerEndpoint -Name $endpointName -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -ErrorAction Stop > $null
+
+      # Update tenant provisioning server alias to point to newly created tenant resources
+      $newTenantAlias = $config.NewTenantAliasStem + $wtpUser.Name
+      $fullyQualifiedNewTenantAlias = $newTenantAlias + ".database.windows.net"
+      $currentProvisioningServerName = Get-ServerNameFromAlias $fullyQualifiedNewTenantAlias
+      Set-DnsAlias `
+        -ResourceGroupName $recoveryResourceGroupName `
+        -ServerName $newTenantServerName `
+        -ServerDNSAlias $newTenantAlias `
+        -OldResourceGroupName $wtpUser.ResourceGroupName `
+        -OldServerName $currentProvisioningServerName `
+        -PollDnsUpdate `
+        >$null
     }
   }
 
@@ -225,7 +238,7 @@ while ($true)
 
     #Reset web app in recovery region
     $recoveryAppName = $config.EventsAppNameStem + $recoveryLocation + '-' + $wtpUser.Name
-    Restart-AzureRmWebApp -ResourceGroupName $recoveryResourceGroupName -Name $recoveryAppName >$null
+    #Restart-AzureRmWebApp -ResourceGroupName $recoveryResourceGroupName -Name $recoveryAppName >$null
     break
   }
   else

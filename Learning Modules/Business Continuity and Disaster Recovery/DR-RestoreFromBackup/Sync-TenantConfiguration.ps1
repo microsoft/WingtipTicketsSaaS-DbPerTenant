@@ -6,10 +6,6 @@
   This script ensures that the Wingtip tenant catalog has the most current record of configuration of tenant servers, pools and databases.
   This enables disaster recovery to a recovery region with mirror servers and pools that match the initial configuration. 
 
-.PARAMETER CatalogResourceGroupName
-  The resource group where the catalog database that will be synced to is located. 
-  If no resource group name is specified, the resource group which contains the Wingtip deployment will be used as default.
-
 .PARAMETER Interval
   The catalog sync interval in seconds
 
@@ -18,9 +14,6 @@
 #>
 [cmdletbinding()]
 param (
-    [parameter(Mandatory=$false)]
-    [String] $CatalogResourceGroupName,
-
     [parameter(Mandatory=$false)]
     [int] $Interval = 60,
 
@@ -42,11 +35,6 @@ $ErrorActionPreference = "Stop"
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
 
-if (!$CatalogResourceGroupName)
-{
-    $CatalogResourceGroupName = $wtpUser.ResourceGroupName
-}
-
 # Get Azure credentials
 $credentialLoad = Import-AzureRmContext -Path "$env:TEMP\profile.json"
 if (!$credentialLoad)
@@ -55,7 +43,7 @@ if (!$credentialLoad)
 }
 
 # Get the tenant catalog 
-$catalog = Get-Catalog -ResourceGroupName $CatalogResourceGroupName -WtpUser $wtpUser.Name
+$catalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
 
 Write-Output "Synchronizing tenant resources with catalog at $interval second intervals..."
 
@@ -63,7 +51,7 @@ Write-Output "Synchronizing tenant resources with catalog at $interval second in
 while (1 -eq 1)
 {
     # Get the active tenant catalog 
-    $catalog = Get-Catalog -ResourceGroupName $CatalogResourceGroupName -WtpUser $wtpUser.Name
+    $catalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
     Write-Output "Acquired tenant catalog: '$($catalog.Database.ServerName)/$($catalog.Database.DatabaseName)'"
     
     $loopStart = (Get-Date).ToUniversalTime()
@@ -78,7 +66,8 @@ while (1 -eq 1)
     # Get tenant servers 
     foreach ($tenantShard in $tenantShardLocations)
     {
-        $tenantServerName = $tenantShard.Server
+        $fullyQualifiedTenantServerName = $tenantShard.Server
+        $tenantServerName = $tenantShard.Server.Split('.')[0]
         $tenantDatabaseName = $tenantShard.Database
         $tenantResources += New-Object PSObject -Property @{ServerName = $tenantServerName; DatabaseName = $tenantDatabaseName}
 

@@ -41,10 +41,10 @@ $elasticPoolName = $config.TenantPoolNameStem + "1"
 Initialize-Subscription
 
 # Find tenant server in Azure 
-$serverQuery = Find-AzureRmResource -ResourceNameEquals $serverName -ResourceType "Microsoft.Sql/servers"
-if ($serverQuery.Count -gt 0)
+$queryResult = Find-AzureRmResource -ResourceNameEquals $serverName -ResourceType "Microsoft.Sql/servers"
+if ($queryResult)
 {
-    $WtpResourceGroupName = $serverQuery.ResourceGroupName
+    $WtpResourceGroupName = $queryResult.ResourceGroupName
     $Server = Get-AzureRmSqlServer -ResourceGroupName $WtpResourceGroupName -ServerName $serverName 
 }
 else
@@ -179,7 +179,8 @@ foreach($tenant in $allNewTenants)
     Add-TenantDatabaseToCatalog -Catalog $catalog `
         -TenantName $tenant.Name `
         -TenantKey $tenantKey `
-        -TenantDatabase $tenantDatabase
+        -TenantDatabase $tenantDatabase `
+        -TenantServerName $serverName
 
     Write-Output "Tenant '$($tenant.Name)' initialized and registered in the catalog."
 } 

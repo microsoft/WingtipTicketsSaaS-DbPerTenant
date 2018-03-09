@@ -59,7 +59,7 @@ namespace Events_Tenant.Common.Repositories
         public bool Add(Tenants tenant)
         {
             var wingtipUser = _configuration["User"];
-            var tenantServerName = "tenants1-dpt-" + wingtipUser + "-home";
+            var tenantServerName = "tenants1-dpt-" + wingtipUser;
             var normalizedTenantName = tenant.TenantName.Replace(" ", string.Empty).ToLower();
             var location = _configuration["APP_REGION"];
             var defaultTenantValues = _configuration.GetSection("DefaultEnvironment");
