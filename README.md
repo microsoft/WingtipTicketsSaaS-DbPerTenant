@@ -24,7 +24,7 @@ The basic application, which includes three pre-defined databases for three venu
 To deploy the app to Azure, click the link below.  Deploy the app in a new resource group, and provide a short *user* value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
 
 
-<a href="https://aka.ms/deploywingtipdpt-aliases" target="_blank">
+<a href="https://aka.ms/deploywingtipdpt-v2" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
