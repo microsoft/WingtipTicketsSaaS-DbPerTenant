@@ -82,7 +82,7 @@ while (($pastDeployment) -and ($pastDeployment.ProvisioningState -NotIn "Succeed
 $restoredElasticPools = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
 foreach ($pool in $tenantElasticPools)
 {
-  $recoveredServerName = ($pool.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix
+  $recoveredServerName = ($pool.ServerName) + $config.RecoveryRoleSuffi
   $compoundPoolName = "$($recoveredServerName)/$($pool.ElasticPoolName)"
   $pool | Add-Member "CompoundPoolName" $compoundPoolName
 
@@ -124,7 +124,7 @@ while ($recoveredPoolCount -lt $poolCount)
         if (($recoveredServerList.ServerName -contains $elasticPool.ServerName) -and ($elasticPool.RecoveryState -In "n/a","restoring","complete"))
         {
           $poolRecoveryQueue += $elasticPool
-          $recoveredServerName = ($elasticPool.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix
+          $recoveredServerName = ($elasticPool.ServerName) + $config.RecoveryRoleSuffix
           $recoveredServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceNameEquals $recoveredServerName
           [array]$elasticPoolConfigurations += @{
             ServerName = "$($recoveredServer.Name)"

@@ -14,19 +14,11 @@ CREATE VIEW [dbo].[TenantsExtended]
                     ELSE 'Unknown'
                     END AS TenantStatus,
                     tenant.ServicePlan,
-                    CASE
-                        WHEN ((shard.ServerName NOT LIKE '%home.database.windows.net') AND (shard.ServerName NOT LIKE '%recovery.database.windows.net')) THEN shard.ServerName
-                        ELSE NULL
-                    END AS TenantAlias,
-                    CASE
-                        WHEN ((shard.ServerName LIKE '%home.database.windows.net') OR (shard.ServerName LIKE '%recovery.database.windows.net')) THEN shard.ServerName
-                        ELSE tenantDB.ServerName
-                    END AS ServerName,
+                    shard.ServerName,
                     shard.DatabaseName,
                     tenant.RecoveryState AS TenantRecoveryState,
                     tenantServer.Location,
                     CASE
-                        WHEN tenantDB.LastUpdated IS NULL THEN tenant.LastUpdated
                         WHEN (tenantDB.LastUpdated > tenant.LastUpdated) THEN tenantDB.LastUpdated
                         WHEN (tenantDB.LastUpdated < tenant.LastUpdated) THEN tenant.LastUpdated
                         ELSE tenant.LastUpdated
@@ -37,4 +29,4 @@ CREATE VIEW [dbo].[TenantsExtended]
         JOIN        [__ShardManagement].[ShardsGlobal] as shard ON (shard.ShardId = mapping.ShardId AND shard.ShardMapId = map.ShardMapId AND mapping.ShardMapId = map.ShardMapId)
         LEFT JOIN   databasesWithPriority AS tenantDB ON (tenantDB.DatabaseName = shard.DatabaseName AND tenantDB.databasePriority = 1)
         LEFT JOIN   Servers AS tenantServer ON (tenantServer.ServerName = tenantDB.ServerName)
-        WHERE       (map.Name = 'tenantcatalog'); 
+        WHERE       (map.Name = 'tenantcatalog');

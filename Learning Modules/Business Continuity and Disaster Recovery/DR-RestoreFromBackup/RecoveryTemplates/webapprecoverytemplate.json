@@ -37,14 +37,12 @@
       "lowerCaseUser": "[toLower(parameters('wtpUser'))]",
       "recoveryLocation": "[resourceGroup().location]",
       "catalogDatabaseName": "tenantcatalog",
-      "catalogAliasName": "[concat('catalog-',variables('lowerCaseUser'))]",
       "databasePerTenantSuffix": "dpt",
-      "originRoleSuffix": "-home",
       "trafficManagerInstance": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'))]",
       "trafficManagerRecoveryEndpointName": "[concat('events-wingtip-', variables('databasePerTenantSuffix'), '-', variables('recoveryLocation'), '-', variables('lowerCaseUser'))]",      
       "recoveryWebAppSku": "Standard",
       "wtpEventsRecoveryApp": "[concat('events-wingtip-', variables('databasePerTenantSuffix'), '-', variables('recoveryLocation'), '-', variables('lowerCaseUser'))]",
-      "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage-v5.zip"
+      "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage-v6.zip"
   },
   "resources": [
     {
@@ -97,7 +95,6 @@
             "properties": {
                 "BlobPath": "https://wingtipsaas.blob.core.windows.net/images/",
                 "ConnectionTimeOut": "30",
-                "CatalogAlias": "[variables('catalogAliasName')]",
                 "CatalogDatabase": "[variables('catalogDatabaseName')]",
                 "CatalogServer": "[parameters('catalogRecoveryServer')]",
                 "DatabasePassword": "P@ssword1",

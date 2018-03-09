@@ -36,8 +36,12 @@ if (!$credentialLoad)
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
 
-# Get the active tenant catalog 
+# Get the tenant catalog in the recovery region
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
+while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup)
+{
+  $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
+}
 
 # Find any previous tenant resource update operations to get most current state of recovered resources 
 # This allows the script to be re-run if an error during deployment 
@@ -73,7 +77,7 @@ $originRegionServers = (Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.R
 [array]$tenantServerConfigurations = @()
 foreach($server in $recoveryRegionServers)
 {
-  $originServerName = ($server.ServerName -split $config.RecoveryRoleSuffix)[0] + $config.OriginRoleSuffix
+  $originServerName = ($server.ServerName -split $config.RecoveryRoleSuffix)[0]
 
   [array]$tenantServerConfigurations += @{
         ServerName = "$originServerName"
@@ -89,7 +93,7 @@ foreach($server in $recoveryRegionServers)
 [array]$tenantElasticPoolConfigurations = @()
 foreach($pool in $recoveryRegionElasticPools)
 {
-  $originServerName = ($server.ServerName -split $config.RecoveryRoleSuffix)[0] + $config.OriginRoleSuffix 
+  $originServerName = ($server.ServerName -split $config.RecoveryRoleSuffix)[0]
 
   [array]$tenantElasticPoolConfigurations += @{
       ServerName = "$originServerName"
@@ -121,7 +125,7 @@ $deployment = New-AzureRmResourceGroupDeployment `
 # Mark server recovery as complete 
 foreach($server in $tenantServerConfigurations)
 {
-  $recoveryServerName = ($server.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix 
+  $recoveryServerName = ($server.ServerName) + $config.RecoveryRoleSuffix 
 
   $originServerState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $server.ServerName 
   $recoveryServerState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $recoveryServerName
@@ -130,7 +134,7 @@ foreach($server in $tenantServerConfigurations)
 # Mark pool recovery as complete 
 foreach($pool in $tenantElasticPoolConfigurations)
 {
-  $recoveryServerName = ($server.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix 
+  $recoveryServerName = ($server.ServerName) + $config.RecoveryRoleSuffix 
 
   $originPoolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReplication" -ServerName $server.ServerName -ElasticPoolName $pool.ElasticPoolName
   $recoveryPoolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $recoveryServerName -ElasticPoolName $pool.ElasticPoolName

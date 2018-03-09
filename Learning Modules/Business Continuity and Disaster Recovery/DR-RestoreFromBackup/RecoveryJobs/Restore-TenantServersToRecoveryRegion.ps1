@@ -86,7 +86,7 @@ $restoredServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecover
 foreach ($server in $serverList)
 {
   # Only recover servers that haven't already been recovered or haven't started repatriation
-  $serverRecoveryName = ($server.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix
+  $serverRecoveryName = ($server.ServerName) + $config.RecoveryRoleSuffix
   if (($server.RecoveryState -In "n/a","restoring","complete") -and ($restoredServers.Name -notcontains $serverRecoveryName))
   {
     $serverQueue += $serverRecoveryName
@@ -131,7 +131,7 @@ if ($serverQueue.Count -gt 0)
   # Mark 'origin' servers as recovered 
   foreach ($server in $serverQueue)
   {
-    $originServerName = ($server -split $config.RecoveryRoleSuffix)[0] + $config.OriginRoleSuffix
+    $originServerName = ($server -split $config.RecoveryRoleSuffix)[0]
     $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $originServerName
   }
   $recoveredServers += $serverQueue.Length

@@ -25,7 +25,7 @@ Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 
 $config = Get-Configuration
 
-$catalogServerName = $($config.CatalogServerNameStem) + $WtpUser + $config.OriginRoleSuffix
+$catalogServerName = $($config.CatalogServerNameStem) + $WtpUser
 
 $databaseName = $config.TenantAnalyticsDatabaseName
 
@@ -309,7 +309,7 @@ WHERE Timestamp <= @SourceVELastTimestamp
 GO
 "
 
-$catalogServerName = $config.catalogServerNameStem + $WtpUser + $config.OriginRoleSuffix
+$catalogServerName = $config.catalogServerNameStem + $WtpUser
 $fullyQualifiedCatalogServerName = $catalogServerName + ".database.windows.net"
 
 Invoke-SqlcmdWithRetry `

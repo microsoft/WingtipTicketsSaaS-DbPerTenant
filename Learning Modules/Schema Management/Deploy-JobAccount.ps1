@@ -37,7 +37,7 @@ if(!$resourceGroup)
 }
 
 # Job account database is deployed to the catalog server with other singleton management databases in the Wingtip SaaS app 
-$catalogServerName = $config.catalogServerNameStem + $WtpUser + $config.OriginRoleSuffix
+$catalogServerName = $config.catalogServerNameStem + $WtpUser
 $fullyQualifiedCatalogServerName = $catalogServerName + ".database.windows.net"
 
 $jobAccountDatabaseName = $config.JobAccountDatabaseName

@@ -24,15 +24,16 @@
     "sqlCollation": "SQL_Latin1_General_CP1_CI_AS",
     "sqlEdition": "Standard",
     "databasePerTenantSuffix": "dpt",
-    "originRoleSuffix": "-home",
     "originLocation": "[resourceGroup().location]",
     "catalogDatabaseName": "tenantcatalog",
-    "catalogServer": "[concat('catalog', '-', variables('databasePerTenantSuffix'), '-', variables('lowerCaseUser'), variables('originRoleSuffix'))]",
+    "catalogServer": "[concat('catalog', '-', variables('databasePerTenantSuffix'), '-', variables('lowerCaseUser'))]",
+    "catalogServerAlias": "[concat('activecatalog-dpt','-', variables('lowerCaseUser'))]",
+    "tenantProvisioningAlias": "[concat('newtenants-dpt','-', variables('lowerCaseUser'))]",
     "baseTenantDB": "basetenantdb",
     "tenantContosoConcertHall": "contosoconcerthall",
     "tenantFabrikamJazzClub": "fabrikamjazzclub",
     "tenantDogwoodDojo": "dogwooddojo",
-    "tenantServer": "[concat('tenants1', '-', variables('databasePerTenantSuffix'), '-', variables('lowerCaseUser'), variables('originRoleSuffix'))]",
+    "tenantServer": "[concat('tenants1', '-', variables('databasePerTenantSuffix'), '-', variables('lowerCaseUser'))]",
     "tenantContosoConcertHallStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/',variables('tenantContosoConcertHall'),'.bacpac')]",
     "tenantFabrikamJazzClubStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/',variables('tenantFabrikamJazzClub'),'.bacpac')]",
     "tenantDogwoodDojoStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/',variables('tenantDogwoodDojo'),'.bacpac')]",
@@ -304,6 +305,24 @@
           ]
         }
       ]
+    },
+    {
+      "dependsOn": [
+        "[concat('Microsoft.Sql/servers/',variables('catalogServer'))]"
+      ],
+      "apiVersion": "2017-03-01-preview",
+      "name": "[concat(variables('catalogServer'), '/', variables('catalogServerAlias'))]",
+      "properties": {},
+      "type": "Microsoft.Sql/servers/dnsAliases"
+    },
+    {
+      "dependsOn": [
+        "[concat('Microsoft.Sql/servers/',variables('tenantServer'))]"
+      ],
+      "apiVersion": "2017-03-01-preview",
+      "name": "[concat(variables('tenantServer'), '/', variables('tenantProvisioningAlias'))]",
+      "properties": {},
+      "type": "Microsoft.Sql/servers/dnsAliases"
     },
     {
       "dependsOn": [

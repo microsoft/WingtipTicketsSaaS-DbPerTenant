@@ -50,7 +50,7 @@ $recoveryLocation = $regionPairs[$primaryLocation]
 $currentSubscriptionId = Get-SubscriptionId
 $recoveryResourceGroupName = $wtpUser.ResourceGroupName + $config.RecoveryRoleSuffix
 $recoveryCatalogServerName = $config.CatalogServerNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix 
-$originCatalogServerName = $config.CatalogServerNameStem + $wtpUser.Name + $config.OriginRoleSuffix 
+$originCatalogServerName = $config.CatalogServerNameStem + $wtpUser.Name
 
 #-------------------------------------------------------[Main Script]------------------------------------------------------------
 

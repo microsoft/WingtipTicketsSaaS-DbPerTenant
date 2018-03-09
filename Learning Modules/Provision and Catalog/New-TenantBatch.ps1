@@ -8,9 +8,6 @@
   are initialized with venue information and registered in the catalog and mapped to a tenant key generated from the 
   tenant name.
 
-.PARAMETER WtpResourceGroupName
-  The resource group name used during the deployment of the WTP app (case sensitive)
-
 .PARAMETER WtpUser
   The 'User' value that was entered during the deployment of the WTP app
 
@@ -19,9 +16,6 @@
 #>
 
 Param(
-    [Parameter(Mandatory=$true)]
-    [string]$WtpResourceGroupName,
-    
     [Parameter(Mandatory=$true)]
     [string]$WtpUser,
 
@@ -36,7 +30,8 @@ Import-Module $PSScriptRoot\..\Common\CatalogAndDatabaseManagement -Force
 Import-Module $PSScriptRoot\..\WtpConfig -Force
 
 $config = Get-Configuration
-$serverName = $config.TenantServerNameStem + $WtpUser + $config.OriginRoleSuffix
+$newTenantServerAlias = $config.NewTenantAliasStem + $WtpUser + ".database.windows.net"
+$serverName = Get-ServerNameFromAlias $newTenantServerAlias
 $fullyQualifiedServerName = $serverName + ".database.windows.net"
 $elasticPoolName = $config.TenantPoolNameStem + "1"
 
@@ -45,13 +40,18 @@ $elasticPoolName = $config.TenantPoolNameStem + "1"
 # Ensure logged in to Azure
 Initialize-Subscription
 
-# Check the tenant server exists
-$Server = Get-AzureRmSqlServer -ResourceGroupName $WtpResourceGroupName -ServerName $serverName 
-
-if (!$Server)
+# Find tenant server in Azure 
+$serverQuery = Find-AzureRmResource -ResourceNameEquals $serverName -ResourceType "Microsoft.Sql/servers"
+if ($serverQuery.Count -gt 0)
 {
-    throw "Could not find tenant server '$serverName'."
+    $WtpResourceGroupName = $serverQuery.ResourceGroupName
+    $Server = Get-AzureRmSqlServer -ResourceGroupName $WtpResourceGroupName -ServerName $serverName 
 }
+else
+{
+    throw "Could not find tenant server for provisioning: '$serverName'."
+}
+
 
 # Get the catalog 
 $catalog = Get-Catalog -ResourceGroupName $WtpResourceGroupName -WtpUser $WtpUser
@@ -127,7 +127,7 @@ if ($batchDatabaseNames.Count -gt 0)
         # Construct the resource id for the 'golden' tenant database on the catalog server
         $AzureContext = Get-AzureRmContext
         $subscriptionId = Get-SubscriptionId
-        $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$WtpResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser$($config.OriginRoleSuffix)/databases/$($config.GoldenTenantDatabaseName)"
+        $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$WtpResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser/databases/$($config.GoldenTenantDatabaseName)"
         
         # Use nested ARM templates to create the tenant database by copying the 'golden' database
         $deployment = New-AzureRmResourceGroupDeployment `

@@ -130,7 +130,7 @@ function Start-AsynchronousDatabaseRecovery
   )
 
   # Construct geo-restore parameters
-  $recoveredServerName = ($TenantDatabase.ServerName -split $config.OriginRoleSuffix)[0] + $config.RecoveryRoleSuffix
+  $recoveredServerName = ($TenantDatabase.ServerName) + $config.RecoveryRoleSuffix
   $recoveredServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceNameEquals $recoveredServerName
   $databaseId = "/subscriptions/$currentSubscriptionId/resourceGroups/$($wtpUser.ResourceGroupName)/providers/Microsoft.Sql/servers/$($TenantDatabase.ServerName)/recoverabledatabases/$($TenantDatabase.DatabaseName)"
 
@@ -177,7 +177,7 @@ function Complete-AsynchronousDatabaseRecovery
   if ($databaseDetails)
   {
     $originServerName = $databaseDetails.ServerName
-    $restoredServerName = ($databaseDetails.ServerName -split $config.OriginRoleSuffix)[0] + $config.OriginRoleSuffix
+    $restoredServerName = ($databaseDetails.ServerName) + $config.RecoveryRoleSuffix
 
     # Update tenant database recovery state
     $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $originServerName -DatabaseName $databaseDetails.DatabaseName

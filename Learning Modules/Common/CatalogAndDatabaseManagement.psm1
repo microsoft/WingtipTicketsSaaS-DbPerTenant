@@ -317,7 +317,7 @@ function Get-Catalog
     $config = Get-Configuration
 
     # Resolve DNS alias to get current catalog server
-    $catalogAlias = $config.CatalogServerNameStem + $WtpUser + ".database.windows.net"
+    $catalogAlias = $config.ActiveCatalogAliasStem + $WtpUser + ".database.windows.net"
     $catalogServerName = Get-ServerNameFromAlias $catalogAlias
 
     # Find catalog server in Azure 
@@ -1432,7 +1432,7 @@ function New-TenantDatabase
         # Construct the resource id for the 'golden' tenant database 
         $AzureContext = Get-AzureRmContext
         $subscriptionId = Get-SubscriptionId
-        $catalogServerName = $config.CatalogServerNameStem + $WtpUser + $config.OriginRoleSuffix 
+        $catalogServerName = $config.CatalogServerNameStem + $WtpUser
         $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$ResourceGroupName/providers/Microsoft.Sql/servers/$catalogServerName/databases/$($config.GoldenTenantDatabaseName)"
 
         # Use an ARM template to create the tenant database by copying the 'golden' database
@@ -2637,22 +2637,51 @@ function Update-TenantShardInfo
     $config = Get-Configuration
     $tenantKey = Get-TenantKey $TenantName
     $recoveryManager = ($Catalog.ShardMapManager).getRecoveryManager()
-    $tenantMapping = $Catalog.ShardMap.GetMappingForKey($tenantKey)
-    $tenantShard = $tenantMapping.Shard
-    $tenantShardLocation = $tenantShard.Location
-    $tenantServer = $tenantShardLocation.Server
-
-    if (($tenantServer -ne $FullyQualifiedTenantServerName) -or ($tenantShardLocation.Database -ne $TenantDatabaseName))
+    
+    try
     {
-        $recoveryShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($FullyQualifiedTenantServerName, $TenantDatabaseName, 'tcp', '1433')
-        $recoveryManager.DetachShard($tenantShardLocation)
-        $recoveryManager.AttachShard($recoveryShardLocation)
+        $tenantMapping = $Catalog.ShardMap.GetMappingForKey($tenantKey)
+        $tenantShard = $tenantMapping.Shard
+        $tenantShardLocation = $tenantShard.Location
+        $tenantServer = $tenantShardLocation.Server
 
-        $mappingDifferences = $recoveryManager.DetectMappingDifferences($recoveryShardLocation)
-        foreach ($diff in $mappingDifferences)
+        if (($tenantServer -ne $FullyQualifiedTenantServerName) -or ($tenantShardLocation.Database -ne $TenantDatabaseName))
         {
-            $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
+            $recoveryShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($FullyQualifiedTenantServerName, $TenantDatabaseName, 'tcp', '1433')
+            $recoveryManager.DetachShard($tenantShardLocation)
+            $recoveryManager.AttachShard($recoveryShardLocation)
+
+            $mappingDifferences = $recoveryManager.DetectMappingDifferences($recoveryShardLocation)
+            foreach ($diff in $mappingDifferences)
+            {
+                $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
+            }
+        }    
+    }
+    catch [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementException]
+    {
+        # Tenant mapping does not exist in global shard map
+        $mappingErrorMessage = "Mapping containing the given key value could not be located in the shard map"
+        if ($_.Exception.Message -match $mappingErrorMessage)
+        {
+            $recoveryShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($FullyQualifiedTenantServerName, $TenantDatabaseName, 'tcp', '1433')
+            $recoveryManager.AttachShard($recoveryShardLocation)  
+
+            $mappingDifferences = $recoveryManager.DetectMappingDifferences($recoveryShardLocation)
+            foreach ($diff in $mappingDifferences)
+            {
+                $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
+            }      
         }
+        else
+        {
+            throw $_.Exception.Message    
+        }
+        
+    }    
+    catch
+    {
+        throw $_.Exception.Message
     }    
 }
 
@@ -2819,8 +2848,8 @@ function Update-TenantResourceRecoveryState
     $validInitialStates = $resourceRecoveryStates[$UpdateAction].beginState
     $validInitialStates = "'$($validInitialStates -join "','")'"
 
-    $serverNameStem = ($ServerName -split "$($config.OriginRoleSuffix)|$($config.RecoveryRoleSuffix)")[0]
-    $validServerNames = "'$serverNameStem$($config.OriginRoleSuffix)','$serverNameStem$($config.RecoveryRoleSuffix)'"
+    $serverNameStem = ($ServerName -split "$($config.RecoveryRoleSuffix)")[0]
+    $validServerNames = "'$serverNameStem','$serverNameStem$($config.RecoveryRoleSuffix)'"
 
     if ($DatabaseName)
     {

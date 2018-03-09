@@ -33,7 +33,7 @@ if(!$resourceGroup)
     throw "Resource group '$WtpResourceGroupName' does not exist.  Exiting..."
 }
 
-$catalogServerName = $config.CatalogServerNameStem + $WtpUser + $config.OriginRoleSuffix
+$catalogServerName = $config.CatalogServerNameStem + $WtpUser
 $fullyQualifiedCatalogServerName = $catalogServerName + ".database.windows.net"
 $AdhocAnalyticsDatabaseName = $config.AdhocReportingDatabaseName
 
