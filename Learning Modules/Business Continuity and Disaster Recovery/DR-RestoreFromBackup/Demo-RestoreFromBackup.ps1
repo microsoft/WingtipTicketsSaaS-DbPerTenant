@@ -5,8 +5,8 @@
 #  2. Repatriate the app into its original region using geo-replication
 
 # Parameters for scenarios #3, provision a tenant in the recovery region 
-$TenantName = "Red Pine Rock" # name of the venue to be added/removed as a tenant
-$VenueType  = "rockmusic"      # valid types: blues, classicalmusic, dance, jazz, judo, motorracing, multipurpose, opera, rockmusic, soccer 
+$TenantName = "Hawthorn Hall" # name of the venue to be added/removed as a tenant
+$VenueType  = "multipurpose"  # valid types: blues, classicalmusic, dance, jazz, judo, motorracing, multipurpose, opera, rockmusic, soccer 
 $PostalCode = "98052"
 
 $DemoScenario = 1
@@ -75,7 +75,8 @@ if ($DemoScenario -eq 2)
 ### Provision a new tenant in the recovery region
 if ($DemoScenario -eq 3)
 {
-    # set up the server and pool names in which the tenant will be provisioned
+    # Set up the server and pool names in which the tenant will be provisioned.
+    # The server name is retrieved from an alias used to switch between normal and recovery regions 
     $newTenantAlias = $config.NewTenantAliasStem + $wtpUser.Name + ".database.windows.net"
     $serverName = Get-ServerNameFromAlias $newTenantAlias
     $poolName = $config.TenantPoolNameStem + "1"
