@@ -1432,7 +1432,8 @@ function New-TenantDatabase
         # Construct the resource id for the 'golden' tenant database 
         $AzureContext = Get-AzureRmContext
         $subscriptionId = Get-SubscriptionId
-        $catalogServerName = $config.CatalogServerNameStem + $WtpUser
+        $catalogAliasName = $config.ActiveCatalogAliasStem + $WtpUser + ".database.windows.net"
+        $catalogServerName = Get-ServerNameFromAlias $catalogAliasName
         $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$ResourceGroupName/providers/Microsoft.Sql/servers/$catalogServerName/databases/$($config.GoldenTenantDatabaseName)"
 
         # Use an ARM template to create the tenant database by copying the 'golden' database
