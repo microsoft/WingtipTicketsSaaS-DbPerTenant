@@ -48,7 +48,6 @@ namespace Events_TenantUserApp.Controllers
             try
             {
                 var tenantsModel = await _catalogRepository.GetAllTenants();
-                bool clearConnectionPools = false;
 
                 if (tenantsModel != null)
                 {
@@ -56,45 +55,41 @@ namespace Events_TenantUserApp.Controllers
                     foreach (var tenant in tenantsModel)
                     {
                         VenueModel venue = null;
-                        try
-                        {
-                            venue = await _tenantRepository.GetVenueDetails(tenant.TenantId);
-                        }
-                        catch (Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementException ex)
-                        {
-                            if (ex.ErrorCode == Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementErrorCode.MappingIsOffline)
-                            {
-                                _logger.LogInformation(0, ex, "Tenant is offline: {tenant}", tenant.TenantName);
-                                clearConnectionPools = true;                     
-                            }
-                            else if (ex.ErrorCode == Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementErrorCode.MappingDoesNotExist)
-                            {
-                                //Fix mapping irregularities
-                                _utilities.ResolveMappingDifferences(tenant.TenantId);
+                        String tenantStatus = _utilities.GetTenantStatus(tenant.TenantId);
 
-                                //Get venue details
-                                String tenantStatus = _utilities.GetTenantStatus(tenant.TenantId);
-                                if (tenantStatus == "Online")
+                        if (tenantStatus == "Online")
+                        {
+                            try
+                            {
+                                venue = await _tenantRepository.GetVenueDetails(tenant.TenantId);
+                            }
+                            catch (Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementException ex)
+                            {
+                                if (ex.ErrorCode == Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementErrorCode.MappingDoesNotExist)
                                 {
-                                    venue = await _tenantRepository.GetVenueDetails(tenant.TenantId);
-                                }
-                            }
-                            else
-                            {
-                                _logger.LogError(0, ex.Message, "Mapping unavailable for tenant: {tenant}", tenant.TenantName);
-                            }                                                    
-                        }
-                                                    
-                        if (venue != null)
-                        {
-                            tenant.VenueName = venue.VenueName;
-                            tenant.TenantName = venue.DatabaseName;
-                        }
+                                    //Fix mapping irregularities - trust local shard map
+                                    _utilities.ResolveMappingDifferences(tenant.TenantId);
 
-                    }
-                    if (clearConnectionPools)
-                    {
-                        SqlConnection.ClearAllPools();
+                                    //Get venue details if tenant is online
+                                    String updatedTenantStatus = _utilities.GetTenantStatus(tenant.TenantId);
+                                    if (updatedTenantStatus == "Online")
+                                    {
+                                        venue = await _tenantRepository.GetVenueDetails(tenant.TenantId);
+                                    }
+                                }                                
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(0, ex, "Error in getting all tenants in Events Hub");
+                                return View("Error", ex.Message);
+                            }
+                          }
+                                                                                                   
+                          if (venue != null)
+                          {
+                             tenant.VenueName = venue.VenueName;
+                             tenant.TenantName = venue.DatabaseName;
+                          }
                     }
                     return View(tenantsModel);
                 }

@@ -2658,7 +2658,6 @@ function Update-TenantShardInfo
                 {
                     $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
                 }
-                return $true
             }    
         }
         catch [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementException]
@@ -2675,7 +2674,6 @@ function Update-TenantShardInfo
                 {
                     $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
                 }
-                $return $true      
             }
             else
             {
@@ -2686,7 +2684,8 @@ function Update-TenantShardInfo
         catch
         {
             throw $_.Exception.Message
-        } 
+        }
+        return $true
     }
     else
     {

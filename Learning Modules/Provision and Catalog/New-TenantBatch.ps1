@@ -176,7 +176,7 @@ foreach($tenant in $allNewTenants)
         -PostalCode $tenant.PostalCode
 
     # Register the tenant to database mapping in the catalog
-    $tenantServicePlan = Get-Random -InputObject @('Premium','Standard','Free')
+    $tenantServicePlan = Get-Random -InputObject @('premium','standard','free')
     Add-TenantDatabaseToCatalog -Catalog $catalog `
         -TenantName $tenant.Name `
         -TenantKey $tenantKey `

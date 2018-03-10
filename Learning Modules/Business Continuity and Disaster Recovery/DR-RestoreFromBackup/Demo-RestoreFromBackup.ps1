@@ -64,7 +64,7 @@ if ($DemoScenario -eq 1)
 ### Restore app into the recovery region
 if ($DemoScenario -eq 2)
 {
-  Write-Output "Restoring app into recovery region ..."  
+  Write-Output "Restoring app into recovery region. This will take several minutes ..."  
   
   & $PSScriptRoot\Restore-IntoSecondaryRegion.ps1 -NoEcho
      
@@ -109,13 +109,16 @@ if ($DemoScenario -eq 3)
 #>
 
 
-### Delete an event from a tenant
+### Delete an event from contoso concerthall
 if ($DemoScenario -eq 4)
 {
-  Write-Output "Restoring  app into recovery region.  This will take several minutes..."  
-  
-  & $PSScriptRoot\Restore-IntoSecondaryRegion.ps1 -NoEcho
-     
+  $TenantName = "Contoso Concert Hall"
+  $deletedEvent = & $PSScriptRoot\..\..\Utilities\Remove-UnsoldEventFromTenant.ps1 `
+                      -WtpResourceGroupName $wtpUser.ResourceGroupName `
+                      -WtpUser $wtpUser.Name `
+                      -TenantName $TenantName `
+                      -NoEcho
+  Write-Output "Deleted event '$deletedEvent' from $TenantName."  
   exit
 }
 

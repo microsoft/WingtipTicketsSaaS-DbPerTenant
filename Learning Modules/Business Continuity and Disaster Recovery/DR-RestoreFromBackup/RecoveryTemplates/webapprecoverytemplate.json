@@ -101,7 +101,7 @@
                 "DatabaseServerPort": "1433",
                 "DatabaseUser": "developer",
                 "ResetEventDates": "false",
-                "ServicePlan": "Standard",
+                "ServicePlan": "standard",
                 "SqlProtocol": "tcp",
                 "TenantServer": "[parameters('tenantsRecoveryServer')]",
                 "LearnHowFooterUrl": "https://aka.ms/sqldbsaastutorial",
