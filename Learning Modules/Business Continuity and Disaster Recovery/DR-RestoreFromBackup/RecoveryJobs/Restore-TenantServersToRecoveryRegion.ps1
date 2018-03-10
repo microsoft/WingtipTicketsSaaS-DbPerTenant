@@ -22,6 +22,11 @@ Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -For
 Import-Module "$using:scriptPath\..\..\WtpConfig" -Force
 Import-Module "$using:scriptPath\..\..\UserConfig" -Force
 
+# Import-Module "$PSScriptRoot\..\..\..\Common\CatalogAndDatabaseManagement" -Force
+# Import-Module "$PSScriptRoot\..\..\..\Common\AzureSqlAsyncManagement" -Force
+# Import-Module "$PSScriptRoot\..\..\..\WtpConfig" -Force
+# Import-Module "$PSScriptRoot\..\..\..\UserConfig" -Force
+
 # Stop execution on error 
 $ErrorActionPreference = "Stop"
   
@@ -41,7 +46,7 @@ $recoveryResourceGroup = Get-AzureRmResourceGroup -Name $WingtipRecoveryResource
 
 # Get the tenant catalog in the recovery region
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
-while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup)
+while ($tenantCatalog.Database.ResourceGroupName -ne $WingtipRecoveryResourceGroup)
 {
   $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
 }

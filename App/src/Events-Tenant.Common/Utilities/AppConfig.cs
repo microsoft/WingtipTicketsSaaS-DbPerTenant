@@ -25,6 +25,7 @@ namespace Events_Tenant.Common.Utilities
         public string CatalogServer { get; set; }
         public string CatalogDatabase { get; set; }
         public string ServicePlan { get; set; }
+        public string CatalogLocation { get; set; }
     }
 
     /// <summary>

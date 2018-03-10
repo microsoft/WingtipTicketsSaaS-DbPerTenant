@@ -134,8 +134,9 @@
     <div class="footer-right-third">
         <div class="grow-tenant-page">
             <p><b>@Localizer["Tenant id"]: </b>@tenantConfig.TenantId | raw: @(String.Format("{0}{1}", "0x", tenantConfig.TenantIdInString))</p>
-            <p><b>@Localizer["Tenant server"]: </b>@tenantConfig.DatabaseServerName.Split('.')[0]</p>
-            <p><b>@Localizer["Tenant database"]: </b>@tenantConfig.DatabaseName</p>
+            <p><b>@Localizer["Database"]: </b>@tenantConfig.DatabaseName</p>
+            <p><b>@Localizer["Server"]: </b>@tenantConfig.DatabaseServerName.Split('.')[0]</p>
+            <p><b>@Localizer["Location"]: </b>@Startup.CatalogConfig.CatalogLocation</p>            
         </div>
         <div class="tutorial-link">
             <a href=@Startup.DatabaseConfig.LearnHowFooterUrl target="_blank">@Localizer["Learn how to build a SaaS app on SQL database"]</a>

@@ -185,7 +185,7 @@ while ($true)
 
   # Enable traffic manager endpoint in recovery region if resources have been created for new tenants 
   # This signals that the app is ready to receive traffic and can process new tenant registrations while recovery operations are underway
-  if (($newTenantProvisioningJob.State -eq "Completed") -and ($appRecoveryJob.State -eq "Completed"))
+  if (($newTenantProvisioningJob.State -eq "Completed") -and ($appRecoveryJob.State -eq "Completed") -and ($serverRecoveryJob.State -eq "Completed"))
   {
     $profileName = $config.EventsAppNameStem + $wtpUser.Name
     $endpointName = $config.EventsAppNameStem + $recoveryLocation + '-' + $wtpUser.Name

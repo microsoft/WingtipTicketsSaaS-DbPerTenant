@@ -224,7 +224,8 @@ namespace Events_TenantUserApp
             {
                 ServicePlan = Configuration["ServicePlan"],
                 CatalogDatabase = Configuration["CatalogDatabase"],
-                CatalogServer = Configuration["CatalogServer"] + ".database.windows.net"
+                CatalogServer = Configuration["CatalogServer"] + ".database.windows.net",
+                CatalogLocation = Configuration["APP_REGION"]
             };
 
             TenantServerConfig = new TenantServerConfig

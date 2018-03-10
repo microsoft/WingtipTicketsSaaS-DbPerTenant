@@ -38,7 +38,7 @@ $config = Get-Configuration
 
 # Get the tenant catalog in the recovery region
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
-while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup)
+while ($tenantCatalog.Database.ResourceGroupName -ne $WingtipRecoveryResourceGroup)
 {
   $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
 }

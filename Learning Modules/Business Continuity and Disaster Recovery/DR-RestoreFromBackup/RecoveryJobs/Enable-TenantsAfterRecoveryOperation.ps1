@@ -39,14 +39,11 @@ if (!$credentialLoad)
 # Get deployment configuration  
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
-$currentSubscriptionId = Get-SubscriptionId
 
-# Get the recovery region resource group
-$recoveryResourceGroup = Get-AzureRmResourceGroup -Name $WingtipRecoveryResourceGroup
 
 # Get the tenant catalog in the recovery region
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
-while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup)
+while ($tenantCatalog.Database.ResourceGroupName -ne $WingtipRecoveryResourceGroup)
 {
   $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
 }
@@ -124,18 +121,21 @@ while ($true)
           $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startShardUpdateToRecovery" -TenantKey $tenantKey
 
           # Update tenant shard to point to recovered database
-          Update-TenantShardInfo `
-            -Catalog $tenantCatalog `
-            -TenantName $tenant.TenantName `
-            -FullyQualifiedTenantServerName "$restoredTenantServer.database.windows.net" `
-            -TenantDatabaseName $tenant.DatabaseName
+          $updateComplete = Update-TenantShardInfo `
+                            -Catalog $tenantCatalog `
+                            -TenantName $tenant.TenantName `
+                            -FullyQualifiedTenantServerName "$restoredTenantServer.database.windows.net" `
+                            -TenantDatabaseName $tenant.DatabaseName
 
-          # Mark tenant online in catalog
-          Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
-          $onlineTenantCount +=1
+          if ($updateComplete)
+          {
+            # Mark tenant online in catalog
+            Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
+            $onlineTenantCount +=1
 
-          # Update tenant recovery status to 'OnlineInRecovery'
-          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToRecovery" -TenantKey $tenantKey
+            # Update tenant recovery status to 'OnlineInRecovery'
+            $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToRecovery" -TenantKey $tenantKey
+          }
         }   
       }
       elseif (($tenantDatabaseRecoveryStatus.RecoveryState -In ('restored', 'failedOver')) -and ($tenantRecoveryState -eq 'UpdatingTenantShardToRecovery'))
@@ -144,18 +144,21 @@ while ($true)
         $originTenantServer = $originTenantDatabase.Name.Split('/')[0]  
                
         # Update tenant shard to point to recovered database
-        Update-TenantShardInfo `
-          -Catalog $tenantCatalog `
-          -TenantName $tenant.TenantName `
-          -FullyQualifiedTenantServerName "$restoredTenantServer.database.windows.net" `
-          -TenantDatabaseName $tenant.DatabaseName
+        $updateComplete = Update-TenantShardInfo `
+                            -Catalog $tenantCatalog `
+                            -TenantName $tenant.TenantName `
+                            -FullyQualifiedTenantServerName "$restoredTenantServer.database.windows.net" `
+                            -TenantDatabaseName $tenant.DatabaseName
 
-        # Mark tenant online in catalog
-        Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
-        $onlineTenantCount +=1
+        if ($updateComplete)
+        {
+          # Mark tenant online in catalog
+          Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
+          $onlineTenantCount +=1
 
-        # Update tenant recovery status to 'OnlineInRecovery'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToRecovery" -TenantKey $tenantKey     
+          # Update tenant recovery status to 'OnlineInRecovery'
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToRecovery" -TenantKey $tenantKey
+        }     
       }
       elseif (($tenantDatabaseRecoveryStatus.RecoveryState -In ('restored', 'failedOver')) -and ($tenantRecoveryState -eq 'OnlineInRecovery'))
       {
@@ -191,18 +194,21 @@ while ($true)
         }
 
         # Update tenant shard to point to recovered database
-        Update-TenantShardInfo `
-          -Catalog $tenantCatalog `
-          -TenantName $tenant.TenantName `
-          -FullyQualifiedTenantServerName "$originTenantServer.database.windows.net" `
-          -TenantDatabaseName $tenant.DatabaseName
+        $updateComplete = Update-TenantShardInfo `
+                            -Catalog $tenantCatalog `
+                            -TenantName $tenant.TenantName `
+                            -FullyQualifiedTenantServerName "$originTenantServer.database.windows.net" `
+                            -TenantDatabaseName $tenant.DatabaseName
 
-        # Mark tenant online in catalog
-        Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
-        $onlineTenantCount +=1
+        if ($updateComplete)
+        {
+          # Mark tenant online in catalog
+          Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
+          $onlineTenantCount +=1
 
-        # Update tenant recovery status to 'OnlineInOrigin'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
+          # Update tenant recovery status to 'OnlineInOrigin'
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
+        }        
       }
       elseif (($tenantDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'UpdatingTenantShardToOrigin'))
       {
@@ -216,18 +222,21 @@ while ($true)
         }
 
         # Update tenant shard to point to recovered database
-        Update-TenantShardInfo `
-          -Catalog $tenantCatalog `
-          -TenantName $tenant.TenantName `
-          -FullyQualifiedTenantServerName "$originTenantServer.database.windows.net" `
-          -TenantDatabaseName $tenant.DatabaseName
+        $updateComplete = Update-TenantShardInfo `
+                            -Catalog $tenantCatalog `
+                            -TenantName $tenant.TenantName `
+                            -FullyQualifiedTenantServerName "$originTenantServer.database.windows.net" `
+                            -TenantDatabaseName $tenant.DatabaseName
 
-        # Mark tenant online in catalog
-        Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
-        $onlineTenantCount +=1
+        if ($updateComplete)
+        {
+          # Mark tenant online in catalog
+          Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
+          $onlineTenantCount +=1
 
-        # Update tenant recovery status to 'OnlineInOrigin'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
+          # Update tenant recovery status to 'OnlineInOrigin'
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
+        }  
       }
       elseif (($restoredTenantDatabase) -and ($tenantDatabaseRecoveryStatus.RecoveryState -In 'replicating'))
       {
@@ -275,18 +284,21 @@ while ($true)
         }
 
         # Update tenant shard to point to recovered database
-        Update-TenantShardInfo `
-          -Catalog $tenantCatalog `
-          -TenantName $tenant.TenantName `
-          -FullyQualifiedTenantServerName "$originTenantServer.database.windows.net" `
-          -TenantDatabaseName $tenant.DatabaseName
+        $updateComplete = Update-TenantShardInfo `
+                            -Catalog $tenantCatalog `
+                            -TenantName $tenant.TenantName `
+                            -FullyQualifiedTenantServerName "$originTenantServer.database.windows.net" `
+                            -TenantDatabaseName $tenant.DatabaseName
 
-        # Mark tenant online in catalog
-        Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
-        $onlineTenantCount +=1
+        if ($updateComplete)
+        {
+          # Mark tenant online in catalog
+          Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
+          $onlineTenantCount +=1
 
-        # Update tenant recovery status to 'OnlineInOrigin'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey        
+          # Update tenant recovery status to 'OnlineInOrigin'
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
+        }          
       }
       elseif (($tenantDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'RepatriatedTenantData'))
       {
@@ -300,18 +312,21 @@ while ($true)
         }
 
         # Update tenant shard to point to recovered database
-        Update-TenantShardInfo `
-          -Catalog $tenantCatalog `
-          -TenantName $tenant.TenantName `
-          -FullyQualifiedTenantServerName "$originTenantServer.database.windows.net" `
-          -TenantDatabaseName $tenant.DatabaseName
+        $updateComplete = Update-TenantShardInfo `
+                            -Catalog $tenantCatalog `
+                            -TenantName $tenant.TenantName `
+                            -FullyQualifiedTenantServerName "$originTenantServer.database.windows.net" `
+                            -TenantDatabaseName $tenant.DatabaseName
 
-        # Mark tenant online in catalog
-        Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
-        $onlineTenantCount +=1
+        if ($updateComplete)
+        {
+          # Mark tenant online in catalog
+          Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
+          $onlineTenantCount +=1
 
-        # Update tenant recovery status to 'OnlineInOrigin'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
+          # Update tenant recovery status to 'OnlineInOrigin'
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
+        }  
       }
       elseif (($tenantDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'OnlineInOrigin'))
       {

@@ -4,6 +4,7 @@ using Events_Tenant.Common.Interfaces;
 using Events_Tenant.Common.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System.Data.SqlClient;
 
 namespace Events_TenantUserApp.Controllers
 {
@@ -47,6 +48,7 @@ namespace Events_TenantUserApp.Controllers
             try
             {
                 var tenantsModel = await _catalogRepository.GetAllTenants();
+                bool clearConnectionPools = false;
 
                 if (tenantsModel != null)
                 {
@@ -62,7 +64,8 @@ namespace Events_TenantUserApp.Controllers
                         {
                             if (ex.ErrorCode == Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementErrorCode.MappingIsOffline)
                             {
-                                _logger.LogInformation(0, ex, "Tenant is offline: {tenant}", tenant.TenantName);                       
+                                _logger.LogInformation(0, ex, "Tenant is offline: {tenant}", tenant.TenantName);
+                                clearConnectionPools = true;                     
                             }
                             else if (ex.ErrorCode == Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementErrorCode.MappingDoesNotExist)
                             {
@@ -88,6 +91,10 @@ namespace Events_TenantUserApp.Controllers
                             tenant.TenantName = venue.DatabaseName;
                         }
 
+                    }
+                    if (clearConnectionPools)
+                    {
+                        SqlConnection.ClearAllPools();
                     }
                     return View(tenantsModel);
                 }

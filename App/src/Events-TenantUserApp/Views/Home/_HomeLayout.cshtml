@@ -44,8 +44,9 @@
     </div>
     <div class="footer-right-third">
         <div class="grow">
-            <p><b>@Localizer["Catalog server"]: </b>@Startup.CatalogConfig.CatalogServer.Split('.')[0]</p>
             <p><b>@Localizer["Catalog database"]: </b>@Startup.CatalogConfig.CatalogDatabase</p>
+            <p><b>@Localizer["Server"]: </b>@Startup.CatalogConfig.CatalogServer.Split('.')[0]</p>
+            <p><b>@Localizer["Location"]: </b>@Startup.CatalogConfig.CatalogLocation</p>
         </div>
         <div class="tutorial-link">
             <a href=@Startup.DatabaseConfig.LearnHowFooterUrl target="_blank">@Localizer["Learn how to build a SaaS app on SQL database"]</a>

@@ -71,8 +71,8 @@ function Select-HighestPriorityUnrecoveredTenantPerPool
 
   $highestPriorityTenants = @{}
   $tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
-  $tenantPriorityOrder = "Premium", "Standard", "Free"
-  $tenantSortFunction = {
+  $tenantPriorityOrder = "premium", "standard", "free"
+  $sortOrder = {
     $rank = $tenantPriorityOrder.IndexOf($($_.ServicePlan.ToLower()))
     if ($rank -ne -1) { $rank } else { [System.Double]::PositiveInfinity }
   }
@@ -85,7 +85,7 @@ function Select-HighestPriorityUnrecoveredTenantPerPool
   # Add 'service plan' property to tenant database list. This will be used to calculate database recovery priority
   foreach ($database in $recoveryQueue)
   {
-    $databaseServicePlan = ($tenantList | Where-Object {($_.ServerName -eq $database.ServerName) -and ($_.DatabaseName -eq $database.DatabaseName)}).ServicePlan
+    $databaseServicePlan = ($tenantList | Where-Object {($_.ServerName.split('.')[0] -eq $database.ServerName) -and ($_.DatabaseName -eq $database.DatabaseName)}).ServicePlan
     $database | Add-Member "ServicePlan" $databaseServicePlan
   }
 
@@ -97,7 +97,7 @@ function Select-HighestPriorityUnrecoveredTenantPerPool
     foreach ($pool in $recoveryQueueByPool.Keys)
     {
       # Sort databases in pool by tenant priority
-      $poolPriorityList = $recoveryQueueByPool[$pool] | Sort-Object $tenantSortFunction
+      $poolPriorityList = $recoveryQueueByPool[$pool] | Sort-Object -Property $sortOrder
         
       # Select highest priority tenant for current pool
       if (!$highestPriorityTenants.ContainsKey($pool))
@@ -200,7 +200,7 @@ $recoveryResourceGroup = Get-AzureRmResourceGroup -Name $WingtipRecoveryResource
 
 # Get the tenant catalog in the recovery region
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
-while ($tenantCatalog.Database.ResourceGroupName -ne $recoveryResourceGroup)
+while ($tenantCatalog.Database.ResourceGroupName -ne $WingtipRecoveryResourceGroup)
 {
   $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
 }
