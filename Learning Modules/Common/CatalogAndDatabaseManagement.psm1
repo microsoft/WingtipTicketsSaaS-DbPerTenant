@@ -2309,7 +2309,7 @@ function Set-TenantOnline
     Cancels an ongoing or queued restore operation to recover a tenant into the recovery region. 
     If a tenant name is not specified, all ongoing or queued restore operations will be cancelled.
 #>
-function Stop-TenantRestoreOperation
+function Stop-TenantRestoreOperations
 {
     param(
         [parameter(Mandatory=$true)]
@@ -2321,55 +2321,85 @@ function Stop-TenantRestoreOperation
 
     $config = Get-Configuration
 
-    # Cancel restore operations still in progress or queued 
-    $cancelServerRestoreQuery = "
-        UPDATE [dbo].[Servers] 
-        SET RecoveryState = 'resetting'
-        WHERE (RecoveryState = 'restoring' OR RecoveryState = 'n/a')
-        "
-
-    $cancelElasticPoolRestoreQuery = "
-        UPDATE [dbo].[ElasticPools]
-        SET RecoveryState = 'resetting'
-        WHERE (RecoveryState = 'restoring' OR RecoveryState = 'n/a')
-        "
-
-    $cancelDatabaseRestoreQuery = "
-        UPDATE [dbo].[Databases]
-        SET RecoveryState = 'resetting'
-        WHERE (RecoveryState = 'restoring' OR RecoveryState = 'n/a')
-        "
-
-    # Qualify query if TenantName is specified.
-    if($TenantName)
+    # Cancel restore operations for single tenant
+    if ($TenantName)
     {
-        # Cancel restore of tenant database if still in-progress
-        $tenantObject = Get-Tenant -Catalog $Catalog -TenantName $TenantName
-        $tenantServer = $tenantObject.Database.ServerName
-        $tenantDatabase = $tenantObject.Database.DatabaseName
-        $tenantElasticPool = $tenantObject.Database.ElasticPoolName
+        try
+        {
+            $tenantKey = Get-TenantKey $TenantName
+            $tenantShard = $Catalog.ShardMap.GetMappingForKey($tenantKey)
+            $fullyQualifiedTenantServerName = $tenantShard.Shard.Location.Server
+            $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0]
+            $tenantDatabaseName = $tenantShard.Shard.Location.Database
 
-        $queryTerminator = "`nGO`n"
-        $cancelDatabaseRestoreQuery += " AND ServerName = '$tenantServer' AND DatabaseName = '$tenantDatabase' $queryTerminator"
-        $commandText = $cancelDatabaseRestoreQuery       
+            # Cancel tenant database restore operations
+            $dbState = Update-TenantResourceRecoveryState -Catalog $Catalog -UpdateAction "cancelAndReset" -ServerName $tenantServerName -DatabaseName $tenantDatabaseName
+
+            # Update tenant recovery state
+            $tenantState = Update-TenantRecoveryState -Catalog $Catalog -UpdateAction "startReset" -TenantKey $tenantKey
+        }
+        catch
+        {
+            throw "Tenant '$TenantName' not found in catalog."
+        }
     }
+    # Cancel restore operations for all tenants
     else
     {
-        # Cancel all in-progress restore operations 
-        $queryTerminator = "`nGO`n"
-        $cancelServerRestoreQuery += $queryTerminator
-        $cancelElasticPoolRestoreQuery += $queryTerminator
-        $cancelDatabaseRestoreQuery += $queryTerminator 
-        $commandText = $cancelServerRestoreQuery + $cancelElasticPoolRestoreQuery + $cancelDatabaseRestoreQuery  
-    }
-   
-    Invoke-SqlCmdWithRetry `
-        -ServerInstance $Catalog.FullyQualifiedServerName `
-        -Database $Catalog.Database.DatabaseName `
-        -Query $commandText `
-        -UserName $config.CatalogAdminUserName `
-        -Password $config.CatalogAdminPassword
+        # Construct state transition dictionary for resetting state 
+        $resourceRecoveryStates = @{'cancelAndReset' = @{"beginState" = ('restoring', 'n/a'); "endState" = ('resetting')} }  
+        $requestedState = $resourceRecoveryStates['cancelAndReset'].endState
+        $validInitialStates = $resourceRecoveryStates['cancelAndReset'].beginState
+        $validInitialStates = "'$($validInitialStates -join "','")'"
 
+        # Update recovery states of both origin and recovery instances of tenant resources if applicable
+        $serverNameStem = ($ServerName -split "$($config.RecoveryRoleSuffix)")[0]
+        $validServerNames = "'$serverNameStem','$serverNameStem$($config.RecoveryRoleSuffix)'"
+
+        $cancelRestoreOperationsQuery = "
+        UPDATE  [dbo].[Servers] SET
+                RecoveryState = '$requestedState',
+                LastUpdated = CURRENT_TIMESTAMP
+        WHERE   RecoveryState IN ($validInitialStates);
+
+        UPDATE  [dbo].[ElasticPools] SET
+                RecoveryState = '$requestedState',
+                LastUpdated = CURRENT_TIMESTAMP
+        WHERE   RecoveryState IN ($validInitialStates);
+
+        UPDATE  [dbo].[Databases] SET
+                RecoveryState = '$requestedState',
+                LastUpdated = CURRENT_TIMESTAMP
+        WHERE   RecoveryState IN ($validInitialStates);
+        " 
+   
+        $commandOutput = Invoke-SqlAzureWithRetry `
+                            -ServerInstance $Catalog.FullyQualifiedServerName `
+                            -Database $Catalog.Database.DatabaseName `
+                            -Query $cancelRestoreOperationsQuery `
+                            -UserName $config.CatalogAdminUserName `
+                            -Password $config.CatalogAdminPassword
+
+        # Update recovery states of affected tenants
+        $tenantRecoveryStates = @{ 'startReset' = @{"beginState" = ('RestoringTenantData', 'RestoredTenantData', 'UpdatingTenantShardToRecovery', 'OnlineInRecovery'); "endState" = ('ResettingTenantToOrigin')} }
+        $requestedState = $tenantRecoveryStates['startReset'].endState
+        $validInitialStates = $tenantRecoveryStates['startReset'].beginState
+        $validInitialStates = "'$($validInitialStates -join "','")'"
+        
+        $updateTenantStateQuery = "
+        UPDATE  [dbo].[Tenants] SET
+                RecoveryState = '$requestedState',
+                LastUpdated = CURRENT_TIMESTAMP
+        WHERE   RecoveryState IN ($validInitialStates)
+        "
+
+        $commandOutput = Invoke-SqlAzureWithRetry `
+                            -ServerInstance $Catalog.FullyQualifiedServerName `
+                            -Database $Catalog.Database.DatabaseName `
+                            -Query $updateTenantStateQuery `
+                            -UserName $config.CatalogAdminUserName `
+                            -Password $config.CatalogAdminPassword        
+    } 
 }
 
 <#
@@ -2389,8 +2419,9 @@ function Test-IfTenantDataChanged
     )
 
     $config = Get-Configuration
-    $tenantProperties = Get-ExtendedTenant -Catalog $Catalog -TenantKey (Get-TenantKey $TenantName) 
-    $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $Catalog -ServerName $tenantProperties.ServerName -DatabaseName $tenantProperties.DatabaseName
+    $tenantProperties = Get-ExtendedTenant -Catalog $Catalog -TenantKey (Get-TenantKey $TenantName)
+    $tenantServerName = $tenantProperties.ServerName.split('.')[0] 
+    $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $Catalog -ServerName $tenantServerName -DatabaseName $tenantProperties.DatabaseName
     $recoveryRowVersion = $tenantDatabaseProperties.RecoveryRowVersion
 
     # Return false if tenant database has not been recovered
@@ -2402,7 +2433,7 @@ function Test-IfTenantDataChanged
     # Retrieve current tenant database rowversion
     $commandText = "SELECT @@DBTS AS Value"
     $currRowVersion =  Invoke-SqlAzureWithRetry `
-                            -ServerInstance "$($tenantProperties.ServerName).database.windows.net" `
+                            -ServerInstance $tenantProperties.ServerName `
                             -Database $tenantProperties.DatabaseName `
                             -Query $commandText `
                             -UserName $config.TenantAdminUserName `
@@ -2410,11 +2441,11 @@ function Test-IfTenantDataChanged
     
     if ($currRowVersion.Value -eq $recoveryRowVersion)
     {
-        return $true
+        return $false
     }
     else
     {
-        return $false
+        return $true
     }   
 }
 
@@ -2705,7 +2736,7 @@ function Update-TenantRecoveryState
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [validateset('startRecovery', 'endRecovery', 'startShardUpdateToRecovery', 'endShardUpdateToRecovery', 'startReset', 'endReset', 'startRepatriation', 'endRepatriation', 'startShardUpdateToOrigin', 'endShardUpdateToOrigin', 'markError')]
+        [validateset('startRecovery', 'endRecovery', 'startShardUpdateToRecovery', 'endShardUpdateToRecovery', 'startReset', 'endReset', 'startRepatriation', 'endRepatriation', 'startShardUpdateToOrigin', 'endShardUpdateToOrigin')]
         [string]$UpdateAction,
 
         [parameter(Mandatory=$true)]
@@ -2815,6 +2846,7 @@ function Update-TenantResourceRecoveryState
         errorState              |   failingOver         |   startFailover      (restart failover operations)
         --------------------------------------------------------------------------
         restoring               |   resetting           |   cancelAndReset     (reset back to origin if region comes back online during recovery operations)
+        n/a                     |   resetting           |   cancelAndReset     (reset back to origin if region comes back online during recovery operations)       
         restored                |   resetting           |   startReset         (reset back to origin if data in recovery region is identical to origin region)        
         resetting               |   complete            |   endReset           (reset operations successfully completed)
         resetting               |   errorState          |   markError          (reset operations failed)
@@ -2841,7 +2873,7 @@ function Update-TenantResourceRecoveryState
     $resourceRecoveryStates = @{
         'startRecovery' = @{ "beginState" = ('n/a', 'complete', 'errorState'); "endState" = ('restoring') };
         'startFailover' = @{ "beginState" = ('n/a', 'complete', 'errorState'); "endState" = ('failingOver') };
-        'cancelAndReset' = @{ "beginState" = ('restoring'); "endState" = ('resetting') };
+        'cancelAndReset' = @{ "beginState" = ('restoring', 'n/a'); "endState" = ('resetting') };
         'startReset' = @{ "beginState" = ('restored'); "endState" = ('resetting') };
         'endReset' = @{ "beginState" = ('resetting'); "endState" = ('complete') };
         'markError' = @{ "beginState" = ('restoring', 'resetting', 'failingOver', 'replicating', 'repatriating'); "endState" = ('errorState')};
@@ -2857,6 +2889,7 @@ function Update-TenantResourceRecoveryState
     $validInitialStates = $resourceRecoveryStates[$UpdateAction].beginState
     $validInitialStates = "'$($validInitialStates -join "','")'"
 
+    # Update recovery states of both origin and recovery instances of tenant resources if applicable
     $serverNameStem = ($ServerName -split "$($config.RecoveryRoleSuffix)")[0]
     $validServerNames = "'$serverNameStem','$serverNameStem$($config.RecoveryRoleSuffix)'"
 

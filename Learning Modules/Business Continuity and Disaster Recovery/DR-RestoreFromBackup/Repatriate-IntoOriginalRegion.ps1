@@ -22,6 +22,7 @@ param (
 #----------------------------------------------------------[Initialization]----------------------------------------------------------
 
 Import-Module $PSScriptRoot\..\..\Common\CatalogAndDatabaseManagement -Force
+Import-Module $PSScriptRoot\..\..\Common\FormatJobOutput -Force
 Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 Import-Module $PSScriptRoot\..\..\UserConfig -Force
 
@@ -35,10 +36,60 @@ Initialize-Subscription -NoEcho:$NoEcho.IsPresent
 
 # Get location of primary region
 $primaryLocation = (Get-AzureRmResourceGroup -ResourceGroupName $wtpUser.ResourceGroupName).Location
+$regionPairs = Get-Content -raw "$PSScriptRoot\..\..\Utilities\AzurePairedRegions.txt" | ConvertFrom-StringData
+$recoveryLocation = $regionPairs[$primaryLocation]
 
 # Get the active tenant catalog 
 $catalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
 $recoveryResourceGroupName = $wtpUser.ResourceGroupName + $config.RecoveryRoleSuffix 
+
+#------------------------------------------------------[Helper Functions]-------------------------------------------------------
+<#
+ .SYNOPSIS  
+  Disables traffic manager endpoint in the recovery region if it exists, and enables the endpoint in the origin region.
+  This function also updates the tenant provisioning DNS alias to point to the appropriate tenant server in the origin region.
+#>
+function Reset-TrafficManagerEndpoints
+{
+  # Enable traffic manager endpoint in origin
+  $profileName = $config.EventsAppNameStem + $wtpUser.Name
+  $endpointName = $config.EventsAppNameStem + $primaryLocation + '-' + $wtpUser.Name
+  $webAppEndpoint = Get-AzureRmTrafficManagerEndpoint -Name $endpointName -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName
+    
+  if ($webAppEndpoint.EndpointStatus -ne 'Enabled')
+  {
+    Write-Output "Enabling traffic manager endpoint for Wingtip events app in origin '$endpointName' ..."
+    Enable-AzureRmTrafficManagerEndpoint -Name $endpointName -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -ErrorAction Stop > $null
+  }
+
+  # Disable traffic manager endpoint in recovery region (if applicable)
+  $recoveryAppEndpointName = $config.EventsAppNameStem + $recoveryLocation + '-' + $wtpUser.Name
+  $recoveryAppEndpoint = Get-AzureRmTrafficManagerEndpoint -Name $recoveryAppEndpointName -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -ErrorAction SilentlyContinue
+  if ($recoveryAppEndpoint -and $recoveryAppEndpoint.EndpointStatus -ne 'Disabled')
+  {
+    Write-Output "Disabling traffic manager endpoint for Wingtip events app in recovery region '$recoveryAppEndpointName' ..."
+    Disable-AzureRmTrafficManagerEndpoint -Name $recoveryAppEndpointName -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -Force -ErrorAction SilentlyContinue > $null
+  }
+
+  # Update tenant provisioning server alias to point to original location (if applicable)
+  $newTenantAlias = $config.NewTenantAliasStem + $wtpUser.Name
+  $fullyQualifiedNewTenantAlias = $newTenantAlias + ".database.windows.net"
+  $originProvisioningServerName = $config.TenantServerNameStem + $wtpUser.Name
+  $currentProvisioningServerName = Get-ServerNameFromAlias $fullyQualifiedNewTenantAlias
+
+  if ($currentProvisioningServerName -ne $originProvisioningServerName)
+  {
+    Write-Output "Updating DNS alias for new tenant provisioning ..."
+    Set-DnsAlias `
+        -ResourceGroupName $wtpUser.ResourceGroupName `
+        -ServerName $originProvisioningServerName `
+        -ServerDNSAlias $newTenantAlias `
+        -OldResourceGroupName $recoveryResourceGroupName `
+        -OldServerName $currentProvisioningServerName `
+        -PollDnsUpdate `
+        >$null
+  }
+}
 
 #-------------------------------------------------------[Main Script]------------------------------------------------------------
 
@@ -57,30 +108,182 @@ if (!($runningScripts -like "*Sync-TenantConfiguration*"))
 
 # Cancel tenant restore operations that are still in-flight.
 Write-Output "Stopping any pending restore operations ..."
-Stop-TenantRestoreOperation -Catalog $catalog 
+Stop-TenantRestoreOperations -Catalog $catalog 
 
-# Todo: Check if current catalog is recovery catalog
-  # It it isn't, reset and complete repatriation
-  # If it is, check if any tenant db has been restored
-    # There is none: update catalog alias to origin, enable tm and reset
-    # There is at least one: delete origin catalog, create failover group for catalog db's, failover the group, update alias, enable Tm and reset
+# Check if active catalog is in recovery region
+# Note: This assumes that the DNS alias for the catalog server is only updated during the process of recovery.
+if ($catalog.Database.ResourceGroupName -ne $recoveryResourceGroupName)
+{
+  Write-Output "Resetting catalog database and traffic manager endpoint to origin ..."
+  Reset-TrafficManagerEndpoints
+}
+else
+{
+  $tenantDatabaseList = Get-ExtendedDatabase -Catalog $catalog
+  $defaultRecoveryTenantServerName = $config.TenantServerNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix
+
+  # Get list of restored tenant databases
+  $restoredDbs = $tenantDatabaseList | Where-Object{$_.RecoveryState -eq 'restored'}
+
+  # Get list of new tenants added in the recovery region
+  $newTenants = $tenantDatabaseList | Where-Object{$_.ServerName -ne $defaultRecoveryTenantServerName}
+
+  # Reset catalog to origin if no tenant database has been restored or a new tenant added
+  if (($restoredDbs -eq $null) -and ($newTenants -eq $null))
+  {
+    # Update catalog alias to origin
+    $catalogAliasName = $config.ActiveCatalogAliasStem + $wtpUser.Name
+    $originCatalogServer = $config.CatalogServerNameStem + $wtpUser.Name
+    $activeCatalogServer = Get-ServerNameFromAlias "$catalogAliasName.database.windows.net"
+    if ($activeCatalogServer -ne $originCatalogServer)
+    {
+      Write-Output "Updating active catalog alias to point to origin server '$originCatalogServer' ..."
+      Set-DnsAlias `
+        -ResourceGroupName $wtpUser.ResourceGroupName `
+        -ServerName $originCatalogServer `
+        -ServerDNSAlias $catalogAliasName `
+        -OldResourceGroupName $recoveryResourceGroupName `
+        -OldServerName $activeCatalogServer `
+        -PollDnsUpdate `
+        >$null
+    }    
+  }
+  # Failover recovery catalog database to origin if it has been modified
+  else
+  {
+    $catalogAliasName = $config.ActiveCatalogAliasStem + $wtpUser.Name
+    $originCatalogServerName = $config.CatalogServerNameStem + $wtpUser.Name
+    $recoveryCatalogServerName = $config.CatalogServerNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix
+    $catalogFailoverGroupName = $config.CatalogServerNameStem + "group" + $wtpUser.Name
+
+    $catalogFailoverGroup = Get-AzureRmSqlDatabaseFailoverGroup `
+                              -ResourceGroupName $wtpUser.ResourceGroupName `
+                              -ServerName $originCatalogServerName `
+                              -FailoverGroupName $catalogFailoverGroupName `
+                              -ErrorAction SilentlyContinue
+    
+    # Failover catalog databases to origin (if applicable)
+    if ($catalogFailoverGroup -and ($catalogFailoverGroup.ReplicationRole -eq 'Secondary'))
+    {
+      Write-Output "Failing over catalog database to origin ..."
+      Switch-AzureRmSqlDatabaseFailoverGroup `
+        -ResourceGroupName $wtpUser.ResourceGroupName `
+        -ServerName $originCatalogServerName `
+        -FailoverGroupName $catalogFailoverGroupName `
+        >$null
+
+    }
+    # Create catalog failover group if it doesn't exist and failover to origin
+    else
+    {
+      # Delete origin catalog databases (idempotent)
+      Remove-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originCatalogServerName -DatabaseName $config.CatalogDatabaseName -ErrorAction SilentlyContinue
+      Remove-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originCatalogServerName -DatabaseName $config.GoldenTenantDatabaseName -ErrorAction SilentlyContinue
+
+      # Create failover group for catalog databases
+      $catalogFailoverGroup = New-AzureRMSqlDatabaseFailoverGroup `
+                                -ResourceGroupName $recoveryResourceGroupName `
+                                -FailoverGroupName $catalogFailoverGroupName ` 
+                                -ServerName $recoveryCatalogServerName `
+                                -PartnerResourceGroupName $wtpUser.ResourceGroupName `
+                                -PartnerServerName $originCatalogServerName `
+                                -FailoverPolicy Manual
+
+      $catalogDatabases = Get-AzureRmSqlDatabase -ResourceGroupName $recoveryResourceGroupName -ServerName $recoveryCatalogServerName | Where-Object{$_.DatabaseName -ne 'master'}
+      $catalogFailoverGroup = $catalogFailoverGroup | Add-AzureRmSqlDatabaseToFailoverGroup -Database $catalogDatabases
+
+      # Failover catalog databases to origin
+      Write-Output "Failing over catalog database to origin ..."
+      Switch-AzureRmSqlDatabaseFailoverGroup `
+        -ResourceGroupName $wtpUser.ResourceGroupName `
+        -ServerName $originCatalogServerName `
+        -FailoverGroupName $catalogFailoverGroupName `
+        >$null
+    }   
+        
+    # Update catalog alias to origin (if applicable)
+    $activeCatalogServer = Get-ServerNameFromAlias "$catalogAliasName.database.windows.net"
+    if ($activeCatalogServer -ne $originCatalogServer)
+    {
+      Write-Output "Updating active catalog alias to point to origin server '$originCatalogServer' ..."
+      Set-DnsAlias `
+        -ResourceGroupName $wtpUser.ResourceGroupName `
+        -ServerName $originCatalogServer `
+        -ServerDNSAlias $catalogAliasName `
+        -OldResourceGroupName $recoveryResourceGroupName `
+        -OldServerName $activeCatalogServer `
+        -PollDnsUpdate `
+        >$null
+    }    
+  }
+  
+  # Enable traffic manager endpoint in origin, disable endpoint in recovery
+  Reset-TrafficManagerEndpoints 
+}
 
 # Reconfigure servers and elastic pools in original region to match settings in the recovery region 
 Write-Output "Syncing tenant servers and elastic pools in original region ..."
 $updateTenantResourcesJob = Start-Job -Name "ReconfigureTenantResources" -FilePath "$PSScriptRoot\RecoveryJobs\Update-TenantResourcesInOriginalRegion.ps1" -ArgumentList @($recoveryResourceGroupName)
 
-# Create list of databases
-  # Databases that have not been recovered (ready instantly)
-  # Databases that have been recovered, and have not been updated in the recovery region (ready instantly)
-  # Databases that have been recovered, and are already replicated (ready after failover)
-  # Databases that have been recovered, and have been updated in the recovery region but not replicated (need to replicate, and then failover)
+# Wait to reconfigure servers and pools in origin regionbefore proceeding
+Wait-Job $updateTenantResourcesJob
 
-# Start reset-unchangeddbs job 
-# Start replicate-changeddbs job
-# Start failover-tenantdbs job
-# Start enable-tenantafterrecoveryoperation job
+# Start background job to reset tenant databases that have not been changed in the recovery region 
+$resetDbJob = Start-Job -Name "ResetDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Reset-UnchangedDatabases.ps1" -ArgumentList @($recoveryResourceGroupName)
+
+# Start background job to replicate tenant databases that have been changed in the recovery region to origin region
+$replicateDbJob = Start-Job -Name "ReplicateDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Replicate-ChangedDatabases.ps1" -ArgumentList @($recoveryResourceGroupName)
+
+# Start background job to failover tenant databases that have been replicated to the origin region
+$failoverDbJob = Start-Job -Name "FailoverDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Failover-ChangedDatabases.ps1" -ArgumentList @($recoveryResourceGroupName)
+
+# Start background job to mark tenants online in origin region when all required resources have been restored 
+$tenantRecoveryJob = Start-Job -Name "TenantRecovery" -FilePath "$PSScriptRoot\RecoveryJobs\Enable-TenantsAfterRecoveryOperation.ps1" -ArgumentList @($recoveryResourceGroupName)
+
+# Monitor state of all repatriation jobs 
+while ($true)
+{
+  # Get state of all repatriation jobs. Stop repatriation if there is an error with any job
+  $resetDatabaseStatus = Receive-Job -Job $resetDbJob -Keep -ErrorAction Stop
+  $replicateDatabaseStatus = Receive-Job -Job $replicateDbJob -Keep -ErrorAction Stop
+  $failoverDatabaseStatus = Receive-Job -Job $failoverDbJob -Keep -ErrorAction Stop
+  $tenantRecoveryStatus = Receive-Job -Job $tenantRecoveryJob -Keep -ErrorAction Stop 
+
+  # Initialize and format output for recovery jobs 
+  $resetDatabaseStatus = Format-JobOutput $resetDatabaseStatus
+  $replicateDatabaseStatus = Format-JobOutput $replicateDatabaseStatus
+  $failoverDatabaseStatus = Format-JobOutput $failoverDatabaseStatus
+  $tenantRecoveryStatus = Format-JobOutput $tenantRecoveryStatus
+ 
+  # Output status of repatriation jobs to console
+  [PSCustomObject] @{
+    RepatriatedTenants = $tenantRecoveryStatus
+    ResetDatabases = $resetDatabaseStatus
+    RepatriatedDatabases = $failoverDatabaseStatus
+  } | Format-List
+  
+
+  # Exit recovery if all tenants have been repatriated to origin 
+  if (($resetDbJob.State -eq "Completed") -and ($replicateDbJob.State -eq "Completed") -and ($failoverDbJob.State -eq "Completed") -and ($tenantRecoveryJob.State -eq "Completed"))
+  {
+    Remove-Item -Path "$env:TEMP\profile.json" -ErrorAction SilentlyContinue   
+    break
+  }
+  else
+  {
+    Write-Output "---`nRefreshing status in $StatusCheckTimeInterval seconds..."
+    Start-Sleep $StatusCheckTimeInterval
+    $elapsedTime = (Get-Date) - $startTime
+  }          
+}
+
+Write-Output "'$($wtpUser.ResourceGroupName)' deployment repatriated back into '$primaryLocation' region in $($elapsedTime.TotalMinutes) minutes."     
+
+
 
 #--- PREVIOUS UPDATES -----------
+
+
 # Mark non-recovered tenants as online and available in the catalog - tenant data is already available in the original region . 
 Write-Output "Marking non-recovered tenants as online and available"
 $nonRecoveredTenants = Get-ExtendedTenant -Catalog $catalog | Where-Object {($_.TenantRecoveryState -eq "recovering")}
@@ -202,7 +405,7 @@ if ($resetToOriginalRegion)
 
   # Output elapsed time   
   $elapsedTime = (Get-Date) - $startTime
-  Write-Output "'$($wtpUser.ResourceGroupName)' deployment reset back into '$($wtpUser.User)' region in $($elapsedTime.TotalMinutes) minutes." 
+  Write-Output "'$($wtpUser.ResourceGroupName)' deployment repatriated into '$primaryLocation' region in $($elapsedTime.TotalMinutes) minutes."     
 }
 # Start repatriation process for changed tenant databases
 else
@@ -302,7 +505,6 @@ else
   Disable-AzureRmTrafficManagerEndpoint -Name $recoveryRegionEndpointName -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -Force -ErrorAction Stop > $null   
 
   $elapsedTime = (Get-Date) - $startTime
-  Write-Output "'$($wtpUser.ResourceGroupName)' deployment repatriated back into '$primaryLocation' region in $($elapsedTime.TotalMinutes) minutes."     
 }
  
 

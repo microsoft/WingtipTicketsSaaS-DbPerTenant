@@ -149,14 +149,14 @@ function Start-AsynchronousDatabaseRecovery
   else
   {
     # Geo-restore tenant database into a standalone database
-    $taskObject = GeoRestore-AzureSQLDatabaseAsync `
-                  -AzureContext $AzureContext `
-                  -ResourceGroupName $WingtipRecoveryResourceGroup `
-                  -Location $recoveredServer.Location `
-                  -ServerName $recoveredServerName `
-                  -DatabaseName $TenantDatabase.DatabaseName `
-                  -SourceDatabaseId $databaseId `
-                  -RequestedServiceObjectiveName $TenantDatabase.ServiceObjective
+    $taskObject = Invoke-AzureSQLDatabaseGeoRestoreAsync `
+                    -AzureContext $AzureContext `
+                    -ResourceGroupName $WingtipRecoveryResourceGroup `
+                    -Location $recoveredServer.Location `
+                    -ServerName $recoveredServerName `
+                    -DatabaseName $TenantDatabase.DatabaseName `
+                    -SourceDatabaseId $databaseId `
+                    -RequestedServiceObjectiveName $TenantDatabase.ServiceObjective
   }  
   return $taskObject
 }

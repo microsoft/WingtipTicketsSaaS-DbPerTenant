@@ -160,6 +160,58 @@ function New-AzureSQLDatabaseAsync
 
 <#
 .SYNOPSIS
+    Issues an asynchronous call to create a readable replica for an Azure SQL database.
+    Returns a .NET Task object that can be used to track the status of the call.
+#>
+function New-AzureSQLDatabaseReplicaAsync
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [Microsoft.Azure.Management.Sql.Fluent.SqlManager]$AzureContext,
+
+        [parameter(Mandatory=$true)]
+        [string]$ResourceGroupName,
+
+        [parameter(Mandatory=$true)]
+        [string]$Location,
+
+        [parameter(Mandatory=$true)]
+        [string]$ServerName,
+
+        [parameter(Mandatory=$true)]
+        [string]$DatabaseName,
+
+        [parameter(Mandatory=$true)]
+        [string]$SourceDatabaseId,
+
+        [parameter(Mandatory=$false)]
+        [string]$RequestedServiceObjectiveName,
+
+        [parameter(Mandatory=$false)]
+        [string]$ElasticPoolName
+    )
+
+    $dbProperties = New-Object Microsoft.Azure.Management.Sql.Fluent.Models.DatabaseInner 
+    $dbProperties.CreateMode = 'OnlineSecondary'
+    $dbProperties.Location = $Location
+    $dbProperties.SourceDatabaseId = $SourceDatabaseId
+
+    if ($RequestedServiceObjectiveName)
+    {
+        $dbProperties.RequestedServiceObjectiveName = $RequestedServiceObjectiveName
+    }
+    elseif ($ElasticPoolName)
+    {
+        $dbProperties.ElasticPoolName = $ElasticPoolName
+    }
+
+    # Start asynchronous call to create replica
+    $jobObject = $AzureContext.Inner.Databases.CreateOrUpdateWithHttpMessagesAsync($ResourceGroupName, $ServerName, $DatabaseName, $dbProperties)
+    return $jobObject
+}
+
+<#
+.SYNOPSIS
     Issues an asynchronous call to geo-restore an Azure SQL database to a different region.
     Returns a .NET Task object that can be used to track the status of the call.
 #>

@@ -29,9 +29,9 @@ param (
 #----------------------------------------------------------[Initialization]----------------------------------------------------------
 
 Import-Module $PSScriptRoot\..\..\Common\CatalogAndDatabaseManagement -Force
+Import-Module $PSScriptRoot\..\..\Common\FormatJobOutput -Force
 Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 Import-Module $PSScriptRoot\..\..\UserConfig -Force
-Import-Module $PSScriptRoot\FormatJobOutput -Force
 
 # Get deployment configuration  
 $wtpUser = Get-UserConfig
@@ -152,7 +152,7 @@ Write-Output "---`nRecovering '$($wtpUser.ResourceGroupName)' deployment into '$
 # Construct the name of the server that will be used to store tenants who join the Wingtip platform in the recovery region 
 $serverList = Get-ExtendedServer -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$")}
 $latestServerIndex = $serverList | Select-String -Pattern "tenants(\d+)-.+" | %{$_.matches[0].Groups[1].value -as [int]} | sort | select -last 1
-$newTenantServerName = "tenants" + ($latestServerIndex + 1) + "-$($wtpUser.Name)" + $config.RecoveryRoleSuffix
+$newTenantServerName = "tenants" + ($latestServerIndex + 1) + "-dpt-$($wtpUser.Name)" + $config.RecoveryRoleSuffix
 
 # Start background job to deploy recovery instance of Wingtip application into recovery region 
 $appRecoveryJob = Start-Job -Name "AppRestore" -FilePath "$PSScriptRoot\RecoveryJobs\Restore-WingtipSaaSAppToRecoveryRegion.ps1" -ArgumentList @($recoveryResourceGroupName)
