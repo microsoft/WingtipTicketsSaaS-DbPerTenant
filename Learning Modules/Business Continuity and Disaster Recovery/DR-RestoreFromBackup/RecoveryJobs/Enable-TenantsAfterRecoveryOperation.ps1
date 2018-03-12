@@ -15,7 +15,11 @@
 [cmdletbinding()]
 param (
     [parameter(Mandatory=$true)]
-    [String] $WingtipRecoveryResourceGroup  
+    [String] $WingtipRecoveryResourceGroup,
+
+    [parameter(Mandatory=$false)]
+    [validateset('restore', 'repatriation')]
+    [string]$RecoveryOperation ="restore"
 )
 
 Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -Force
@@ -54,10 +58,19 @@ while ($true)
   $tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
   $tenantCount = $tenantList.Count
   $offlineTenants = $tenantList | Where-Object {($_.TenantStatus -ne 'Online')}   
+  $tenantsInRecovery = $tenantList | Where-Object{$_.TenantRecoveryState -ne 'OnlineInOrigin'}
   $onlineTenantCount = $tenantCount - ($offlineTenants.Count)
+  $repatriatedTenantCount = $tenantCount - ($tenantsInRecovery.Count)
 
-  # Exit if all tenants are online 
-  if (!$offlineTenants)
+  # Exit if all tenants are online after recovery operation
+  if (!$offlineTenants -and ($RecoveryOperation -eq 'restore'))
+  {
+    # Output recovery progress 
+    Write-Output "100% ($tenantCount of $tenantCount)"
+    break
+  }
+  # Exit if all tenants are online in origin after repatriation operation
+  elseif (!$tenantsInRecovery -and ($RecoveryOperation -eq 'repatriation'))
   {
     # Output recovery progress 
     Write-Output "100% ($tenantCount of $tenantCount)"
@@ -73,13 +86,31 @@ while ($true)
     $databaseRecoveryStatuses = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {$_.ServerName -notmatch "$($config.RecoveryRoleSuffix)$"}
 
     # Output recovery progress 
-    $TenantRecoveryPercentage = [math]::Round($onlineTenantCount/$tenantCount,2)
-    $TenantRecoveryPercentage = $TenantRecoveryPercentage * 100
-    Write-Output "$TenantRecoveryPercentage% ($onlineTenantCount of $tenantCount)"
+    if ($RecoveryOperation -eq 'restore')
+    {
+      $TenantRecoveryPercentage = [math]::Round($onlineTenantCount/$tenantCount,2)
+      $TenantRecoveryPercentage = $TenantRecoveryPercentage * 100
+      Write-Output "$TenantRecoveryPercentage% ($onlineTenantCount of $tenantCount)"
+    }
+    elseif ($RecoveryOperation -eq 'repatriation')
+    {
+      $TenantRecoveryPercentage = [math]::Round($repatriatedTenantCount/$tenantCount,2)
+      $TenantRecoveryPercentage = $TenantRecoveryPercentage * 100
+      Write-Output "$TenantRecoveryPercentage% ($repatriatedTenantCount of $tenantCount)"
+    }
 
     # Update tenant status based on the status of database 
     # Note: this job can be sped up by checking the status of tenant databases in multiple background jobs
-    foreach ($tenant in $offlineTenants)
+    if ($RecoveryOperation -eq 'repatriation')
+    {
+      $relevantTenantList = $tenantsInRecovery
+    }
+    else
+    {
+      $relevantTenantList = $offlineTenantse
+    }
+
+    foreach ($tenant in $relevantTenantList)
     {
       $tenantKey = Get-TenantKey $tenant.TenantName
       $tenantRecoveryState = $tenant.TenantRecoveryState     
@@ -176,39 +207,14 @@ while ($true)
       }
       elseif (($tenantDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'ResettingTenantToOrigin'))
       {
-        # Update tenant recovery status to 'ResetTenantDataToOrigin'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -TenantKey $tenantKey        
-      }
-      elseif (($tenantDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'ResetTenantDataToOrigin'))
-      {
-        $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
-        $originTenantServer = $originTenantDatabase.Name.Split('/')[0]  
-
-        # Update tenant recovery status to 'UpdatingTenantShardToOrigin'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startShardUpdateToOrigin" -TenantKey $tenantKey
-
-        # Take tenant offline if applicable
-        if ($tenant.TenantStatus -ne "Offline")
+        if ($tenant.TenantStatus -ne 'Online')
         {
-          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
-        }
-
-        # Update tenant shard to point to recovered database
-        $updateComplete = Update-TenantShardInfo `
-                            -Catalog $tenantCatalog `
-                            -TenantName $tenant.TenantName `
-                            -FullyQualifiedTenantServerName "$originTenantServer.database.windows.net" `
-                            -TenantDatabaseName $tenant.DatabaseName
-
-        if ($updateComplete)
-        {
-          # Mark tenant online in catalog
           Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
           $onlineTenantCount +=1
+        }
 
-          # Update tenant recovery status to 'OnlineInOrigin'
-          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
-        }        
+        # Update tenant recovery status to 'OnlineInOrigin'
+        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -TenantKey $tenantKey                
       }
       elseif (($tenantDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'UpdatingTenantShardToOrigin'))
       {
@@ -221,7 +227,7 @@ while ($true)
           Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
         }
 
-        # Update tenant shard to point to recovered database
+        # Update tenant shard to point to origin database
         $updateComplete = Update-TenantShardInfo `
                             -Catalog $tenantCatalog `
                             -TenantName $tenant.TenantName `
@@ -277,13 +283,7 @@ while ($true)
         $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
         $originTenantServer = $originTenantDatabase.Name.Split('/')[0] 
 
-        # Take tenant offline if applicable
-        if ($tenant.TenantStatus -ne "Offline")
-        {
-          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
-        }
-
-        # Update tenant shard to point to recovered database
+        # Update tenant shard to point to origin database
         $updateComplete = Update-TenantShardInfo `
                             -Catalog $tenantCatalog `
                             -TenantName $tenant.TenantName `
@@ -343,14 +343,32 @@ while ($true)
       }
 
        # Output recovery progress 
+      if ($RecoveryOperation -eq 'restore')
+      {
+        $TenantRecoveryPercentage = [math]::Round($onlineTenantCount/$tenantCount,2)
+        $TenantRecoveryPercentage = $TenantRecoveryPercentage * 100
+        Write-Output "$TenantRecoveryPercentage% ($onlineTenantCount of $tenantCount)"
+      }
+      elseif ($RecoveryOperation -eq 'repatriation')
+      {
+        $TenantRecoveryPercentage = [math]::Round($repatriatedTenantCount/$tenantCount,2)
+        $TenantRecoveryPercentage = $TenantRecoveryPercentage * 100
+        Write-Output "$TenantRecoveryPercentage% ($repatriatedTenantCount of $tenantCount)"
+      }
+    }
+
+    # Output recovery progress 
+    if ($RecoveryOperation -eq 'restore')
+    {
       $TenantRecoveryPercentage = [math]::Round($onlineTenantCount/$tenantCount,2)
       $TenantRecoveryPercentage = $TenantRecoveryPercentage * 100
       Write-Output "$TenantRecoveryPercentage% ($onlineTenantCount of $tenantCount)"
     }
-
-    # Output recovery progress 
-    $TenantRecoveryPercentage = [math]::Round($onlineTenantCount/$tenantCount,2)
-    $TenantRecoveryPercentage = $TenantRecoveryPercentage * 100
-    Write-Output "$TenantRecoveryPercentage% ($onlineTenantCount of $tenantCount)"
+    elseif ($RecoveryOperation -eq 'repatriation')
+    {
+      $TenantRecoveryPercentage = [math]::Round($repatriatedTenantCount/$tenantCount,2)
+      $TenantRecoveryPercentage = $TenantRecoveryPercentage * 100
+      Write-Output "$TenantRecoveryPercentage% ($repatriatedTenantCount of $tenantCount)"
+    }
   }      
 }

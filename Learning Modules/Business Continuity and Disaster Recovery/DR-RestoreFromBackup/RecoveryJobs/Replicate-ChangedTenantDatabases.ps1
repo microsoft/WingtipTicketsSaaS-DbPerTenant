@@ -141,10 +141,17 @@ function Complete-AsynchronousDatabaseReplication
 
 # Get list of tenants that have updated databases in the recovery region
 $tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
+$originTenantServerName = $config.TenantServerNameStem + $wtpUser.Name
 foreach ($tenant in $tenantList)
 {
+  $expectedTenantOriginServerName = ($tenant.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
   $tenantDataChanged = Test-IfTenantDataChanged -Catalog $tenantCatalog -TenantName $tenant.TenantName
   if ($tenantDataChanged)
+  {
+    $replicationQueue += $tenant
+  }
+  # Include tenants that were added in the recovery region to replication queue
+  elseif($expectedTenantOriginServerName -ne $originTenantServerName)
   {
     $replicationQueue += $tenant
   }

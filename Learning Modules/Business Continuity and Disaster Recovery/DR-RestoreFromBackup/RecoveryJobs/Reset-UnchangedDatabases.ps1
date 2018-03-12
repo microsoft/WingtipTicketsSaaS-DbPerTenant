@@ -66,14 +66,13 @@ foreach ($tenant in $unchangedTenantDatabases)
   $originTenantServerName = ($tenant.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
 
   $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReset" -ServerName $tenant.ServerName -DatabaseName $tenant.DatabaseName
-  $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startReset" -TenantKey $tenantKey
 
   # Update tenant resources to origin region
+  Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
   $tenantReset = Update-TenantShardInfo -Catalog $tenantCatalog -TenantName $tenant.TenantName -FullyQualifiedTenantServerName "$originTenantServerName.database.windows.net" -TenantDatabaseName $tenant.DatabaseName
   if ($tenantReset)
   {
     $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -ServerName $originTenantServerName -DatabaseName $tenant.DatabaseName
-    $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -TenantKey $tenantKey
     $resetDatabaseCount+=1
   }
   else

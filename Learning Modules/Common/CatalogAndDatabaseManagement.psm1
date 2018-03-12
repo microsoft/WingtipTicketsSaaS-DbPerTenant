@@ -2757,7 +2757,7 @@ function Update-TenantRecoveryState
         RestoredTenantData              |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
         UpdatingTenantShardToRecovery   |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
         OnlineInRecovery                |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
-        ResettingTenantToOrigin         |   ResetTenantDataToOrigin         |   endReset                    (tenant resources successfully reset back to origin)
+        ResettingTenantToOrigin         |   OnlineInOrigin                  |   endReset                    (tenant resources successfully reset back to origin)
         --------------------------------------------------------------------------------------------------
         RestoringTenantData             |   RestoredTenantData              |   endRecovery                 (tenant resources successfully restored in recovery region)
         RestoredTenantData              |   UpdatingTenantShardToRecovery   |   startShardUpdateToRecovery  (update tenant shard details to bring tenant online in recovery region)
@@ -2766,7 +2766,6 @@ function Update-TenantRecoveryState
         OnlineInRecovery                |   RepatriatingTenantData          |   startRepatriation           (tenant resources in the process of migrating back to origin)
         RepatriatingTenantData          |   RepatriatedTenantData           |   endRepatriation             (tenant resources successfully migrated back to origin)
         --------------------------------------------------------------------------------------------------
-        ResetTenantDataToOrigin         |   UpdatingTenantShardToOrigin     |   startShardUpdateToOrigin    (update tenant shard details to bring tenant online in origin region)
         RepatriatedTenantData           |   UpdatingTenantShardToOrigin     |   startShardUpdateToOrigin    (update tenant shard details to bring tenant online in origin region)
         UpdatingTenantShardToOrigin     |   OnlineInOrigin                  |   endShardUpdateToOrigin      (tenant shard update successful and tenant is back online in origin region)
     #>
@@ -2775,13 +2774,13 @@ function Update-TenantRecoveryState
     $tenantRecoveryStates = @{
         'startRecovery' = @{ "beginState" = ('n/a', 'OnlineInOrigin'); "endState" = ('RestoringTenantData') };
         'startReset' = @{ "beginState" = ('RestoringTenantData', 'RestoredTenantData', 'UpdatingTenantShardToRecovery', 'OnlineInRecovery'); "endState" = ('ResettingTenantToOrigin') };
-        'endReset' = @{ "beginState" = ('ResettingTenantToOrigin'); "endState" = ('ResetTenantDataToOrigin') };
+        'endReset' = @{ "beginState" = ('ResettingTenantToOrigin'); "endState" = ('OnlineInOrigin') };
         'endRecovery' = @{ "beginState" = ('RestoringTenantData'); "endState" = ('RestoredTenantData') };
         'startShardUpdateToRecovery' = @{ "beginState" = ('RestoredTenantData'); "endState" = ('UpdatingTenantShardToRecovery')};
         'endShardUpdateToRecovery' = @{ "beginState" = ('UpdatingTenantShardToRecovery'); "endState" = "OnlineInRecovery"};
         'startRepatriation' = @{ "beginState" = ('OnlineInRecovery'); "endState" = ('RepatriatingTenantData') };        
         'endRepatriation' = @{ "beginState" = ('RepatriatingTenantData'); "endState" = ('RepatriatedTenantData') };
-        'startShardUpdateToOrigin' = @{ "beginState" = ('ResetTenantDataToOrigin', 'RepatriatedTenantData'); "endState" = ('UpdatingTenantShardToOrigin')};
+        'startShardUpdateToOrigin' = @{ "beginState" = ('RepatriatedTenantData'); "endState" = ('UpdatingTenantShardToOrigin')};
         'endShardUpdateToOrigin' = @{ "beginState" = ('UpdatingTenantShardToOrigin'); "endState" = ('OnlineInOrigin')};
     }    
 
