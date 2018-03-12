@@ -56,8 +56,10 @@ $originCatalogServerName = $config.CatalogServerNameStem + $wtpUser.Name
 
 $startTime = Get-Date
 
+Write-Output "Original region: $primaryLocation Recovery region: $recoveryLocation"
+
 # Disable traffic manager web app endpoint in primary region (idempotent)
-Write-Output "Disabling traffic manager endpoint for Wingtip events app..."
+Write-Output "Disabling Traffic Manager endpoint for Wingtip Events app..."
 $profileName = $config.EventsAppNameStem + $wtpUser.Name
 $webAppEndpoint = $config.EventsAppNameStem + $primaryLocation + '-' + $wtpUser.name
 Disable-AzureRmTrafficManagerEndpoint -Name $webAppEndpoint -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -Force -ErrorAction SilentlyContinue > $null
@@ -71,7 +73,7 @@ try
                         -DatabaseName $config.CatalogDatabaseName `
                         -ErrorAction Stop   
   
-  Write-Output "Catalog database already recovered in recovery region..."                   
+  Write-Output "Catalog database already restored in recovery region..."                   
 }
 catch
 {
@@ -86,7 +88,7 @@ catch
   }
 
   # Geo-restore the catalog database in a resource group in the recovery region. The ARM template also creates the catalog server if required 
-  Write-Output "Georestoring catalog database to recovery region..."
+  Write-Output "Geo-restoring catalog database to recovery region..."
   $deployment = New-AzureRmResourceGroupDeployment `
                   -Name "CatalogRecovery" `
                   -ResourceGroupName $recoveryResourceGroup.ResourceGroupName `
@@ -136,7 +138,7 @@ if (!($runningScripts -like "*Sync-TenantConfiguration*"))
 $tenantList = Get-Tenants -Catalog $tenantCatalog -ErrorAction Stop
 
 # Mark all non-recovered tenants as unavailable in the recovery catalog
-Write-Output "Marking non-recovered tenants offline in the catalog..."
+Write-Output "Marking tenants offline in the catalog..."
 foreach ($tenant in $tenantList)
 {
   $tenantStatus = (Get-ExtendedTenant -Catalog $tenantCatalog -TenantKey $tenant.Key).TenantRecoveryState
@@ -249,5 +251,5 @@ while ($true)
   }          
 }
 
-Write-Output "'$($wtpUser.ResourceGroupName)' deployment recovered into '$recoveryLocation' region in $($elapsedTime.TotalMinutes) minutes."
+Write-Output "'$($wtpUser.ResourceGroupName)' deployment recovered into '$recoveryLocation' region in $([math]::Round($elapsedTime.TotalMinutes,2)) minutes."
 

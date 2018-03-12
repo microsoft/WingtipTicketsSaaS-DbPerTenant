@@ -4,7 +4,7 @@
 #  1. Restore the app into a secondary recovery region using geo-restore from automatic backups,
 #  2. Repatriate the app into its original region using geo-replication
 
-# Parameters for scenarios #3, provision a tenant in the recovery region 
+# Parameters for scenarios #4, provision a tenant in the recovery region 
 $TenantName = "Hawthorn Hall" # name of the venue to be added/removed as a tenant
 $VenueType  = "multipurpose"  # valid types: blues, classicalmusic, dance, jazz, judo, motorracing, multipurpose, opera, rockmusic, soccer 
 $PostalCode = "98052"
@@ -13,15 +13,13 @@ $DemoScenario = 1
 <# Select the scenario that will be run. It is recommended you run the scenarios below in order. 
    Scenario
       1     Start synchronizing tenant server, pool, and database configuration info into the catalog
-      2     Recover the app into a recovery region by restoring from geo-redundant backups
-      3     Provision a new tenant in the recovery region 
-      4     Delete an event from a tenant in the recovery region
-      5     Repatriate the app into its original region
-      6     Delete obsolete resources from the recovery region 
+      2     Verify that geo-redundant database backups are available
+      3     Recover the app into a recovery region by restoring from geo-redundant backups
+      4     Provision a new tenant in the recovery region 
+      5     Delete an event from a tenant in the recovery region
+      6     Repatriate the app into its original region
+      7     Delete obsolete resources from the recovery region 
 #>
-
-# The name of the tenant whose event will be deleted in scenario 3 
-$TenantName = "Contoso Concert Hall"
 
 Import-Module "$PSScriptRoot\..\..\Common\CatalogAndDatabaseManagement" -Force
 Import-Module "$PSScriptRoot\..\..\Common\SubscriptionManagement" -Force
@@ -61,10 +59,28 @@ if ($DemoScenario -eq 1)
 }
 
 
-### Restore app into the recovery region
+### Verify that geo-redundant database backups are available
 if ($DemoScenario -eq 2)
 {
-  Write-Output "Restoring app into recovery region. This will take several minutes ..."  
+  Write-Output "Verifying that geo-redundant backups are available ..."  
+  
+  try
+  {
+    Get-AzureRmSqlServer -ResourceGroupName $wtpUser.ResourceGroupName | Get-AzureRmSqlDatabaseGeoBackup
+  }
+  catch
+  {
+    Write-Error "Backups not yet available.  Please try again later..."
+  }   
+  exit
+}
+
+
+
+### Recover the app into the recovery region by restoring from geo-redundant backups
+if ($DemoScenario -eq 3)
+{
+  Write-Output "`nStarting geo-restore of application. This will take several minutes ..."  
   
   & $PSScriptRoot\Restore-IntoSecondaryRegion.ps1 -NoEcho
      
@@ -73,7 +89,7 @@ if ($DemoScenario -eq 2)
 
 
 ### Provision a new tenant in the recovery region
-if ($DemoScenario -eq 3)
+if ($DemoScenario -eq 4)
 {
     # Set up the server and pool names in which the tenant will be provisioned.
     # The server name is retrieved from an alias used to switch between normal and recovery regions 
@@ -110,7 +126,7 @@ if ($DemoScenario -eq 3)
 
 
 ### Delete an event from contoso concerthall
-if ($DemoScenario -eq 4)
+if ($DemoScenario -eq 5)
 {
   $TenantName = "Contoso Concert Hall"
   $deletedEvent = & $PSScriptRoot\..\..\Utilities\Remove-UnsoldEventFromTenant.ps1 `
@@ -124,7 +140,7 @@ if ($DemoScenario -eq 4)
 
 
 ### Repatriate the app into its original region
-if ($DemoScenario -eq 5)
+if ($DemoScenario -eq 6)
 {
   Write-Output "Repatriating app into primary region. This will take several minutes..."
   
@@ -133,9 +149,8 @@ if ($DemoScenario -eq 5)
   exit
 }
 
-
-# Delete obsolete resources in recovery region
-if ($DemoScenario -eq 6)
+### Delete obsolete resources in recovery region
+if ($DemoScenario -eq 7)
 {
   Write-Output "Deleting recovery resources ..."
 
@@ -144,7 +159,5 @@ if ($DemoScenario -eq 6)
   exit
 }
 
-
 ### Invalid option selected
 Write-Output "Invalid scenario selected"
-
