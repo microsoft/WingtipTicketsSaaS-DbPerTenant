@@ -2760,6 +2760,7 @@ function Update-TenantRecoveryState
         ResettingTenantToOrigin         |   OnlineInOrigin                  |   endReset                    (tenant resources successfully reset back to origin)
         --------------------------------------------------------------------------------------------------
         RestoringTenantData             |   RestoredTenantData              |   endRecovery                 (tenant resources successfully restored in recovery region)
+        n/a                             |   RestoredTenantData              |   endRecovery                 (tenant resources successfully restored in recovery region)
         RestoredTenantData              |   UpdatingTenantShardToRecovery   |   startShardUpdateToRecovery  (update tenant shard details to bring tenant online in recovery region)
         UpdatingTenantShardToRecovery   |   OnlineInRecovery                |   endShardUpdateToRecovery    (tenant shard update successful and tenant is online in recovery region)
         --------------------------------------------------------------------------------------------------
@@ -2775,7 +2776,7 @@ function Update-TenantRecoveryState
         'startRecovery' = @{ "beginState" = ('n/a', 'OnlineInOrigin'); "endState" = ('RestoringTenantData') };
         'startReset' = @{ "beginState" = ('RestoringTenantData', 'RestoredTenantData', 'UpdatingTenantShardToRecovery', 'OnlineInRecovery'); "endState" = ('ResettingTenantToOrigin') };
         'endReset' = @{ "beginState" = ('ResettingTenantToOrigin'); "endState" = ('OnlineInOrigin') };
-        'endRecovery' = @{ "beginState" = ('RestoringTenantData'); "endState" = ('RestoredTenantData') };
+        'endRecovery' = @{ "beginState" = ('RestoringTenantData', 'n/a'); "endState" = ('RestoredTenantData') };
         'startShardUpdateToRecovery' = @{ "beginState" = ('RestoredTenantData'); "endState" = ('UpdatingTenantShardToRecovery')};
         'endShardUpdateToRecovery' = @{ "beginState" = ('UpdatingTenantShardToRecovery'); "endState" = "OnlineInRecovery"};
         'startRepatriation' = @{ "beginState" = ('OnlineInRecovery'); "endState" = ('RepatriatingTenantData') };        
@@ -2847,6 +2848,7 @@ function Update-TenantResourceRecoveryState
         restoring               |   resetting           |   cancelAndReset     (reset back to origin if region comes back online during recovery operations)
         n/a                     |   resetting           |   cancelAndReset     (reset back to origin if region comes back online during recovery operations)       
         restored                |   resetting           |   startReset         (reset back to origin if data in recovery region is identical to origin region)        
+        errorState              |   resetting           |   startReset         (reset back to origin if data in recovery region is identical to origin region)
         resetting               |   complete            |   endReset           (reset operations successfully completed)
         resetting               |   errorState          |   markError          (reset operations failed)
         --------------------------------------------------------------------------
@@ -2856,11 +2858,13 @@ function Update-TenantResourceRecoveryState
         failingOver             |   errorState          |   markError          (failover operations failed)
         --------------------------------------------------------------------------
         restored                |   replicating         |   startReplication   (replicate changed data to origin)
+        errorState              |   replicating         |   startReplication   (replicate changed data to origin)
         replicating             |   replicated          |   endReplication     (replication to origin successfully completed)
         replicating             |   errorState          |   markError          (replication to origin failed)
         --------------------------------------------------------------------------
         replicated              |   repatriating        |   startFailback      (failback to origin)
         failedOver              |   repatriating        |   startFailback      (failback to origin)
+        markError               |   repatriating        |   startFailback      (failback to origin)
         repatriating            |   complete            |   conclude           (failback to origin successfully completed)
         repatriating            |   errorState          |   markError          (failback to origin failed)
     #>
@@ -2873,14 +2877,14 @@ function Update-TenantResourceRecoveryState
         'startRecovery' = @{ "beginState" = ('n/a', 'complete', 'errorState'); "endState" = ('restoring') };
         'startFailover' = @{ "beginState" = ('n/a', 'complete', 'errorState'); "endState" = ('failingOver') };
         'cancelAndReset' = @{ "beginState" = ('restoring', 'n/a'); "endState" = ('resetting') };
-        'startReset' = @{ "beginState" = ('restored'); "endState" = ('resetting') };
+        'startReset' = @{ "beginState" = ('restored', 'errorState'); "endState" = ('resetting') };
         'endReset' = @{ "beginState" = ('resetting'); "endState" = ('complete') };
         'markError' = @{ "beginState" = ('restoring', 'resetting', 'failingOver', 'replicating', 'repatriating'); "endState" = ('errorState')};
         'endRecovery' = @{ "beginState" = ('restoring'); "endState" = ('restored') };
         'endFailover' = @{ "beginState" = ('failingOver'); "endState" = ('failedOver') };        
-        'startReplication' = @{ "beginState" = ('restored'); "endState" = ('replicating') };
+        'startReplication' = @{ "beginState" = ('restored', 'errorState'); "endState" = ('replicating') };
         'endReplication' = @{ "beginState" = ('replicating'); "endState" = ('replicated') };
-        'startFailback' = @{ "beginState" = ('replicated', 'failedOver'); "endState" = ('repatriating') };
+        'startFailback' = @{ "beginState" = ('replicated', 'failedOver', 'errorState'); "endState" = ('repatriating') };
         'conclude' = @{ "beginState" = ('repatriating'); "endState" = ('complete') };
     }    
 

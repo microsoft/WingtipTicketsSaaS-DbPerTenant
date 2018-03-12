@@ -1,19 +1,19 @@
 <#
 .SYNOPSIS
-  Replicates tenant databases that have been updated in the recovery region into the original region.
+  Failover tenant databases that have been replicated to the original region.
 
 .DESCRIPTION
   This script is intended to be run as a background job in the 'Repatriate-IntoOriginalRegion' script that repatriates the Wingtip SaaS app environment (apps, databases, servers e.t.c) into the origin.
-  The script geo-replicates tenant databases tha have been changed in the recovery region into the original Wingtip region
+  The script fails over tenant databases that have previously been geo-replicates into the original Wingtip region
 
 .PARAMETER WingtipRecoveryResourceGroup
   Resource group in the recovery region that contains recovered resources
 
-.PARAMETER MaxConcurrentReplicationOperations
-  Maximum number of replication operations that can be run concurrently
+.PARAMETER MaxConcurrentFailoverOperations
+  Maximum number of failover operations that can be run concurrently
 
 .EXAMPLE
-  [PS] C:\>.\Replicate-ChangedTenantDatabases.ps1 -WingtipRecoveryResourceGroup "sampleRecoveryResourceGroup"
+  [PS] C:\>.\Failover-ChangedTenantDatabases.ps1 -WingtipRecoveryResourceGroup "sampleRecoveryResourceGroup"
 #>
 [cmdletbinding()]
 param (
@@ -21,7 +21,7 @@ param (
   [String] $WingtipRecoveryResourceGroup,
 
   [parameter(Mandatory=$false)]
-  [int] $MaxConcurrentReplicationOperations=50 
+  [int] $MaxConcurrentFailoverOperations=50 
 )
 
 Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -Force
@@ -50,18 +50,17 @@ $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -W
 
 # Initialize replication variables
 $sleepInterval = 10
-$replicationQueue = @()
 $operationQueue = @()
 $operationQueueMap = @{}
-$replicatedDatabaseCount = 0
+$failoverCount = 0
 
 #---------------------- Helper Functions --------------------------------------------------------------
 <#
  .SYNOPSIS  
-  Starts an asynchronous call to create a readable secondary replica of a tenant database
+  Starts an asynchronous call to failover a tenant database to the origin region
   This function returns a task object that can be used to track the status of the operation
 #>
-function Start-AsynchronousDatabaseReplication
+function Start-AsynchronousDatabaseFailover
 {
   param
   (
@@ -69,64 +68,49 @@ function Start-AsynchronousDatabaseReplication
     [Microsoft.Azure.Management.Sql.Fluent.SqlManager]$AzureContext,
 
     [Parameter(Mandatory=$true)]
-    [object]$TenantDatabase       
+    [String]$SecondaryTenantServerName,
+
+    [Parameter(Mandatory=$true)]
+    [String]$TenantDatabaseName
   )
 
-  # Construct replication parameters
-  $originServerName = ($TenantDatabase.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
-  $originServer = Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.ResourceGroupName -ResourceNameEquals $originServerName
-  $databaseId = "/subscriptions/$currentSubscriptionId/resourceGroups/$WingtipRecoveryResourceGroup/providers/Microsoft.Sql/servers/$($TenantDatabase.ServerName)/databases/$($TenantDatabase.DatabaseName)"
+  # Get replication link Id
+  $replicationObject = Get-AzureRmSqlDatabaseReplicationLink `
+                          -ResourceGroupName $wtpUser.ResourceGroupName `
+                          -ServerName $SecondaryTenantServerName `
+                          -DatabaseName $TenantDatabaseName `
+                          -PartnerResourceGroupName $WingtipRecoveryResourceGroup
 
-  # Delete existing tenant database
-  Remove-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originServerName -DatabaseName $TenantDatabase.DatabaseName -ErrorAction SilentlyContinue
-
-  # Issue asynchronous replication operation
-  if ($TenantDatabase.ServiceObjective -eq 'ElasticPool')
-  {
-    # Replicate tenant database into an elastic pool
-    $taskObject = New-AzureSQLDatabaseReplicaAsync `
-                    -AzureContext $AzureContext `
-                    -ResourceGroupName $wtpUser.ResourceGroupName `
-                    -Location $originServer.Location `
-                    -ServerName $originServerName `
-                    -DatabaseName $TenantDatabase.DatabaseName `
-                    -SourceDatabaseId $databaseId `
-                    -ElasticPoolName $TenantDatabase.ElasticPoolName
-  }
-  else
-  {
-    # Replicate tenant database into a standalone database
-    $taskObject = New-AzureSQLDatabaseReplicaAsync `
-                    -AzureContext $AzureContext `
-                    -ResourceGroupName $wtpUser.ResourceGroupName `
-                    -Location $originServer.Location `
-                    -ServerName $originServerName `
-                    -DatabaseName $TenantDatabase.DatabaseName `
-                    -SourceDatabaseId $databaseId `
-                    -RequestedServiceObjectiveName $TenantDatabase.ServiceObjective
-  }  
+  # Issue asynchronous failover operation
+  $taskObject = Invoke-AzureSQLDatabaseFailoverAsync `
+                  -AzureContext $AzureContext `
+                  -ResourceGroupName $wtpUser.ResourceGroupName `
+                  -ServerName $SecondaryTenantServerName `
+                  -DatabaseName $TenantDatabaseName `
+                  -ReplicationLinkId "$($replicationObject.LinkId)"  
+   
   return $taskObject
 }
 
 <#
  .SYNOPSIS  
-  Marks a tenant database replication as complete when the database has been successfully replicated
+  Marks the failover for a tenant database as complete after failover is concluded
 #>
-function Complete-AsynchronousDatabaseReplication
+function Complete-AsynchronousDatabaseFailover
 {
   param
   (
     [Parameter(Mandatory=$true)]
-    [String]$ReplicationJobId
+    [String]$FailoverJobId
   )
 
-  $databaseDetails = $operationQueueMap[$ReplicationJobId]
+  $databaseDetails = $operationQueueMap[$FailoverJobId]
   if ($databaseDetails)
   {
     $restoredServerName = $databaseDetails.ServerName
 
     # Update tenant database recovery state
-    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReplication" -ServerName $restoredServerName -DatabaseName $databaseDetails.DatabaseName
+    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $restoredServerName -DatabaseName $databaseDetails.DatabaseName
     if (!$dbState)
     {
       Write-Verbose "Could not update recovery state for database: '$originServerName/$($databaseDetails.DatabaseName)'"
@@ -140,62 +124,97 @@ function Complete-AsynchronousDatabaseReplication
 }
 
 #----------------------------Main script--------------------------------------------------
+<#
+ Start a 'Failover-TenantDatabases' job to failover any tenant database that has completed geo-replication
+  * Start acting on the databases with a 'replicated' state.
+  * Add to list databases that have changed tenant data but are not replicated yet
+  * Set db recovery state to 'repatriating' 
+  * Start loop to failover tenant databases to the primary region (~ 10secs per db)
+  * Start loop to check on status of failover of databases. Set db recovery state to 'complete' when failover finished
+  * End when all changed tenant databases have been repatriated
+#>
 
-# Get list of tenants that have updated databases in the recovery region
+$failoverQueue = @()
 $tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
-$originTenantServerName = $config.TenantServerNameStem + $wtpUser.Name
+$tenantDatabaseList = Get-ExtendedDatabase -Catalog
+$replicatedDatabaseList = $tenantDatabaseList | Where-Object{$_.RecoveryState -eq 'replicated'}
+
+# Add replicated databases to queue of tenant databases that will be failed over
+foreach ($database in $replicatedDatabaseList)
+{
+  $dbProperties = @{
+    "ServerName" = $database.ServerName
+    "DatabaseName" = $database.DatabaseName
+  }
+  $failoverQueue += $dbProperties
+}
+
+# Add tenant databases that have been changed in the recovery region to queue of databases that will be failed over
 foreach ($tenant in $tenantList)
 {
-  $expectedTenantOriginServerName = ($tenant.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
   $tenantDataChanged = Test-IfTenantDataChanged -Catalog $tenantCatalog -TenantName $tenant.TenantName
-  if ($tenantDataChanged)
+  $tenantServerName = $tenant.ServerName.split('.')[0]
+  $tenantDatabaseObject = $tenantDatabaseList | Where-Object{(($_.ServerName -eq $tenantServerName) -and ($_.DatabaseName -eq $tenant.DatabaseName))}
+
+  if ($tenantDataChanged -and ($tenantDatabaseObject.RecoveryState -ne 'complete') -and ($tenantDatabaseObject -NotIn $failoverQueue))
   {
-    $replicationQueue += $tenant
-  }
-  # Include tenants that were added in the recovery region to replication queue
-  elseif($expectedTenantOriginServerName -ne $originTenantServerName)
-  {
-    $replicationQueue += $tenant
+    $dbProperties = @{
+      "ServerName" = $tenantDatabaseObject.ServerName
+      "DatabaseName" = $tenantDatabaseObject.DatabaseName
+    }
+    $failoverQueue += $dbProperties
   }
 }
-$changedDatabaseCount = $replicationQueue.length 
+$replicatedDatabaseCount = $failoverQueue.Count
 
-
-# Remove databases that have already been replicated from queue
-foreach ($tenant in $replicationQueue)
+while($failoverQueue.Count -gt 0)
 {
-  $tenantServerName = $tenant.ServerName.split('.')[0]
-  $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $tenantServerName -DatabaseName $tenant.DatabaseName
+  # Get database recovery status
+  $tenantDatabaseList = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object{(($_.ServerName -In $failoverQueue.ServerName) -and ($_.DatabaseName -In $failoverQueue.DatabaseName))}
 
-  if ($tenantDatabaseProperties.RecoveryState -eq 'replicated')
+  # Issue asynchronous call to failover eligible databases
+  foreach ($database in $tenantDatabaseList)
   {
-    # Remove databases that have already been replicated from queue
-    $replicationQueue = $replicationQueue -ne $tenant
-    $replicatedDatabaseCount+=1
-  }
-  else if ($tenantDatabaseProperties.RecoveryState -eq 'replicating')
-  {
-    # Get replication status of tenant database
-    $replicationLink = Get-AzureRmSqlDatabaseReplicationLink `
-                          -ResourceGroupName $WingtipRecoveryResourceGroup `
-                          -ServerName $tenantServerName `
-                          -DatabaseName $tenant.DatabaseName `
-                          -PartnerResourceGroupName $wtpUser.ResourceGroupName `
-                          -ErrorAction SilentlyContinue
-    if ($replicationLink)
+    if ($database.RecoveryState -eq 'replicated')
     {
-      # Update database recovery state if it has completed replication
-      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReplication" -ServerName $tenantServerName -DatabaseName $tenant.DatabaseName
-      $replicationQueue = $replicationQueue -ne $tenant
-      $replicatedDatabaseCount+=1
+      # Remove database from failover queue
+      $dbProperties = @{
+        "ServerName" = $database.ServerName
+        "DatabaseName" = $database.DatabaseName
+      }
+      $failoverQueue = $failoverQueue -ne $dbProperties
+      $originServerName = ($database.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
+
+      # Update database recovery state
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
+
+      # Issue asynchronous call to failover databases
+      $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $originServerName -TenantDatabaseName $database.DatabaseName
+
+      # Add operation to queue for tracking
+      $operationId = $operationObject.Id
+      if (!$operationQueueMap.ContainsKey("$operationId"))
+      {
+        $operationQueue += $operationObject
+        $operationQueueMap.Add("$operationId", $dbProperties)
+      } 
     }
   }
+
+  # Pick the databases that have 'replicated' state and add them to failover queue
+  # For each db in queue :
+    # Update db recovery state
+    # Call async failover
+    # Remove db from failoverqueue? failoverQueue queue?
 }
 
+
+
+
 # Output recovery progress 
-$DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$changedDatabaseCount,2)
+$DatabaseRecoveryPercentage = [math]::Round($repatriatedDatabaseCount/$changedDatabaseCount,2)
 $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $changedDatabaseCount)"
+Write-Output "$DatabaseRecoveryPercentage% ($repatriatedDatabaseCount of $changedDatabaseCount)"
 
 # Issue a request to replicate changed tenant databases asynchronously till concurrent operation limit is reached
 $azureContext = Get-RestAPIContext
@@ -295,7 +314,7 @@ while ($operationQueue.Count -gt 0)
 }
 
 # Output recovery progress 
-$DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$changedDatabaseCount,2)
+$DatabaseRecoveryPercentage = [math]::Round($failoverCount/$replicatedDatabaseCount,2)
 $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $changedDatabaseCount)"
+Write-Output "$DatabaseRecoveryPercentage% ($($failoverCount) of $replicatedDatabaseCount)"
 

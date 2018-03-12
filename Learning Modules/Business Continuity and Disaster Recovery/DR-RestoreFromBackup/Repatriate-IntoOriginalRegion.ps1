@@ -225,6 +225,16 @@ else
 Write-Output "Syncing tenant servers and elastic pools in original region ..."
 $updateTenantResourcesJob = Start-Job -Name "ReconfigureTenantResources" -FilePath "$PSScriptRoot\RecoveryJobs\Update-TenantResourcesInOriginalRegion.ps1" -ArgumentList @($recoveryResourceGroupName)
 
+# Mark any databases stuck in repatriating state as in error
+$databaselist = Get-ExtendedDatabase -Catalog $catalog
+foreach ($database in $databaselist)
+{
+  if ($database.RecoveryState -In 'resetting', 'replicating', 'repatriating')
+  {
+    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
+  }
+}
+
 # Wait to reconfigure servers and pools in origin regionbefore proceeding
 Wait-Job $updateTenantResourcesJob
 

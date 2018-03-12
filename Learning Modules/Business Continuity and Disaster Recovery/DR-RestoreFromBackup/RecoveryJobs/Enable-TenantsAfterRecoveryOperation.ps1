@@ -123,7 +123,7 @@ while ($true)
         # Update tenant recovery status to 'RestoringTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -TenantKey $tenantKey
       }
-      elseif (($tenantDatabaseRecoveryStatus.RecoveryState -In ('restored', 'failedOver')) -and ($tenantRecoveryState -eq 'RestoringTenantData'))
+      elseif (($tenantDatabaseRecoveryStatus.RecoveryState -In ('restored', 'failedOver')) -and ($tenantRecoveryState -In 'RestoringTenantData', 'n/a'))
       {
         # Update tenant recovery status to 'RestoredTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -TenantKey $tenantKey

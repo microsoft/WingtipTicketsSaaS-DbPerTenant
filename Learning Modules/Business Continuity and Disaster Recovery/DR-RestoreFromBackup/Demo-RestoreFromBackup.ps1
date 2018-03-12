@@ -128,22 +128,22 @@ if ($DemoScenario -eq 5)
 {
   Write-Output "Repatriating app into primary region. This will take several minutes..."
   
-  #& $PSScriptRoot\Repatriate-IntoOriginalRegion.ps1 -NoEcho
+  & $PSScriptRoot\Repatriate-IntoOriginalRegion.ps1 -NoEcho
   
   exit
 }
 
 
-<### Delete obsolete resources in recovery region
+# Delete obsolete resources in recovery region
 if ($DemoScenario -eq 6)
 {
   Write-Output "Deleting recovery resources ..."
 
-  #& $PSScriptRoot\Remove-RecoveryResources.ps1 -NoEcho
- 
+  $recoveryResourceGroupName = $wtpUser.ResourceGroupName + $config.RecoveryRoleSuffix
+  Remove-AzureRmResourceGroup -Name $recoveryResourceGroupName -Force -ErrorAction SilentlyContinue 
   exit
 }
-#>
+
 
 ### Invalid option selected
 Write-Output "Invalid scenario selected"
