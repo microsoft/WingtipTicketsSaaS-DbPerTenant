@@ -7,10 +7,10 @@ Geo-restore is the lowest-cost disaster recovery solution.  However, restoring f
 This tutorial explores both restore and repatriation workflows. You'll learn how to:
 
 * Sync database and elastic pool configuration info into the tenant catalog
-* Set up a mirror image recovery environment in a 'recovery' region, comprising application, servers, and pools    
+* Set up a mirror image environment in a 'recovery' region, comprising application, servers, and pools    
 * Recover catalog and tenant databases using _geo-restore_
 * Repatriate the tenant catalog and changed tenant databases using _geo-replication_ after the outage is resolved
-* Update the catalog as each database is restored or repatriated to track the current location of the active copy of each tenant's database
+* Update the catalog as each database is restored (or repatriated) to track the current location of the active copy of each tenant's database
 * Ensure the application and tenant database are always colocated in the same Azure region to reduce latency  
  
 
