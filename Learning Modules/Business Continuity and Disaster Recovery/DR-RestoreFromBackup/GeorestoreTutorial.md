@@ -2,7 +2,7 @@
 
 In this tutorial, you explore a full disaster recovery scenario for a multi-tenant SaaS application implemented using the database-per-tenant model. You use [_geo-restore_](https://docs.microsoft.com/en-us/azure/sql-database/sql-database-recovery-using-backups) to recover the catalog and tenant databases from automatically maintained geo-redundant backups into an alternate recovery region. After the outage is resolved, you use [_geo-replication_](https://docs.microsoft.com/en-us/azure/sql-database/sql-database-geo-replication-overview) to repatriate changed databases to their original production region.
 
-Geo-restore is the lowest-cost disaster recovery solution.  However, restoring from geo-redundant backups can result in data loss and can take a considerable time, depending on the size of the databases. **To recover applications with the lowest possible RPO and RTO, use geo-replication instead of geo-restore**.
+Geo-restore is the lowest-cost disaster recovery solution for SQL Database.  However, restoring from geo-redundant backups can result in data loss of up to one hour, and can take a considerable time, depending on the size of each database. **To recover applications with the lowest possible RPO and RTO, use geo-replication instead of geo-restore**.
 
 This tutorial explores both restore and repatriation workflows. You'll learn how to:
 
@@ -22,7 +22,7 @@ Before starting this tutorial, make sure the following prerequisites are complet
 
 Disaster recovery (DR) is an important consideration for many applications, whether for compliance reasons or business continuity.  Should there be a prolonged service outage, a well-prepared DR plan can minimize business disruption.
 
-![Recovery Architecture](TutorialMedia/recoveryarchitecture.png)
+![Recovery Architecture](Media/recoveryarchitecture.png)
  
 For a SaaS application implemented with a database-per-tenant model, recovery and repatriation must be carefully orchestrated.
 
@@ -80,37 +80,37 @@ In this task, you start a process to sync the configuration of the servers, elas
 	* **$DemoScenario = 1, Start a background job that syncs tenant server, and pool configuration info into the catalog**
 
 3. Press **F5** to run the sync script. A new PowerShell session is opened to sync the configuration of tenant resources.
-![Sync process](TutorialMedia/syncprocess.png)
+![Sync process](Media/syncprocess.png)
 
 Leave the PowerShell window running in the background and continue with the rest of the tutorial. 
 
 > Note: The sync process connects to the catalog via a DNS alias. This alias is modified during restore and repatriation to point to the active catalog. The sync process keeps the catalog up to date with any configuration changes made in the recovery region.  During repatriation, these changes are applied to the equivalent resources in the original region. 
 
-## Restore tenant resources into the recovery region
+## Recover the application into the recovery region
 
-The restore process process does the following:
+The restore process does the following:
 
-1. Disables the Traffic Manager endpoint for the web app in the original region. Disabling the endpoint prevents users from connecting to the app in an invalid state should the region come online during recovery.
+1. Disables the Traffic Manager endpoint for the web app in the original region. Disabling the endpoint prevents users from connecting to the app in an invalid state should the original region come online during recovery.
 
-1. Provisions a recovery catalog server in the recovery region and then geo-restores the catalog database and updates the catalog alias to point to the restored database.  
-	* The catalog alias is used by the catalog sync process
+1. Provisions a recovery catalog server in the recovery region, geo-restores the catalog database, and updates the _activecatalog_ alias to point to the restored catalog server.  
+	* Changing the catalog alias ensures the catalog sync process always syncs to the active catalog.
 
 1. Marks all existing tenants in the recovery catalog as offline to prevent access to tenant databases before they are restored.
 
 1. Provisions an instance of the app in the recovery region and configures it to use the restored catalog in that region.
+	* To keep latency to a minimum, the sample app is designed so that it always connects to a tenant database in the same region.
 
-1. Provisions a server and elastic pool in which new tenants will be provisioned. 
-	* To keep app-to-database latency to a minimum, the sample app is designed so that it always connects to a tenant database in the same region.
+1. Provisions a server and elastic pool in which new tenants will be provisioned. 	
 		
-1. Provisions the recovery server and elastic pools required for restoring existing tenant databases. The configuration in the recovery region is a mirror image of the configuration in the original region.  An additional server and pool is provisioned for new tenants.  Provisioning pools up-front is important to reserve all the capacity needed.
-	* An outage in one region may place significant pressure on the resources available in the paired region.  Reserving resources quickly is recommended. Consider using geo-replication if it is critical that an application must be recovered in a specific region. 
+1. Provisions the servers and elastic pools in the recovery region required for restoring existing tenant databases. The servers and pools in the recovery region are a mirror image of the configuration in the original region.  An additional server and pool is provisioned for new tenants.  Provisioning pools up-front reserves the capacity needed to restore all the databases.
+	* An outage in a region may place significant pressure on the resources available in the paired region.  If you rely on geo-restore for DR then reserving resources quickly is recommended. Consider using geo-replication if it is critical that an application must be recovered in a specific region. 
 
-1. Enables the Traffic Manager endpoint for the Web app in the recovery region, which allows the application to provision new tenants.   
+1. Enables the Traffic Manager endpoint for the Web app in the recovery region. This allows the application to provision new tenants. At this stage existing tenants are still offline.
 
-1. Submits batches of requests to restore databases across all pools in priority order. 
+1. Submits batches of requests to restore databases in priority order. 
 	* Batches are organized so that databases are restored in parallel across all pools.  
-	* Restore requests are submitted asynchronously so they are submitted quickly and queued for execution.
-	* As restore requests are processed in parallel across all pools, it is better to distribute important tenants across many pools rather than concentrating them in a few pools. 
+	* Restore requests are submitted asynchronously so they are submitted quickly and queued for execution in each pool.
+	* Because restore requests are processed in parallel across all pools, it is better to distribute important tenants across many pools. 
 
 1. Polls the database service to determine when databases are restored.  Once a tenant database is restored, it updates the catalog to record the database rowversion and mark the tenant as online. 
 	* Tenant databases can be accessed by the application as soon as they're marked online in the catalog. 
@@ -118,9 +118,9 @@ The restore process process does the following:
 
 ## Run the recovery script
 
-> IMPORTANT This tutorial restores databases from geo-redundant backups. These backups may not be available for 10-20 minutes after initial database creation. Wait for 20 mins from installation of the app before running this script.
+> IMPORTANT This tutorial restores databases from geo-redundant backups. It can take from ten minutes to an hour after initial database creation before these backups are available. The script will pause until they are available. 
 
-Now run the recovery script that automates the restore steps described previously:
+Run the recovery script that automates the restore steps described previously:
 
 1. In the *PowerShell ISE*, open the ...\Learning Modules\Business Continuity and Disaster Recovery\DR-RestoreFromBackup\Demo-RestoreFromBackup.ps1 script and set the following values:
 	* **$DemoScenario = 2, Recover the app into a recovery region by restoring from geo-redundant backups**
@@ -131,7 +131,7 @@ Now run the recovery script that automates the restore steps described previousl
 
 1. Monitor the status of the recovery process in the console section of the PowerShell window.
 
-**insert screenshot of powershell window with code running <<<**
+![recovery process](media/recoveryprocess.png)
 
 >To explore the code for the recovery jobs, review the PowerShell scripts in the ...\Learning Modules\Business Continuity and Disaster Recovery\DR-RestoreFromBackup\RecoveryJobs folder.
 
