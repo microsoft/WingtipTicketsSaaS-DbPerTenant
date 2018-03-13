@@ -94,7 +94,7 @@ function Start-AsynchronousDatabaseFailover
 
 <#
  .SYNOPSIS  
-  Marks the failover for a tenant database as complete after failover is concluded
+  Marks the failover for a tenant database as complete and updates tenant shard after failover is concluded
 #>
 function Complete-AsynchronousDatabaseFailover
 {
@@ -108,13 +108,23 @@ function Complete-AsynchronousDatabaseFailover
   if ($databaseDetails)
   {
     $restoredServerName = $databaseDetails.ServerName
+    $originServerName = ($restoredServerName -split "$($config.RecoveryRoleSuffix)")[0]
 
-    # Update tenant database recovery state
-    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $restoredServerName -DatabaseName $databaseDetails.DatabaseName
-    if (!$dbState)
+    # Update tenant shard to origin
+    $shardUpdate = Update-TenantShardInfo -Catalog $tenantCatalog -TenantName $databaseDetails.DatabaseName -FullyQualifiedTenantServerName "$originServerName.database.windows.net" -TenantDatabaseName $databaseDetails.DatabaseName
+    if ($shardUpdate)
     {
-      Write-Verbose "Could not update recovery state for database: '$restoredServerName/$($databaseDetails.DatabaseName)'"
+       # Update tenant database recovery state
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $restoredServerName -DatabaseName $databaseDetails.DatabaseName
+      if (!$dbState)
+      {
+        Write-Verbose "Could not update recovery state for database: '$restoredServerName/$($databaseDetails.DatabaseName)'"
+      } 
     }
+    else
+    {
+        Write-Verbose "Could not update tenant shard to point to origin: '$restoredServerName/$($databaseDetails.DatabaseName)'"
+    }   
   }
   else
   {
@@ -125,7 +135,7 @@ function Complete-AsynchronousDatabaseFailover
 #----------------------------Main script--------------------------------------------------
 $failoverQueue = @()
 $tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
-$tenantDatabaseList = Get-ExtendedDatabase -Catalog
+$tenantDatabaseList = Get-ExtendedDatabase -Catalog $tenantCatalog
 $replicatedDatabaseList = $tenantDatabaseList | Where-Object{$_.RecoveryState -eq 'replicated'}
 
 # Add replicated databases to queue of tenant databases that will be failed over
@@ -156,71 +166,82 @@ foreach ($tenant in $tenantList)
 }
 $replicatedDatabaseCount = $failoverQueue.Count
 
-while(($failoverQueue.Count -gt 0) -or ($operationQueue.Count -gt 0))
+if ($replicatedDatabaseCount -eq 0)
 {
-  # Get database recovery status
-  $tenantDatabaseList = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object{(($_.ServerName -In $failoverQueue.ServerName) -and ($_.DatabaseName -In $failoverQueue.DatabaseName))}
-
-  # Issue asynchronous call to failover eligible databases
-  foreach ($database in $tenantDatabaseList)
+  Write-Output "100% (0 of 0)"
+  exit
+}
+else
+{
+  $azureContext = Get-RestAPIContext
+  while(($failoverQueue.Count -gt 0) -or ($operationQueue.Count -gt 0))
   {
-    if ($database.RecoveryState -eq 'replicated')
+    # Get database recovery status
+    $tenantDatabaseList = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object{(($_.ServerName -In $failoverQueue.ServerName) -and ($_.DatabaseName -In $failoverQueue.DatabaseName))}
+
+    # Issue asynchronous call to failover eligible databases
+    foreach ($database in $tenantDatabaseList)
     {
-      # Remove database from failover queue
-      $dbProperties = @{
-        "ServerName" = $database.ServerName
-        "DatabaseName" = $database.DatabaseName
-      }
-      $failoverQueue = $failoverQueue -ne $dbProperties
-      $originServerName = ($database.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
-
-      # Update database recovery state
-      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
-
-      # Issue asynchronous call to failover databases
-      $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $originServerName -TenantDatabaseName $database.DatabaseName
-
-      # Add operation to queue for tracking
-      $operationId = $operationObject.Id
-      if (!$operationQueueMap.ContainsKey("$operationId"))
+      if ($database.RecoveryState -eq 'replicated')
       {
-        $operationQueue += $operationObject
-        $operationQueueMap.Add("$operationId", $dbProperties)
-      } 
+        # Remove database from failover queue
+        $dbProperties = @{
+          "ServerName" = $database.ServerName
+          "DatabaseName" = $database.DatabaseName
+        }
+        $failoverQueue = $failoverQueue -ne $dbProperties
+        $originServerName = ($database.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
+
+        # Update database recovery state
+        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
+
+        # Issue asynchronous call to failover databases
+        $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $originServerName -TenantDatabaseName $database.DatabaseName
+
+        # Add operation to queue for tracking
+        $operationId = $operationObject.Id
+        if (!$operationQueueMap.ContainsKey("$operationId"))
+        {
+          $operationQueue += $operationObject
+          $operationQueueMap.Add("$operationId", $dbProperties)
+        } 
+      }
+    }
+
+    # Check on status of failover operations 
+    foreach($failoverJob in $operationQueue)
+    {
+      if (($failoverJob.IsCompleted) -and ($failoverJob.Status -eq 'RanToCompletion'))
+      {
+        # Update tenant database recovery state
+        Complete-AsynchronousDatabaseFailover -FailoverJobId $failoverJob.Id 
+
+        # Remove completed job from queue for polling
+        $operationQueue = $operationQueue -ne $failoverJob      
+
+        # Output recovery progress 
+        $failoverCount+= 1
+        $DatabaseRecoveryPercentage = [math]::Round($failoverCount/$replicatedDatabaseCount,2)
+        $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
+        Write-Output "$DatabaseRecoveryPercentage% ($($failoverCount) of $replicatedDatabaseCount)"               
+      }
+      elseif (($failoverJob.IsCompleted) -and ($failoverJob.Status -eq "Faulted"))
+      {
+        # Mark errorState for databases that could not failover
+        $databaseDetails = $operationQueueMap[$failoverJob.Id]
+        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $databaseDetails.ServerName -DatabaseName $databaseDetails.DatabaseName
+        
+        # Remove completed job from queue for polling
+        $operationQueue = $operationQueue -ne $failoverJob
+      }
     }
   }
 
-  # Check on status of failover operations 
-  foreach($failoverJob in $operationQueue)
-  {
-    if (($failoverJob.IsCompleted) -and ($failoverJob.Status -eq 'RanToCompletion'))
-    {
-      # Update tenant database recovery state
-      Complete-AsynchronousDatabaseFailover -FailoverJobId $failoverJob.Id 
-
-      # Remove completed job from queue for polling
-      $operationQueue = $operationQueue -ne $failoverJob      
-
-      # Output recovery progress 
-      $failoverCount+= 1
-      $DatabaseRecoveryPercentage = [math]::Round($failoverCount/$replicatedDatabaseCount,2)
-      $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-      Write-Output "$DatabaseRecoveryPercentage% ($($failoverCount) of $replicatedDatabaseCount)"               
-    }
-    elseif (($failoverJob.IsCompleted) -and ($failoverJob.Status -eq "Faulted"))
-    {
-      # Mark errorState for databases that could not failover
-      $databaseDetails = $operationQueueMap[$failoverJob.Id]
-      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $databaseDetails.ServerName -DatabaseName $databaseDetails.DatabaseName
-      
-      # Remove completed job from queue for polling
-      $operationQueue = $operationQueue -ne $failoverJob
-    }
-  }
+  # Output recovery progress 
+  $DatabaseRecoveryPercentage = [math]::Round($failoverCount/$replicatedDatabaseCount,2)
+  $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
+  Write-Output "$DatabaseRecoveryPercentage% ($($failoverCount) of $replicatedDatabaseCount)"
 }
 
-# Output recovery progress 
-$DatabaseRecoveryPercentage = [math]::Round($failoverCount/$replicatedDatabaseCount,2)
-$DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-Write-Output "$DatabaseRecoveryPercentage% ($($failoverCount) of $replicatedDatabaseCount)"
+
 

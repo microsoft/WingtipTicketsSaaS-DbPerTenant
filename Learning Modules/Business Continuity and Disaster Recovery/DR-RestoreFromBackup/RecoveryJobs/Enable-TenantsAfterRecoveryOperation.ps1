@@ -45,12 +45,8 @@ $wtpUser = Get-UserConfig
 $config = Get-Configuration
 
 
-# Get the tenant catalog in the recovery region
+# Get the active tenant catalog
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
-while ($tenantCatalog.Database.ResourceGroupName -ne $WingtipRecoveryResourceGroup)
-{
-  $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
-}
 
 # Mark tenants online as their databases become available
 while ($true)

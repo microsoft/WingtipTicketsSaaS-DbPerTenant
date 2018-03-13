@@ -10,13 +10,19 @@
 .PARAMETER NoEcho
   Stops the default message output by Azure when a user signs in. This prevents double echo
 
+.PARAMETER StatusCheckTimeInterval
+  This determines how often the script will check on the status of background recovery jobs. The script will wait the provided time in seconds before checking the status again.
+
 .EXAMPLE
   [PS] C:\>.\Repatriate-IntoOriginalRegion.ps1
 #>
 [cmdletbinding()]
 param (   
     [parameter(Mandatory=$false)]
-    [switch] $NoEcho
+    [switch] $NoEcho,
+
+    [parameter(Mandatory=$false)]
+    [Int] $StatusCheckTimeInterval = 10
 )
 
 #----------------------------------------------------------[Initialization]----------------------------------------------------------
@@ -177,20 +183,30 @@ else
     else
     {
       # Delete origin catalog databases (idempotent)
-      Remove-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originCatalogServerName -DatabaseName $config.CatalogDatabaseName -ErrorAction SilentlyContinue
-      Remove-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originCatalogServerName -DatabaseName $config.GoldenTenantDatabaseName -ErrorAction SilentlyContinue
+      Remove-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originCatalogServerName -DatabaseName ($config.CatalogDatabaseName).ToLower() -ErrorAction SilentlyContinue >$null
+      Remove-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originCatalogServerName -DatabaseName ($config.GoldenTenantDatabaseName).ToLower() -ErrorAction SilentlyContinue >$null
 
       # Create failover group for catalog databases
-      $catalogFailoverGroup = New-AzureRMSqlDatabaseFailoverGroup `
+      Write-Output "Creating failover group for catalog databases ..."
+      $catalogFailoverGroup = New-AzureRmSqlDatabaseFailoverGroup `
+                                -FailoverGroupName $catalogFailoverGroupName `
                                 -ResourceGroupName $recoveryResourceGroupName `
-                                -FailoverGroupName $catalogFailoverGroupName ` 
                                 -ServerName $recoveryCatalogServerName `
                                 -PartnerResourceGroupName $wtpUser.ResourceGroupName `
                                 -PartnerServerName $originCatalogServerName `
-                                -FailoverPolicy Manual
+                                -FailoverPolicy Manual      
 
       $catalogDatabases = Get-AzureRmSqlDatabase -ResourceGroupName $recoveryResourceGroupName -ServerName $recoveryCatalogServerName | Where-Object{$_.DatabaseName -ne 'master'}
-      $catalogFailoverGroup = $catalogFailoverGroup | Add-AzureRmSqlDatabaseToFailoverGroup -Database $catalogDatabases
+      Write-Output "Adding catalog databases to failover group ..."
+      foreach ($database in $catalogDatabases)
+      {
+        Add-AzureRmSqlDatabaseToFailoverGroup `
+          -ResourceGroupName $recoveryResourceGroupName `
+          -ServerName $recoveryCatalogServerName `
+          -FailoverGroupName $catalogFailoverGroupName `
+          -Database $database `
+          >$null
+      }
 
       # Failover catalog databases to origin
       Write-Output "Failing over catalog database to origin ..."
@@ -203,12 +219,12 @@ else
         
     # Update catalog alias to origin (if applicable)
     $activeCatalogServer = Get-ServerNameFromAlias "$catalogAliasName.database.windows.net"
-    if ($activeCatalogServer -ne $originCatalogServer)
+    if ($activeCatalogServer -ne $originCatalogServerName)
     {
-      Write-Output "Updating active catalog alias to point to origin server '$originCatalogServer' ..."
+      Write-Output "Updating active catalog alias to point to origin server '$originCatalogServerName' ..."
       Set-DnsAlias `
         -ResourceGroupName $wtpUser.ResourceGroupName `
-        -ServerName $originCatalogServer `
+        -ServerName $originCatalogServerName `
         -ServerDNSAlias $catalogAliasName `
         -OldResourceGroupName $recoveryResourceGroupName `
         -OldServerName $activeCatalogServer `
@@ -236,13 +252,18 @@ foreach ($database in $databaselist)
 }
 
 # Wait to reconfigure servers and pools in origin regionbefore proceeding
-Wait-Job $updateTenantResourcesJob
+$reconfigureJobStatus = Wait-Job $updateTenantResourcesJob
+if ($reconfigureJobStatus.State -eq "Failed")
+{
+  Receive-Job $updateTenantResourcesJob
+  exit
+}
 
 # Start background job to reset tenant databases that have not been changed in the recovery region 
 $resetDbJob = Start-Job -Name "ResetDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Reset-UnchangedDatabases.ps1" -ArgumentList @($recoveryResourceGroupName)
 
 # Start background job to replicate tenant databases that have been changed in the recovery region to origin region
-$replicateDbJob = Start-Job -Name "ReplicateDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Replicate-ChangedDatabases.ps1" -ArgumentList @($recoveryResourceGroupName)
+$replicateDbJob = Start-Job -Name "ReplicateDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Replicate-ChangedTenantDatabases.ps1" -ArgumentList @($recoveryResourceGroupName)
 
 # Start background job to failover tenant databases that have been replicated to the origin region
 $failoverDbJob = Start-Job -Name "FailoverDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Failover-ChangedDatabases.ps1" -ArgumentList @($recoveryResourceGroupName)

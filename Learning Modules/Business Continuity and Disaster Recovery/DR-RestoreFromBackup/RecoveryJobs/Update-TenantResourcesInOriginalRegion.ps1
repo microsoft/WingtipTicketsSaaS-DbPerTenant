@@ -22,6 +22,10 @@ Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -For
 Import-Module "$using:scriptPath\..\..\WtpConfig" -Force
 Import-Module "$using:scriptPath\..\..\UserConfig" -Force
 
+# Import-Module "$PSScriptRoot\..\..\..\Common\CatalogAndDatabaseManagement" -Force
+# Import-Module "$PSScriptRoot\..\..\..\WtpConfig" -Force
+# Import-Module "$PSScriptRoot\..\..\..\UserConfig" -Force
+
 # Stop execution on error 
 $ErrorActionPreference = "Stop"
   
@@ -36,12 +40,8 @@ if (!$credentialLoad)
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
 
-# Get the tenant catalog in the recovery region
+# Get the active tenant catalog in the recovery region
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
-while ($tenantCatalog.Database.ResourceGroupName -ne $WingtipRecoveryResourceGroup)
-{
-  $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
-}
 
 # Find any previous tenant resource update operations to get most current state of recovered resources 
 # This allows the script to be re-run if an error during deployment 
@@ -70,9 +70,6 @@ while (($pastDeployment) -and ($pastDeployment.ProvisioningState -NotIn "Succeed
 $recoveryRegionServers = Get-ExtendedServer -Catalog $tenantCatalog | Where-Object {($_.ServerName -Match "$($config.RecoveryRoleSuffix)$")}
 $recoveryRegionElasticPools = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {($_.ServerName -Match "$($config.RecoveryRoleSuffix)$")}
 
-# Get list of servers that exist in original region 
-$originRegionServers = (Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.ResourceGroupName -ResourceType "Microsoft.sql/servers").Name
-
 # Save server configuration settings
 [array]$tenantServerConfigurations = @()
 foreach($server in $recoveryRegionServers)
@@ -85,15 +82,15 @@ foreach($server in $recoveryRegionServers)
         AdminPassword = "$($config.TenantAdminPassword)"           
   }
   
-  $originServerState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $originServerName 
-  $recoveryServerState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $server.ServerName
+  $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $originServerName 
 }
 
-# Save elastic pool configuration settings. Pools are updated even though they may exist in the original region to sync any configuration changes that happened during recovery 
+# Save elastic pool configuration settings. 
+# Pools are updated even though they may exist in the original region to sync any configuration changes that happened during recovery 
 [array]$tenantElasticPoolConfigurations = @()
 foreach($pool in $recoveryRegionElasticPools)
 {
-  $originServerName = ($server.ServerName -split $config.RecoveryRoleSuffix)[0]
+  $originServerName = ($pool.ServerName -split $config.RecoveryRoleSuffix)[0]
 
   [array]$tenantElasticPoolConfigurations += @{
       ServerName = "$originServerName"
@@ -105,8 +102,7 @@ foreach($pool in $recoveryRegionElasticPools)
       StorageMB = "$($pool.StorageMB)"
     }
     # Update elastic pool recovery state 
-    $originPoolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $originServerName -ElasticPoolName $pool.ElasticPoolName
-    $recoveryPoolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $server.ServerName -ElasticPoolName $pool.ElasticPoolName
+    $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $originServerName -ElasticPoolName $pool.ElasticPoolName
 }
 $tenantResourceCount = $tenantServerConfigurations.Count + $tenantElasticPoolConfigurations.Count
 
@@ -117,7 +113,7 @@ Write-Output "0% (0 of $tenantResourceCount)"
 $deployment = New-AzureRmResourceGroupDeployment `
                   -Name $deploymentName `
                   -ResourceGroupName $wtpUser.ResourceGroupName `
-                  -TemplateFile ("$using:scriptPath\..\..\Common\RecoveryTemplates\" + $config.ReconfigureTenantResourcesTemplate) `
+                  -TemplateFile ("$using:scriptPath\RecoveryTemplates\" + $config.ReconfigureTenantResourcesTemplate) `
                   -ServerConfigurationSettings $tenantServerConfigurations `
                   -PoolConfigurationSettings $tenantElasticPoolConfigurations `
                   -ErrorAction Stop
@@ -125,19 +121,13 @@ $deployment = New-AzureRmResourceGroupDeployment `
 # Mark server recovery as complete 
 foreach($server in $tenantServerConfigurations)
 {
-  $recoveryServerName = ($server.ServerName) + $config.RecoveryRoleSuffix 
-
-  $originServerState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $server.ServerName 
-  $recoveryServerState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $recoveryServerName
+  $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReplication" -ServerName $server.ServerName 
 }
 
 # Mark pool recovery as complete 
 foreach($pool in $tenantElasticPoolConfigurations)
 {
-  $recoveryServerName = ($server.ServerName) + $config.RecoveryRoleSuffix 
-
-  $originPoolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReplication" -ServerName $server.ServerName -ElasticPoolName $pool.ElasticPoolName
-  $recoveryPoolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $recoveryServerName -ElasticPoolName $pool.ElasticPoolName
+  $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReplication" -ServerName $pool.ServerName -ElasticPoolName $pool.ElasticPoolName
 }
 
 # Output recovery progress 

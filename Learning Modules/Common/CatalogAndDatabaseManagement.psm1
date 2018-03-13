@@ -2352,25 +2352,24 @@ function Stop-TenantRestoreOperations
         $validInitialStates = $resourceRecoveryStates['cancelAndReset'].beginState
         $validInitialStates = "'$($validInitialStates -join "','")'"
 
-        # Update recovery states of both origin and recovery instances of tenant resources if applicable
         $serverNameStem = ($ServerName -split "$($config.RecoveryRoleSuffix)")[0]
-        $validServerNames = "'$serverNameStem','$serverNameStem$($config.RecoveryRoleSuffix)'"
+        $validServerNames = "'$serverNameStem'"
 
         $cancelRestoreOperationsQuery = "
         UPDATE  [dbo].[Servers] SET
                 RecoveryState = '$requestedState',
                 LastUpdated = CURRENT_TIMESTAMP
-        WHERE   RecoveryState IN ($validInitialStates);
+        WHERE   RecoveryState IN ($validInitialStates) AND ServerName IN ($validServerNames);
 
         UPDATE  [dbo].[ElasticPools] SET
                 RecoveryState = '$requestedState',
                 LastUpdated = CURRENT_TIMESTAMP
-        WHERE   RecoveryState IN ($validInitialStates);
+        WHERE   RecoveryState IN ($validInitialStates) AND ServerName IN ($validServerNames);
 
         UPDATE  [dbo].[Databases] SET
                 RecoveryState = '$requestedState',
                 LastUpdated = CURRENT_TIMESTAMP
-        WHERE   RecoveryState IN ($validInitialStates);
+        WHERE   RecoveryState IN ($validInitialStates) AND ServerName IN ($validServerNames);
         " 
    
         $commandOutput = Invoke-SqlAzureWithRetry `
@@ -2857,6 +2856,7 @@ function Update-TenantResourceRecoveryState
         restoring               |   errorState          |   markError          (recovery operations failed)
         failingOver             |   errorState          |   markError          (failover operations failed)
         --------------------------------------------------------------------------
+        n/a                     |   replicating         |   startReplication   (replicate changed data to origin)
         restored                |   replicating         |   startReplication   (replicate changed data to origin)
         errorState              |   replicating         |   startReplication   (replicate changed data to origin)
         replicating             |   replicated          |   endReplication     (replication to origin successfully completed)
@@ -2882,7 +2882,7 @@ function Update-TenantResourceRecoveryState
         'markError' = @{ "beginState" = ('restoring', 'resetting', 'failingOver', 'replicating', 'repatriating'); "endState" = ('errorState')};
         'endRecovery' = @{ "beginState" = ('restoring'); "endState" = ('restored') };
         'endFailover' = @{ "beginState" = ('failingOver'); "endState" = ('failedOver') };        
-        'startReplication' = @{ "beginState" = ('restored', 'errorState'); "endState" = ('replicating') };
+        'startReplication' = @{ "beginState" = ('restored', 'errorState', 'n/a'); "endState" = ('replicating') };
         'endReplication' = @{ "beginState" = ('replicating'); "endState" = ('replicated') };
         'startFailback' = @{ "beginState" = ('replicated', 'failedOver', 'errorState'); "endState" = ('repatriating') };
         'conclude' = @{ "beginState" = ('repatriating'); "endState" = ('complete') };

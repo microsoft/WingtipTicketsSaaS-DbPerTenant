@@ -55,29 +55,42 @@ foreach ($tenant in $tenantList)
 
 # Output recovery progress 
 $unchangedDatabaseCount = $unchangedTenantDatabases.length 
-$DatabaseRecoveryPercentage = [math]::Round($resetDatabaseCount/$unchangedDatabaseCount,2)
-$DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-Write-Output "$DatabaseRecoveryPercentage% ($($resetDatabaseCount) of $unchangedDatabaseCount)"
-
-# Reset unchanged tenant databases
-foreach ($tenant in $unchangedTenantDatabases)
+if ($unchangedDatabaseCount -eq 0)
 {
-  $tenantKey = Get-TenantKey $tenant.TenantName
-  $originTenantServerName = ($tenant.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
+  Write-Output "100% (0 of 0)"
+  exit
+}
+else
+{
+  $DatabaseRecoveryPercentage = [math]::Round($resetDatabaseCount/$unchangedDatabaseCount,2)
+  $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
+  Write-Output "$DatabaseRecoveryPercentage% ($($resetDatabaseCount) of $unchangedDatabaseCount)"
 
-  $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReset" -ServerName $tenant.ServerName -DatabaseName $tenant.DatabaseName
+  # Reset unchanged tenant databases
+  foreach ($tenant in $unchangedTenantDatabases)
+  {
+    $tenantKey = Get-TenantKey $tenant.TenantName
+    $originTenantServerName = ($tenant.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
 
-  # Update tenant resources to origin region
-  Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
-  $tenantReset = Update-TenantShardInfo -Catalog $tenantCatalog -TenantName $tenant.TenantName -FullyQualifiedTenantServerName "$originTenantServerName.database.windows.net" -TenantDatabaseName $tenant.DatabaseName
-  if ($tenantReset)
-  {
-    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -ServerName $originTenantServerName -DatabaseName $tenant.DatabaseName
-    $resetDatabaseCount+=1
-  }
-  else
-  {
-    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $tenant.ServerName -DatabaseName $tenant.DatabaseName
+    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReset" -ServerName $tenant.ServerName -DatabaseName $tenant.DatabaseName
+
+    # Update tenant resources to origin region
+    Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+    $tenantReset = Update-TenantShardInfo -Catalog $tenantCatalog -TenantName $tenant.TenantName -FullyQualifiedTenantServerName "$originTenantServerName.database.windows.net" -TenantDatabaseName $tenant.DatabaseName
+    if ($tenantReset)
+    {
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -ServerName $originTenantServerName -DatabaseName $tenant.DatabaseName
+      $resetDatabaseCount+=1
+    }
+    else
+    {
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $tenant.ServerName -DatabaseName $tenant.DatabaseName
+    }
+
+    # Output recovery progress 
+    $DatabaseRecoveryPercentage = [math]::Round($resetDatabaseCount/$unchangedDatabaseCount,2)
+    $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
+    Write-Output "$DatabaseRecoveryPercentage% ($($resetDatabaseCount) of $unchangedDatabaseCount)"
   }
 
   # Output recovery progress 
@@ -86,8 +99,5 @@ foreach ($tenant in $unchangedTenantDatabases)
   Write-Output "$DatabaseRecoveryPercentage% ($($resetDatabaseCount) of $unchangedDatabaseCount)"
 }
 
-# Output recovery progress 
-$DatabaseRecoveryPercentage = [math]::Round($resetDatabaseCount/$unchangedDatabaseCount,2)
-$DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-Write-Output "$DatabaseRecoveryPercentage% ($($resetDatabaseCount) of $unchangedDatabaseCount)"
+
 
