@@ -56,7 +56,7 @@ $originCatalogServerName = $config.CatalogServerNameStem + $wtpUser.Name
 
 $startTime = Get-Date
 
-Write-Output "Original region: $primaryLocation Recovery region: $recoveryLocation"
+Write-Output "Original region: $primaryLocation,  Recovery region: $recoveryLocation"
 
 # Disable traffic manager web app endpoint in primary region (idempotent)
 Write-Output "Disabling Traffic Manager endpoint for Wingtip Events app..."
@@ -88,7 +88,7 @@ catch
   }
 
   # Geo-restore the catalog database in a resource group in the recovery region. The ARM template also creates the catalog server if required 
-  Write-Output "Geo-restoring catalog database to recovery region..."
+  Write-Output "Geo-restoring catalog database to recovery region.  This step may take several minutes..."
   $deployment = New-AzureRmResourceGroupDeployment `
                   -Name "CatalogRecovery" `
                   -ResourceGroupName $recoveryResourceGroup.ResourceGroupName `
