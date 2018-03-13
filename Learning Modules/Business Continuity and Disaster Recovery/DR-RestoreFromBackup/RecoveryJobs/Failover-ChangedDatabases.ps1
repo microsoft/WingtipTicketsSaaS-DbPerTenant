@@ -113,12 +113,12 @@ function Complete-AsynchronousDatabaseFailover
     $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $restoredServerName -DatabaseName $databaseDetails.DatabaseName
     if (!$dbState)
     {
-      Write-Verbose "Could not update recovery state for database: '$originServerName/$($databaseDetails.DatabaseName)'"
+      Write-Verbose "Could not update recovery state for database: '$restoredServerName/$($databaseDetails.DatabaseName)'"
     }
   }
   else
   {
-    Write-Verbose "Could not find database details for recovery job with Id: '$ReplicationJobId'"
+    Write-Verbose "Could not find database details for recovery job with Id: '$FailoverJobId'"
   }
 }
 
