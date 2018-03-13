@@ -120,20 +120,9 @@ function Complete-AsynchronousDatabaseFailover
   {
     Write-Verbose "Could not find database details for recovery job with Id: '$ReplicationJobId'"
   }
-
 }
 
 #----------------------------Main script--------------------------------------------------
-<#
- Start a 'Failover-TenantDatabases' job to failover any tenant database that has completed geo-replication
-  * Start acting on the databases with a 'replicated' state.
-  * Add to list databases that have changed tenant data but are not replicated yet
-  * Set db recovery state to 'repatriating' 
-  * Start loop to failover tenant databases to the primary region (~ 10secs per db)
-  * Start loop to check on status of failover of databases. Set db recovery state to 'complete' when failover finished
-  * End when all changed tenant databases have been repatriated
-#>
-
 $failoverQueue = @()
 $tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
 $tenantDatabaseList = Get-ExtendedDatabase -Catalog
@@ -167,7 +156,7 @@ foreach ($tenant in $tenantList)
 }
 $replicatedDatabaseCount = $failoverQueue.Count
 
-while($failoverQueue.Count -gt 0)
+while(($failoverQueue.Count -gt 0) -or ($operationQueue.Count -gt 0))
 {
   # Get database recovery status
   $tenantDatabaseList = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object{(($_.ServerName -In $failoverQueue.ServerName) -and ($_.DatabaseName -In $failoverQueue.DatabaseName))}
@@ -201,114 +190,31 @@ while($failoverQueue.Count -gt 0)
     }
   }
 
-  # Pick the databases that have 'replicated' state and add them to failover queue
-  # For each db in queue :
-    # Update db recovery state
-    # Call async failover
-    # Remove db from failoverqueue? failoverQueue queue?
-}
-
-
-
-
-# Output recovery progress 
-$DatabaseRecoveryPercentage = [math]::Round($repatriatedDatabaseCount/$changedDatabaseCount,2)
-$DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-Write-Output "$DatabaseRecoveryPercentage% ($repatriatedDatabaseCount of $changedDatabaseCount)"
-
-# Issue a request to replicate changed tenant databases asynchronously till concurrent operation limit is reached
-$azureContext = Get-RestAPIContext
-while($operationQueue.Count -le $MaxConcurrentReplicationOperations)
-{
-  $currentTenant = $replicationQueue[0]
-
-  if ($currentTenant)
+  # Check on status of failover operations 
+  foreach($failoverJob in $operationQueue)
   {
-    $replicationQueue = $replicationQueue -ne $currentTenant
-    $tenantServerName = $currentTenant.ServerName.split('.')[0]
-    $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $tenantServerName -DatabaseName $currentTenant.DatabaseName
-
-    # Update tenant database recovery state
-    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $tenantServerName -DatabaseName $currentTenant.DatabaseName
-    
-    $operationObject = Start-AsynchronousDatabaseReplication -AzureContext $azureContext -TenantDatabase $tenantDatabaseProperties
-    $databaseDetails = @{
-      "ServerName" = $tenantDatabaseProperties.ServerName
-      "DatabaseName" = $tenantDatabaseProperties.DatabaseName
-      "ServiceObjective" = $tenantDatabaseProperties.ServiceObjective
-      "ElasticPoolName" = $tenantDatabaseProperties.ElasticPoolName
-    }
-
-    # Add operation to queue for tracking
-    $operationId = $operationObject.Id
-    if (!$operationQueueMap.ContainsKey("$operationId"))
+    if (($failoverJob.IsCompleted) -and ($failoverJob.Status -eq 'RanToCompletion'))
     {
-      $operationQueue += $operationObject
-      $operationQueueMap.Add("$operationId", $databaseDetails)
-    }     
-  }  
-  else 
-  {
-    # There are no more databases eligible for replication     
-    break
-  }
-}
-
-# Check on status of database recovery operations 
-while ($operationQueue.Count -gt 0)
-{
-  foreach($replicationJob in $operationQueue)
-  {
-    if (($replicationJob.IsCompleted) -and ($replicationJob.Status -eq 'RanToCompletion'))
-    {
-      # Start new replication operation if there are any databases left to replicate
-      $currentTenant = $replicationQueue[0]
-      if ($currentTenant)
-      {
-        $replicationQueue = $replicationQueue -ne $currentTenant
-        $tenantServerName = $currentTenant.ServerName.split('.')[0]
-        $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $tenantServerName -DatabaseName $currentTenant.DatabaseName
-
-        # Update tenant database recovery state
-        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $tenantServerName -DatabaseName $currentTenant.DatabaseName
-    
-        $operationObject = Start-AsynchronousDatabaseReplication -AzureContext $azureContext -TenantDatabase $tenantDatabaseProperties
-        $databaseDetails = @{
-          "ServerName" = $tenantDatabaseProperties.ServerName
-          "DatabaseName" = $tenantDatabaseProperties.DatabaseName
-          "ServiceObjective" = $tenantDatabaseProperties.ServiceObjective
-          "ElasticPoolName" = $tenantDatabaseProperties.ElasticPoolName
-        }
-
-        # Add operation to queue for tracking
-        $operationId = $operationObject.Id
-        if (!$operationQueueMap.ContainsKey("$operationId"))
-        {
-          $operationQueue += $operationObject
-          $operationQueueMap.Add("$operationId", $databaseDetails)
-        }     
-      }
-
       # Update tenant database recovery state
-      Complete-AsynchronousDatabaseReplication -replicationJobId $replicationJob.Id 
+      Complete-AsynchronousDatabaseFailover -FailoverJobId $failoverJob.Id 
 
       # Remove completed job from queue for polling
-      $operationQueue = $operationQueue -ne $replicationJob      
+      $operationQueue = $operationQueue -ne $failoverJob      
 
       # Output recovery progress 
-      $replicatedDatabaseCount+= 1
-      $DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$changedDatabaseCount,2)
+      $failoverCount+= 1
+      $DatabaseRecoveryPercentage = [math]::Round($failoverCount/$replicatedDatabaseCount,2)
       $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-      Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $changedDatabaseCount)"               
+      Write-Output "$DatabaseRecoveryPercentage% ($($failoverCount) of $replicatedDatabaseCount)"               
     }
-    elseif (($replicationJob.IsCompleted) -and ($replicationJob.Status -eq "Faulted"))
+    elseif (($failoverJob.IsCompleted) -and ($failoverJob.Status -eq "Faulted"))
     {
-      # Mark errorState for databases that have not been replicated 
-      $databaseDetails = $operationQueueMap[$replicationJob.Id]
+      # Mark errorState for databases that could not failover
+      $databaseDetails = $operationQueueMap[$failoverJob.Id]
       $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $databaseDetails.ServerName -DatabaseName $databaseDetails.DatabaseName
       
       # Remove completed job from queue for polling
-      $operationQueue = $operationQueue -ne $replicationJob
+      $operationQueue = $operationQueue -ne $failoverJob
     }
   }
 }
