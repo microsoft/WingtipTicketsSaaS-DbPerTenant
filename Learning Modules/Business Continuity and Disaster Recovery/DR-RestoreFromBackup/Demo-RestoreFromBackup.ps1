@@ -123,7 +123,7 @@ if ($DemoScenario -eq 4)
 ### Repatriate the app into its original region
 if ($DemoScenario -eq 5)
 {
-  Write-Output "Repatriating app into primary region. This will take several minutes..."
+  Write-Output "Repatriating app into original region. This may take several minutes..."
   
   & $PSScriptRoot\Repatriate-IntoOriginalRegion.ps1 -NoEcho
   
