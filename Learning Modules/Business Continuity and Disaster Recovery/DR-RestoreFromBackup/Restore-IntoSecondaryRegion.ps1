@@ -45,7 +45,7 @@ $primaryLocation = (Get-AzureRmResourceGroup -ResourceGroupName $wtpUser.Resourc
 
 # Use paired Azure region as recovery region (more info: https://docs.microsoft.com/azure/best-practices-availability-paired-regions)
 # Note: An optimization that can be applied here would be to instead pass in a priority list of regions. This will allow recovery to continue if the paired region does not have enough capacity.
-$regionPairs = Get-Content -raw "$PSScriptRoot\..\..\Utilities\AzurePairedRegions.txt" | ConvertFrom-StringData
+$regionPairs = Get-Content "$PSScriptRoot\..\..\Utilities\AzurePairedRegions.txt" | ConvertFrom-StringData
 $recoveryLocation = $regionPairs[$primaryLocation]
 $currentSubscriptionId = Get-SubscriptionId
 $recoveryResourceGroupName = $wtpUser.ResourceGroupName + $config.RecoveryRoleSuffix
