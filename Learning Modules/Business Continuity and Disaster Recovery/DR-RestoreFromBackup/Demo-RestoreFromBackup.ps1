@@ -9,7 +9,7 @@ $TenantName = "Hawthorn Hall" # name of the venue to be added/removed as a tenan
 $VenueType  = "multipurpose"  # valid types: blues, classicalmusic, dance, jazz, judo, motorracing, multipurpose, opera, rockmusic, soccer 
 $PostalCode = "98052"
 
-$DemoScenario = 4
+$DemoScenario = 1
 <# Select the scenario that will be run. It is recommended you run the scenarios below in order. 
    Scenario
       1     Start synchronizing tenant server, pool, and database configuration info into the catalog

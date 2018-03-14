@@ -99,7 +99,7 @@ while (1 -eq 1)
     foreach ($syncedTenantServer in $syncedTenantServers)
     {
         # Do not remove servers that will be used for disaster recovery 
-        if (($servers.ServerName -notcontains $syncedTenantServer.ServerName) -and ($syncedTenantServer.RecoveryState -notmatch 'restored$|complete$'))
+        if (($servers.ServerName -notcontains $syncedTenantServer.ServerName) -and ($syncedTenantServer.RecoveryState -notmatch 'restored$|replicated$'))
         {
             # remove the entry from the catalog
             Remove-ExtendedServer -Catalog $catalog -ServerName $syncedTenantServer.ServerName
@@ -165,7 +165,7 @@ while (1 -eq 1)
     foreach ($syncedElasticPool in $syncedElasticPools)
     {
         # Do not remove elastic pools that will be used for disaster recovery 
-        if (($elasticPools.compoundElasticPoolName -notcontains $syncedElasticPool.compoundElasticPoolName) -and ($syncedElasticPool.RecoveryState -NotIn "restored", "complete"))
+        if (($elasticPools.compoundElasticPoolName -notcontains $syncedElasticPool.compoundElasticPoolName) -and ($syncedElasticPool.RecoveryState -NotIn "restored", "replicated"))
         {
             # remove the elastic pool entry from the catalog
             Remove-ExtendedElasticPool -Catalog $catalog -ServerName $syncedElasticPool.ServerName -ElasticPoolName $syncedElasticPool.ElasticPoolName
@@ -230,7 +230,7 @@ while (1 -eq 1)
     foreach ($syncedDatabase in $syncedDatabases)
     {
         # Do not remove databases that will be used for disaster recovery 
-        if (($tenantDatabases.compoundDatabaseName -notcontains $syncedDatabase.compoundDatabaseName) -and ($syncedDatabase.RecoveryState -NotIn "restored", "recovered", "complete"))
+        if (($tenantDatabases.compoundDatabaseName -notcontains $syncedDatabase.compoundDatabaseName) -and ($syncedDatabase.RecoveryState -NotIn "restored", "failedOver", "replicated"))
         {
             # remove the tenant database entry from the catalog
             Remove-ExtendedDatabase -Catalog $catalog -ServerName $syncedDatabase.ServerName -DatabaseName $syncedDatabase.DatabaseName

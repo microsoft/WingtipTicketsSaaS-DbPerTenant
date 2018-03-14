@@ -2162,6 +2162,47 @@ function Set-ExtendedServer {
 
 <#
 .SYNOPSIS
+    Adds or updates the recovery row version of a tenant database
+#>
+function Set-TenantDatabaseRecoveryRowVersion
+{
+    param(
+    [parameter(Mandatory=$true)]
+    [object]$Catalog,
+
+    [parameter(Mandatory=$true)]
+    [String]$ServerName,
+
+    [parameter(Mandatory=$true)]
+    [String]$DatabaseName       
+    )
+
+    $config = Get-Configuration
+    $commandText = "SELECT @@DBTS AS Value"
+    $rawValueBytes =  Invoke-SqlAzureWithRetry `
+                        -ServerInstance "$ServerName.database.windows.net" `
+                        -Database $DatabaseName `
+                        -Query $commandText `
+                        -UserName $config.TenantAdminUserName `
+                        -Password $config.TenantAdminPassword
+    $rawValueString = [BitConverter]::ToString($rawValueBytes.Value)
+    $recoveryRowVersion = "0x" + $rawValueString.Replace("-", "")  
+    
+    $commandText = "
+    UPDATE [dbo].[Databases]
+    SET    RecoveryRowVersion = $recoveryRowVersion
+    WHERE  ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';
+    "
+    $commandOutput = Invoke-SqlAzureWithRetry `
+                        -ServerInstance $Catalog.FullyQualifiedServerName `
+                        -Database $Catalog.Database.DatabaseName `
+                        -Query $commandText `
+                        -Username $config.CatalogAdminUserName `
+                        -Password $config.CatalogAdminPassword
+}
+
+<#
+.SYNOPSIS
     Creates a unique DNS alias that points to the server a tenant's data is stored in
 #>
 function Set-TenantAlias
@@ -2758,11 +2799,12 @@ function Update-TenantRecoveryState
         OnlineInRecovery                |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
         ResettingTenantToOrigin         |   OnlineInOrigin                  |   endReset                    (tenant resources successfully reset back to origin)
         --------------------------------------------------------------------------------------------------
-        RestoringTenantData             |   RestoredTenantData              |   endRecovery                 (tenant resources successfully restored in recovery region)
         n/a                             |   RestoredTenantData              |   endRecovery                 (tenant resources successfully restored in recovery region)
+        RestoringTenantData             |   RestoredTenantData              |   endRecovery                 (tenant resources successfully restored in recovery region)
         RestoredTenantData              |   UpdatingTenantShardToRecovery   |   startShardUpdateToRecovery  (update tenant shard details to bring tenant online in recovery region)
         UpdatingTenantShardToRecovery   |   OnlineInRecovery                |   endShardUpdateToRecovery    (tenant shard update successful and tenant is online in recovery region)
         --------------------------------------------------------------------------------------------------
+        n/a                             |   RepatriatingTenantData          |   startRepatriation           (tenant resources in the process of migrating back to origin)       
         OnlineInRecovery                |   RepatriatingTenantData          |   startRepatriation           (tenant resources in the process of migrating back to origin)
         RepatriatingTenantData          |   RepatriatedTenantData           |   endRepatriation             (tenant resources successfully migrated back to origin)
         --------------------------------------------------------------------------------------------------
@@ -2778,7 +2820,7 @@ function Update-TenantRecoveryState
         'endRecovery' = @{ "beginState" = ('RestoringTenantData', 'n/a'); "endState" = ('RestoredTenantData') };
         'startShardUpdateToRecovery' = @{ "beginState" = ('RestoredTenantData'); "endState" = ('UpdatingTenantShardToRecovery')};
         'endShardUpdateToRecovery' = @{ "beginState" = ('UpdatingTenantShardToRecovery'); "endState" = "OnlineInRecovery"};
-        'startRepatriation' = @{ "beginState" = ('OnlineInRecovery'); "endState" = ('RepatriatingTenantData') };        
+        'startRepatriation' = @{ "beginState" = ('OnlineInRecovery', 'n/a'); "endState" = ('RepatriatingTenantData') };        
         'endRepatriation' = @{ "beginState" = ('RepatriatingTenantData'); "endState" = ('RepatriatedTenantData') };
         'startShardUpdateToOrigin' = @{ "beginState" = ('RepatriatedTenantData'); "endState" = ('UpdatingTenantShardToOrigin')};
         'endShardUpdateToOrigin' = @{ "beginState" = ('UpdatingTenantShardToOrigin'); "endState" = ('OnlineInOrigin')};
