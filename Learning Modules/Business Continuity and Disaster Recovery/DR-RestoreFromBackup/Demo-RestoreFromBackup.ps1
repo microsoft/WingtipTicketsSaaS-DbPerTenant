@@ -9,7 +9,7 @@ $TenantName = "Hawthorn Hall" # name of the venue to be added/removed as a tenan
 $VenueType  = "multipurpose"  # valid types: blues, classicalmusic, dance, jazz, judo, motorracing, multipurpose, opera, rockmusic, soccer 
 $PostalCode = "98052"
 
-$DemoScenario = 2
+$DemoScenario = 4
 <# Select the scenario that will be run. It is recommended you run the scenarios below in order. 
    Scenario
       1     Start synchronizing tenant server, pool, and database configuration info into the catalog
@@ -77,10 +77,11 @@ if ($DemoScenario -eq 3)
     $newTenantAlias = $config.NewTenantAliasStem + $wtpUser.Name + ".database.windows.net"
     $serverName = Get-ServerNameFromAlias $newTenantAlias
     $poolName = $config.TenantPoolNameStem + "1"
+    $resourceGroupName = (Find-AzureRmResource -ResourceNameEquals $serverName -ResourceType "Microsoft.sql/servers").ResourceGroupName
     try
     {
         New-Tenant `
-            -WtpResourceGroupName $wtpUser.ResourceGroupName `
+            -WtpResourceGroupName $resourceGroupName `
             -WtpUser $wtpUser.Name `
             -TenantName $TenantName `
             -ServerName $serverName `
@@ -115,7 +116,6 @@ if ($DemoScenario -eq 4)
                       -WtpUser $wtpUser.Name `
                       -TenantName $TenantName `
                       -NoEcho
-  Write-Output "Deleted event '$deletedEvent' from $TenantName."  
   exit
 }
 
