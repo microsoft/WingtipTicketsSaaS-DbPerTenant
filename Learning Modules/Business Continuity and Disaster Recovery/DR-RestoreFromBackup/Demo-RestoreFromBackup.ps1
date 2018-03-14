@@ -4,13 +4,8 @@
 #  1. Restore the app into a secondary recovery region using geo-restore from automatic backups,
 #  2. Repatriate the app into its original region using geo-replication
 
-# Parameters for scenarios #4, provision a tenant in the recovery region 
-$TenantName = "Hawthorn Hall" # name of the venue to be added/removed as a tenant
-$VenueType  = "multipurpose"  # valid types: blues, classicalmusic, dance, jazz, judo, motorracing, multipurpose, opera, rockmusic, soccer 
-$PostalCode = "98052"
-
-$DemoScenario = 4
-<# Select the scenario that will be run. It is recommended you run the scenarios below in order. 
+$DemoScenario = 1
+<# Select the scenario that will be run. Run the scenarios below in order. 
    Scenario
       1     Start synchronizing tenant server, pool, and database configuration info into the catalog
       2     Recover the app into a recovery region by restoring from geo-redundant backups
@@ -19,6 +14,13 @@ $DemoScenario = 4
       5     Repatriate the app into its original region
       6     Delete obsolete resources from the recovery region 
 #>
+
+# Parameters for scenario #3, provision a tenant in the recovery region 
+$TenantName = "Hawthorn Hall" # name of the venue to be added/removed as a tenant
+$VenueType  = "multipurpose"  # valid types: blues, classicalmusic, dance, jazz, judo, motorracing, multipurpose, opera, rockmusic, soccer
+
+# Parameters for scenario #4, delete an event from a tenant in the recovery region
+$TenantName2 = "Contoso Concert Hall" # Name of tenant from which event will be deleted
 
 Import-Module "$PSScriptRoot\..\..\Common\CatalogAndDatabaseManagement" -Force
 Import-Module "$PSScriptRoot\..\..\Common\SubscriptionManagement" -Force
@@ -87,7 +89,6 @@ if ($DemoScenario -eq 3)
             -ServerName $serverName `
             -PoolName $poolName `
             -VenueType $VenueType `
-            -PostalCode $PostalCode `
             -ErrorAction Stop `
             > $null
     }
@@ -107,15 +108,15 @@ if ($DemoScenario -eq 3)
 #>
 
 
-### Delete an event from contoso concerthall
+### Delete an event from a tenant
 if ($DemoScenario -eq 4)
 {
-  $TenantName = "Contoso Concert Hall"
-  $deletedEvent = & $PSScriptRoot\..\..\Utilities\Remove-UnsoldEventFromTenant.ps1 `
+  & $PSScriptRoot\..\..\Utilities\Remove-UnsoldEventFromTenant.ps1 `
                       -WtpResourceGroupName $wtpUser.ResourceGroupName `
                       -WtpUser $wtpUser.Name `
-                      -TenantName $TenantName `
-                      -NoEcho
+                      -TenantName $TenantName2 `
+                      -NoEcho `
+                      > $null
   exit
 }
 
