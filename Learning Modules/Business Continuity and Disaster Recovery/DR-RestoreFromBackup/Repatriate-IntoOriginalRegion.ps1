@@ -42,8 +42,11 @@ Initialize-Subscription -NoEcho:$NoEcho.IsPresent
 
 # Get location of primary region
 $primaryLocation = (Get-AzureRmResourceGroup -ResourceGroupName $wtpUser.ResourceGroupName).Location
-$regionPairs = Get-Content "$PSScriptRoot\..\..\Utilities\AzurePairedRegions.txt" | ConvertFrom-StringData
-$recoveryLocation = $regionPairs[$primaryLocation]
+
+# Get location of recovery region 
+$content = Get-Content "$PSScriptRoot\..\..\Utilities\AzurePairedRegions.txt" | Out-String
+$regionPairs = Invoke-Expression $content
+$recoveryLocation = $regionPairs.Item($primaryLocation)
 
 # Get the active tenant catalog 
 $catalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
