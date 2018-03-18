@@ -42,7 +42,7 @@ Initialize-Subscription -NoEcho:$NoEcho.IsPresent
 
 # Get location of primary region
 $primaryLocation = (Get-AzureRmResourceGroup -ResourceGroupName $wtpUser.ResourceGroupName).Location
-$regionPairs = Get-Content "$PSScriptRoot\..\..\Utilities\AzurePairedRegions.txt" | ConvertFrom-StringData
+$regionPairs = Get-Content "$PSScriptRoot\..\..\Utilities\AzurePairedRegions.txt" | Out-String | ConvertFrom-StringData
 $recoveryLocation = $regionPairs[$primaryLocation]
 
 # Get the active tenant catalog 
@@ -169,7 +169,7 @@ else
                               -ErrorAction SilentlyContinue
     
     # Failover catalog databases to origin (if applicable)
-    if ($catalogFailoverGroup -and ($catalogFailoverGroup.ReplicationRole -eq 'Secondary'))
+    if ($catalogFailoverGroup -and ($catalogFailoverGroup.ReplicationRole -eq 'Secondary') -and ($catalogFailoverGroup.ReplicationState -eq 'CATCH_UP'))
     {
       Write-Output "Failing over catalog database to origin ..."
       Switch-AzureRmSqlDatabaseFailoverGroup `
@@ -177,7 +177,11 @@ else
         -ServerName $originCatalogServerName `
         -FailoverGroupName $catalogFailoverGroupName `
         >$null
-
+    }
+    elseif ($catalogFailoverGroup -and ($catalogFailoverGroup.ReplicationRole -eq 'Secondary') -and ($catalogFailoverGroup.ReplicationState -In 'PENDING', 'SEEDING'))
+    {
+      Write-Output "Catalog database in origin region is still being seeded with data from the recovery region. Try running the repatriation script again later."
+      exit 
     }
     # Create catalog failover group if it doesn't exist and failover to origin
     else
@@ -238,7 +242,7 @@ else
 }
 
 # Reconfigure servers and elastic pools in original region to match settings in the recovery region 
-Write-Output "Syncing tenant servers and elastic pools in original region ..."
+Write-Output "Reconfiguring tenant servers and elastic pools in original region to match recovery region ..."
 $updateTenantResourcesJob = Start-Job -Name "ReconfigureTenantResources" -FilePath "$PSScriptRoot\RecoveryJobs\Update-TenantResourcesInOriginalRegion.ps1" -ArgumentList @($recoveryResourceGroupName)
 
 # Mark any databases stuck in repatriating state as in error
@@ -251,7 +255,7 @@ foreach ($database in $databaselist)
   }
 }
 
-# Wait to reconfigure servers and pools in origin regionbefore proceeding
+# Wait to reconfigure servers and pools in origin region before proceeding
 $reconfigureJobStatus = Wait-Job $updateTenantResourcesJob
 if ($reconfigureJobStatus.State -eq "Failed")
 {

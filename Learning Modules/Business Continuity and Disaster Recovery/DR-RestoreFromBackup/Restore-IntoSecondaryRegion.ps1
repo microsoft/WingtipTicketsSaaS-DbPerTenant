@@ -45,7 +45,7 @@ $primaryLocation = (Get-AzureRmResourceGroup -ResourceGroupName $wtpUser.Resourc
 
 # Use paired Azure region as recovery region (more info: https://docs.microsoft.com/azure/best-practices-availability-paired-regions)
 # Note: An optimization that can be applied here would be to instead pass in a priority list of regions. This will allow recovery to continue if the paired region does not have enough capacity.
-$regionPairs = Get-Content "$PSScriptRoot\..\..\Utilities\AzurePairedRegions.txt" | ConvertFrom-StringData
+$regionPairs = Get-Content "$PSScriptRoot\..\..\Utilities\AzurePairedRegions.txt" | Out-String | ConvertFrom-StringData
 $recoveryLocation = $regionPairs[$primaryLocation]
 $currentSubscriptionId = Get-SubscriptionId
 $recoveryResourceGroupName = $wtpUser.ResourceGroupName + $config.RecoveryRoleSuffix
@@ -73,7 +73,28 @@ try
                         -DatabaseName $config.CatalogDatabaseName `
                         -ErrorAction Stop   
   
-  Write-Output "Catalog database already restored in recovery region..."                   
+  Write-Output "Catalog database already restored in recovery region..." 
+
+  # Check if catalog database in recovery region is a replica
+  $replicationLink = Get-AzureRmSqlDatabaseReplicationLink `
+                        -ResourceGroupName $recoveryResourceGroupName `
+                        -ServerName $recoveryCatalogServerName `
+                        -DatabaseName $config.CatalogDatabaseName `
+                        -PartnerResourceGroupName $wtpUser.ResourceGroupName `
+                        -ErrorAction SilentlyContinue
+  if ($replicationLink -and ($replicationLink.Role -eq "Secondary"))
+  {
+    Write-Output "Catalog database is detected to be a replica. Failing over catalog database to recovery region..."
+    $catalogFailoverGroupName = $config.CatalogServerNameStem + "group" + $wtpUser.Name
+      
+    # Failover catalog database to recovery region
+    Switch-AzureRmSqlDatabaseFailoverGroup `
+      -ResourceGroupName $recoveryResourceGroupName `
+      -ServerName $recoveryCatalogServerName `
+      -FailoverGroupName $catalogFailoverGroupName `
+      -AllowDataLoss `
+      >$null    
+  }                  
 }
 catch
 {
@@ -143,7 +164,7 @@ foreach ($tenant in $tenantList)
 {
   $tenantStatus = (Get-ExtendedTenant -Catalog $tenantCatalog -TenantKey $tenant.Key).TenantRecoveryState
 
-  if ($tenantStatus -NotIn 'onlineInRecovery')
+  if ($tenantStatus -NotIn 'OnlineInRecovery')
   {
     Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenant.Key -ErrorAction Stop
   }
@@ -236,11 +257,7 @@ while ($true)
   # Exit recovery if all tenant databases have been recovered 
   if (($databaseRecoveryJob.State -eq "Completed") -and ($poolRecoveryJob.State -eq "Completed") -and ($serverRecoveryJob.State -eq "Completed") -and ($newTenantProvisioningJob.State -eq "Completed") -and ($tenantRecoveryJob.State -eq "Completed"))
   {
-    Remove-Item -Path "$env:TEMP\profile.json" -ErrorAction SilentlyContinue
-
-    #Reset web app in recovery region
-    $recoveryAppName = $config.EventsAppNameStem + $recoveryLocation + '-' + $wtpUser.Name
-    #Restart-AzureRmWebApp -ResourceGroupName $recoveryResourceGroupName -Name $recoveryAppName >$null
+    Remove-Item -Path "$env:TEMP\profile.json" -ErrorAction SilentlyContinue   
     break
   }
   else

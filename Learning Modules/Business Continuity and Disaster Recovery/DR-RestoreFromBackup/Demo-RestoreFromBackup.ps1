@@ -136,8 +136,31 @@ if ($DemoScenario -eq 6)
 {
   Write-Output "Deleting obsolete recovery resources ..."
 
+  $tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
+  $recoveryServerList = Get-ExtendedServer -Catalog $tenantCatalog | Where-Object{$_.ServerName -match "$($config.RecoveryRoleSuffix)$"}
+  $recoveryPoolList = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object{$_.ServerName -match "$($config.RecoveryRoleSuffix)$"}
+  $recoveryDatabaseList = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object{$_.ServerName -match "$($config.RecoveryRoleSuffix)$"}
+
+  # Remove recovery server entries from the catalog
+  foreach($recoveryserver in $recoveryServerList)
+  {
+    Remove-ExtendedServer -Catalog $tenantCatalog -ServerName $recoveryserver > $null
+  }
+
+  # Remove recovery elastic pool entries from the catalog
+  foreach($recoverypool in $recoveryPoolList)
+  {
+    Remove-ExtendedElasticPool -Catalog $tenantCatalog -ServerName $recoverypool.ServerName -ElasticPoolName $recoverypool.ElasticPoolName > $null
+  }
+
+  # Remove recovery database entires from the catalog
+  foreach($recoverydatabase in $recoveryDatabaseList)
+  {
+    Remove-ExtendedDatabase -Catalog $tenantCatalog -ServerName $recoverydatabase.ServerName -DatabaseName $recoverydatabase.DatabaseName > $null
+  }   
+
   $recoveryResourceGroupName = $wtpUser.ResourceGroupName + $config.RecoveryRoleSuffix
-  Remove-AzureRmResourceGroup -Name $recoveryResourceGroupName -Force -ErrorAction SilentlyContinue 
+  Remove-AzureRmResourceGroup -Name $recoveryResourceGroupName -Force -ErrorAction SilentlyContinue > $null
   exit
 }
 

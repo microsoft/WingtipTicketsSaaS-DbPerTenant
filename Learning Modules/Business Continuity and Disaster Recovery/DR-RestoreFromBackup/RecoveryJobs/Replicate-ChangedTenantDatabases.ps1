@@ -29,6 +29,11 @@ Import-Module "$using:scriptPath\..\..\Common\AzureSqlAsyncManagement" -Force
 Import-Module "$using:scriptPath\..\..\WtpConfig" -Force
 Import-Module "$using:scriptPath\..\..\UserConfig" -Force
 
+# Import-Module "$PSScriptRoot\..\..\..\Common\CatalogAndDatabaseManagement" -Force
+# Import-Module "$PSScriptRoot\..\..\..\Common\AzureSqlAsyncManagement" -Force
+# Import-Module "$PSScriptRoot\..\..\..\WtpConfig" -Force
+# Import-Module "$PSScriptRoot\..\..\..\UserConfig" -Force
+
 # Stop execution on error 
 $ErrorActionPreference = "Stop"
   
@@ -49,7 +54,6 @@ $currentSubscriptionId = Get-SubscriptionId
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
 
 # Initialize replication variables
-$sleepInterval = 10
 $replicationQueue = @()
 $operationQueue = @()
 $operationQueueMap = @{}
@@ -146,17 +150,20 @@ $tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
 $originTenantServerName = $config.TenantServerNameStem + $wtpUser.Name
 foreach ($tenant in $tenantList)
 {
-  $expectedTenantOriginServerName = ($tenant.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
-  $tenantDataChanged = Test-IfTenantDataChanged -Catalog $tenantCatalog -TenantName $tenant.TenantName
-  if ($tenantDataChanged)
+  if ($tenant.TenantRecoveryState -ne 'OnlineInOrigin')
   {
-    $replicationQueue += $tenant
-  }
-  # Include tenants that were added in the recovery region to replication queue
-  elseif($expectedTenantOriginServerName -ne $originTenantServerName)
-  {
-    $replicationQueue += $tenant
-  }
+    $expectedTenantOriginServerName = ($tenant.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
+    $tenantDataChanged = Test-IfTenantDataChanged -Catalog $tenantCatalog -TenantName $tenant.TenantName
+    if ($tenantDataChanged)
+    {
+      $replicationQueue += $tenant
+    }
+    # Include tenants that were added in the recovery region to replication queue
+    elseif($expectedTenantOriginServerName -ne $originTenantServerName)
+    {
+      $replicationQueue += $tenant
+    }
+  } 
 }
 $changedDatabaseCount = $replicationQueue.length 
 
@@ -170,31 +177,25 @@ else
   # Remove databases that have already been replicated from queue
   foreach ($tenant in $replicationQueue)
   {
-    $tenantServerName = $tenant.ServerName.split('.')[0]
+    $currTenantServerName = $tenant.ServerName.split('.')[0]
+    $originTenantServerName = ($currTenantServerName -split "$($config.RecoveryRoleSuffix)$")[0]
+    $recoveryTenantServerName = $originTenantServerName + $config.RecoveryRoleSuffix
     $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $tenantServerName -DatabaseName $tenant.DatabaseName
 
-    if ($tenantDatabaseProperties.RecoveryState -eq 'replicated')
+    # Get replication status of tenant database
+    $replicationLink = Get-AzureRmSqlDatabaseReplicationLink `
+                          -ResourceGroupName $WingtipRecoveryResourceGroup `
+                          -ServerName $recoveryTenantServerName `
+                          -DatabaseName $tenant.DatabaseName `
+                          -PartnerResourceGroupName $wtpUser.ResourceGroupName `
+                          -PartnerServerName $originTenantServerName `
+                          -ErrorAction SilentlyContinue
+    if ($replicationLink)
     {
-      # Remove databases that have already been replicated from queue
+      # Update database recovery state if it has completed replication
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReplication" -ServerName $tenantServerName -DatabaseName $tenant.DatabaseName
       $replicationQueue = $replicationQueue -ne $tenant
       $replicatedDatabaseCount+=1
-    }
-    elseif ($tenantDatabaseProperties.RecoveryState -eq 'replicating')
-    {
-      # Get replication status of tenant database
-      $replicationLink = Get-AzureRmSqlDatabaseReplicationLink `
-                            -ResourceGroupName $WingtipRecoveryResourceGroup `
-                            -ServerName $tenantServerName `
-                            -DatabaseName $tenant.DatabaseName `
-                            -PartnerResourceGroupName $wtpUser.ResourceGroupName `
-                            -ErrorAction SilentlyContinue
-      if ($replicationLink)
-      {
-        # Update database recovery state if it has completed replication
-        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReplication" -ServerName $tenantServerName -DatabaseName $tenant.DatabaseName
-        $replicationQueue = $replicationQueue -ne $tenant
-        $replicatedDatabaseCount+=1
-      }
     }
   }
   

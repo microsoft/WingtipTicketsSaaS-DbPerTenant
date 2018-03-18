@@ -52,8 +52,8 @@ $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -W
 while ($true)
 {
   $tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
-  $tenantCount = $tenantList.Count
-  $offlineTenants = $tenantList | Where-Object {(($_.TenantStatus -ne 'Online') -or ($_.TenantRecoveryState -eq 'n/a'))}   
+  $tenantCount = (Get-Tenants -Catalog $tenantCatalog).Count
+  $offlineTenants = $tenantList | Where-Object {(($_.TenantStatus -ne 'Online') -or ($_.TenantRecoveryState -In 'n/a', 'OnlineInOrigin'))}   
   $tenantsInRecovery = $tenantList | Where-Object{$_.TenantRecoveryState -ne 'OnlineInOrigin'}
   $onlineTenantCount = $tenantCount - ($offlineTenants.Count)
   $repatriatedTenantCount = $tenantCount - ($tenantsInRecovery.Count)
@@ -62,14 +62,14 @@ while ($true)
   if (!$offlineTenants -and ($RecoveryOperation -eq 'restore'))
   {
     # Output recovery progress 
-    Write-Output "100% ($tenantCount of $tenantCount)"
+    Write-Output "100% ($onlineTenantCount of $tenantCount)"
     break
   }
   # Exit if all tenants are online in origin after repatriation operation
   elseif (!$tenantsInRecovery -and ($RecoveryOperation -eq 'repatriation'))
   {
     # Output recovery progress 
-    Write-Output "100% ($tenantCount of $tenantCount)"
+    Write-Output "100% ($repatriatedTenantCount of $tenantCount)"
     break
   }
   else
@@ -117,8 +117,11 @@ while ($true)
       
       if ($originDatabaseRecoveryStatus.RecoveryState -In ('restoring', 'failingOver'))
       {
-        # Update tenant recovery status to 'RestoringTenantData'
-        $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -TenantKey $tenantKey
+        # Update tenant recovery status to 'RestoringTenantData' (if applicable)
+        if ($tenantRecoveryState -ne 'RestoringTenantData')
+        {
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -TenantKey $tenantKey
+        }
       }
       elseif (($originDatabaseRecoveryStatus.RecoveryState -In ('restored', 'failedOver')) -and ($tenantRecoveryState -In 'RestoringTenantData', 'n/a'))
       {
@@ -158,8 +161,17 @@ while ($true)
           if ($updateComplete)
           {
             # Mark tenant online in catalog
-            Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey       
-            Set-TenantDatabaseRecoveryRowVersion -Catalog $tenantCatalog -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
+            Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
+
+            # Check if recovery database entry exists in catalog for tenant
+            $recoveryDatabaseEntry = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
+            if (!$recoveryDatabaseEntry)
+            {
+              # Add recovery database entry in catalog
+              $recoveryDatabase = Get-AzureRmSqlDatabase -ResourceGroupName $WingtipRecoveryResourceGroup -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
+              Set-ExtendedDatabase -Catalog $tenantCatalog -Database $recoveryDatabase
+            }       
+            Set-TenantDatabaseRecoveryChecksum -Catalog $tenantCatalog -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
             $onlineTenantCount +=1
             
             # Update tenant recovery status to 'OnlineInRecovery'
@@ -183,7 +195,16 @@ while ($true)
         {
           # Mark tenant online in catalog
           Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
-          Set-TenantDatabaseRecoveryRowVersion -Catalog $tenantCatalog -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
+
+          # Check if recovery database entry exists in catalog for tenant
+          $recoveryDatabaseEntry = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
+          if (!$recoveryDatabaseEntry)
+          {
+            # Add recovery database entry in catalog
+            $recoveryDatabase = Get-AzureRmSqlDatabase -ResourceGroupName $WingtipRecoveryResourceGroup -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
+            Set-ExtendedDatabase -Catalog $tenantCatalog -Database $recoveryDatabase
+          }
+          Set-TenantDatabaseRecoveryChecksum -Catalog $tenantCatalog -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
           $onlineTenantCount +=1
 
           # Update tenant recovery status to 'OnlineInRecovery'
@@ -196,7 +217,16 @@ while ($true)
         if ($tenant.TenantStatus -ne "Online")
         {
           Set-TenantOnline -Catalog $tenantCatalog -TenantKey $tenantKey
-          Set-TenantDatabaseRecoveryRowVersion -Catalog $tenantCatalog -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
+
+          # Check if recovery database entry exists in catalog for tenant
+          $recoveryDatabaseEntry = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
+          if (!$recoveryDatabaseEntry)
+          {
+            # Add recovery database entry in catalog
+            $recoveryDatabase = Get-AzureRmSqlDatabase -ResourceGroupName $WingtipRecoveryResourceGroup -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
+            Set-ExtendedDatabase -Catalog $tenantCatalog -Database $recoveryDatabase
+          }
+          Set-TenantDatabaseRecoveryChecksum -Catalog $tenantCatalog -ServerName $restoredTenantServer -DatabaseName $tenant.DatabaseName
           $onlineTenantCount += 1         
         }
       }
@@ -233,7 +263,7 @@ while ($true)
           $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startRepatriation" -TenantKey $tenantKey
         }
       }           
-      elseif (($originDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'RepatriatingTenantData'))
+      elseif (($restoredDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'RepatriatingTenantData'))
       {
         # Update tenant recovery status to 'RepatriatedTenantData'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endRepatriation" -TenantKey $tenantKey
@@ -268,7 +298,7 @@ while ($true)
           $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
         }          
       }
-      elseif (($originDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'RepatriatedTenantData'))
+      elseif (($restoredDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'RepatriatedTenantData'))
       {
         # Update tenant recovery status to 'UpdatingTenantShardToOrigin'
         $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startShardUpdateToOrigin" -TenantKey $tenantKey
@@ -296,7 +326,7 @@ while ($true)
           $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
         }  
       }
-      elseif (($originDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'UpdatingTenantShardToOrigin'))
+      elseif (($restoredDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'UpdatingTenantShardToOrigin'))
       {
         $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
         $originTenantServer = $originTenantDatabase.Name.Split('/')[0]  
@@ -324,7 +354,7 @@ while ($true)
           $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
         }  
       }
-      elseif (($originDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'OnlineInOrigin'))
+      elseif (($restoredDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'OnlineInOrigin'))
       {
         # Set tenant online if not already so 
         if ($tenant.TenantStatus -ne "Online")

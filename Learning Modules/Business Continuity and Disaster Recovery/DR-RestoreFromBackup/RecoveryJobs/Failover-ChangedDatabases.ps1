@@ -29,6 +29,11 @@ Import-Module "$using:scriptPath\..\..\Common\AzureSqlAsyncManagement" -Force
 Import-Module "$using:scriptPath\..\..\WtpConfig" -Force
 Import-Module "$using:scriptPath\..\..\UserConfig" -Force
 
+# Import-Module "$PSScriptRoot\..\..\..\Common\CatalogAndDatabaseManagement" -Force
+# Import-Module "$PSScriptRoot\..\..\..\Common\AzureSqlAsyncManagement" -Force
+# Import-Module "$PSScriptRoot\..\..\..\WtpConfig" -Force
+# Import-Module "$PSScriptRoot\..\..\..\UserConfig" -Force
+
 # Stop execution on error 
 $ErrorActionPreference = "Stop"
   
@@ -42,14 +47,11 @@ if (!$credentialLoad)
 # Get deployment configuration  
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
-$currentSubscriptionId = Get-SubscriptionId
-
 
 # Get the tenant catalog in the recovery region
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
 
 # Initialize replication variables
-$sleepInterval = 10
 $operationQueue = @()
 $operationQueueMap = @{}
 $failoverCount = 0
@@ -114,8 +116,15 @@ function Complete-AsynchronousDatabaseFailover
     $shardUpdate = Update-TenantShardInfo -Catalog $tenantCatalog -TenantName $databaseDetails.DatabaseName -FullyQualifiedTenantServerName "$originServerName.database.windows.net" -TenantDatabaseName $databaseDetails.DatabaseName
     if ($shardUpdate)
     {
-       # Update tenant database recovery state
+      # Update recovery state of tenant resources
+      $tenantDatabaseObject = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $restoredServerName -DatabaseName $databaseDetails.DatabaseName
+      $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $restoredServerName
       $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $restoredServerName -DatabaseName $databaseDetails.DatabaseName
+      if ($tenantDatabaseObject.ElasticPoolName)
+      {
+        $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $restoredServerName -ElasticPoolName $tenantDatabaseObject.ElasticPoolName
+      }
+
       if (!$dbState)
       {
         Write-Verbose "Could not update recovery state for database: '$restoredServerName/$($databaseDetails.DatabaseName)'"
@@ -151,17 +160,56 @@ foreach ($database in $replicatedDatabaseList)
 # Add tenant databases that have been changed in the recovery region to queue of databases that will be failed over
 foreach ($tenant in $tenantList)
 {
-  $tenantDataChanged = Test-IfTenantDataChanged -Catalog $tenantCatalog -TenantName $tenant.TenantName
-  $tenantServerName = $tenant.ServerName.split('.')[0]
-  $tenantDatabaseObject = $tenantDatabaseList | Where-Object{(($_.ServerName -eq $tenantServerName) -and ($_.DatabaseName -eq $tenant.DatabaseName))}
-
-  if ($tenantDataChanged -and ($tenantDatabaseObject.RecoveryState -ne 'complete') -and ($tenantDatabaseObject -NotIn $failoverQueue))
+  if ($tenant.TenantRecoveryState -ne 'OnlineInOrigin')
   {
-    $dbProperties = @{
-      "ServerName" = $tenantDatabaseObject.ServerName
-      "DatabaseName" = $tenantDatabaseObject.DatabaseName
+    $currTenantServerName = $tenant.ServerName.split('.')[0]
+    $originTenantServerName = ($currTenantServerName -split "$($config.RecoveryRoleSuffix)$")[0]
+    $recoveryTenantServerName = $originTenantServerName + $config.RecoveryRoleSuffix
+
+    # Get replication status of tenant database in recovery region
+    $replicationLink = Get-AzureRmSqlDatabaseReplicationLink `
+                          -ResourceGroupName $WingtipRecoveryResourceGroup `
+                          -ServerName $recoveryTenantServerName `
+                          -DatabaseName $tenant.DatabaseName `
+                          -PartnerResourceGroupName $wtpUser.ResourceGroupName `
+                          -PartnerServerName $originTenantServerName `
+                          -ErrorAction SilentlyContinue
+  
+    # Check if tenant database has already been failed over to origin
+    if ($replicationLink.Role -ne 'Secondary')
+    {
+      $tenantDataChanged = Test-IfTenantDataChanged -Catalog $tenantCatalog -TenantName $tenant.TenantName
+      $tenantOriginDatabaseExists = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $tenantOriginServerName -DatabaseName $tenant.DatabaseName
+      
+      if ($tenantDataChanged)
+      {
+        $dbProperties = @{
+          "ServerName" = $currTenantServerName
+          "DatabaseName" = $tenant.DatabaseName
+        }
+        $failoverQueue += $dbProperties
+      }
+      elseif(!$tenantOriginDatabaseExists)
+      {
+        # Include tenants that were added in the recovery region
+        $dbProperties = @{
+          "ServerName" = $currTenantServerName
+          "DatabaseName" = $tenant.DatabaseName
+        }
+        $failoverQueue += $dbProperties
+      }
     }
-    $failoverQueue += $dbProperties
+    else
+    {
+      # Update recovery state of tenant resources
+      $tenantDatabaseObject = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $recoveryTenantServerName -DatabaseName $tenant.DatabaseName
+      $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $recoveryTenantServerName
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $recoveryTenantServerName -DatabaseName $tenant.DatabaseName
+      if ($tenantDatabaseObject.ElasticPoolName)
+      {
+        $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $recoveryTenantServerName -ElasticPoolName $tenantDatabaseObject.ElasticPoolName
+      }
+    }    
   }
 }
 $replicatedDatabaseCount = $failoverQueue.Count
@@ -192,8 +240,10 @@ else
         $failoverQueue = $failoverQueue -ne $dbProperties
         $originServerName = ($database.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
 
-        # Update database recovery state
+        # Update recovery state of tenant resources
+        $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $database.ServerName
         $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
+        $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $database.ServerName -ElasticPoolName $database.ElasticPoolName
 
         # Issue asynchronous call to failover databases
         $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $originServerName -TenantDatabaseName $database.DatabaseName

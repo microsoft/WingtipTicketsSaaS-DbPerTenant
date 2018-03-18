@@ -93,18 +93,7 @@ while (1 -eq 1)
             # add server entry to catalog
             Set-ExtendedServer -Catalog $catalog -Server $server
         }  
-    }
-
-    # Remove any catalog server entries representing servers that no longer hold tenants
-    foreach ($syncedTenantServer in $syncedTenantServers)
-    {
-        # Do not remove servers that will be used for disaster recovery 
-        if (($servers.ServerName -notcontains $syncedTenantServer.ServerName) -and ($syncedTenantServer.RecoveryState -notmatch 'restored$|replicated$'))
-        {
-            # remove the entry from the catalog
-            Remove-ExtendedServer -Catalog $catalog -ServerName $syncedTenantServer.ServerName
-        }
-    }
+    }   
 
     #----------------------------------------------------[Synchronize Elastic Pools]------------------------------------------------------------
     Write-Output "Synchronizing tenant elastic pools..."
@@ -159,18 +148,7 @@ while (1 -eq 1)
                 Set-ExtendedElasticPool -Catalog $catalog -ElasticPool $elasticPool
             }           
         }
-    }
-
-    # Remove any catalog entries for elastic pools that no longer exist
-    foreach ($syncedElasticPool in $syncedElasticPools)
-    {
-        # Do not remove elastic pools that will be used for disaster recovery 
-        if (($elasticPools.compoundElasticPoolName -notcontains $syncedElasticPool.compoundElasticPoolName) -and ($syncedElasticPool.RecoveryState -NotIn "restored", "replicated"))
-        {
-            # remove the elastic pool entry from the catalog
-            Remove-ExtendedElasticPool -Catalog $catalog -ServerName $syncedElasticPool.ServerName -ElasticPoolName $syncedElasticPool.ElasticPoolName
-        }
-    }
+    }   
 
     #-----------------------------------------------------[Synchronize databases]------------------------------------------------------------
     Write-Output "Synchronizing tenant databases..."
@@ -223,17 +201,6 @@ while (1 -eq 1)
             {
                 Set-ExtendedDatabase -Catalog $catalog -Database $tenantDatabase
             }
-        }
-    }
-
-    # Remove any catalog entries for tenant databases that no longer exist 
-    foreach ($syncedDatabase in $syncedDatabases)
-    {
-        # Do not remove databases that will be used for disaster recovery 
-        if (($tenantDatabases.compoundDatabaseName -notcontains $syncedDatabase.compoundDatabaseName) -and ($syncedDatabase.RecoveryState -NotIn "restored", "failedOver", "replicated"))
-        {
-            # remove the tenant database entry from the catalog
-            Remove-ExtendedDatabase -Catalog $catalog -ServerName $syncedDatabase.ServerName -DatabaseName $syncedDatabase.DatabaseName
         }
     }
 

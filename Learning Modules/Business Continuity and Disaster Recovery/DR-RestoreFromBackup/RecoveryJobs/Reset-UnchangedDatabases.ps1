@@ -46,11 +46,16 @@ $resetDatabaseCount = 0
 $tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
 foreach ($tenant in $tenantList)
 {
+  $recoveryTenantServerName = $tenant.ServerName.Split('.')[0]
+  $originTenantServerName = ($recoveryTenantServerName -split "$($config.RecoveryRoleSuffix)$")[0]
+  $originTenantDatabaseExists = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $originTenantServerName -DatabaseName $tenant.DatabaseName
   $tenantDataChanged = Test-IfTenantDataChanged -Catalog $tenantCatalog -TenantName $tenant.TenantName
-  if (!$tenantDataChanged)
+  
+  if (!$tenantDataChanged -and $originTenantDatabaseExists)
   {
     $unchangedTenantDatabases += $tenant
-  }
+  }  
+    
 }
 
 # Output recovery progress 
@@ -70,22 +75,33 @@ else
   foreach ($tenant in $unchangedTenantDatabases)
   {
     $tenantKey = Get-TenantKey $tenant.TenantName
-    $originTenantServerName = ($tenant.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
+    $currTenantServerName = $tenant.ServerName.split('.')[0]
+    $originTenantServerName = ($currTenantServerName -split "$($config.RecoveryRoleSuffix)")[0]
+    $recoveryTenantServerName = $originTenantServerName + $config.RecoveryRoleSuffix
 
-    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReset" -ServerName $tenant.ServerName -DatabaseName $tenant.DatabaseName
-
-    # Update tenant resources to origin region
-    Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
-    $tenantReset = Update-TenantShardInfo -Catalog $tenantCatalog -TenantName $tenant.TenantName -FullyQualifiedTenantServerName "$originTenantServerName.database.windows.net" -TenantDatabaseName $tenant.DatabaseName
-    if ($tenantReset)
+    if ($currTenantServerName -ne $originTenantServerName)
     {
-      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -ServerName $originTenantServerName -DatabaseName $tenant.DatabaseName
-      $resetDatabaseCount+=1
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReset" -ServerName $currTenantServerName -DatabaseName $tenant.DatabaseName
+
+      # Update tenant resources to origin region
+      Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+      $tenantReset = Update-TenantShardInfo -Catalog $tenantCatalog -TenantName $tenant.TenantName -FullyQualifiedTenantServerName "$originTenantServerName.database.windows.net" -TenantDatabaseName $tenant.DatabaseName
+      
+      if ($tenantReset)
+      {
+        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -ServerName $currTenantServerName -DatabaseName $tenant.DatabaseName
+        $resetDatabaseCount+=1
+      }
+      else
+      {
+        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $currTenantServerName -DatabaseName $tenant.DatabaseName
+      }
     }
     else
     {
-      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $tenant.ServerName -DatabaseName $tenant.DatabaseName
-    }
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReset" -ServerName $currTenantServerName -DatabaseName $tenant.DatabaseName
+      $resetDatabaseCount+=1
+    }    
 
     # Output recovery progress 
     $DatabaseRecoveryPercentage = [math]::Round($resetDatabaseCount/$unchangedDatabaseCount,2)

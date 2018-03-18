@@ -7,7 +7,7 @@
   "resources": [ 
   { 
     "apiVersion": "2015-01-01", 
-    "name": "[concat('PoolRecovery-',parameters('PoolConfigurationObjects')[copyIndex()].ElasticPoolName)]",
+    "name": "[concat('PoolRecovery-',parameters('PoolConfigurationObjects')[copyIndex()].ServerName,'-',parameters('PoolConfigurationObjects')[copyIndex()].ElasticPoolName)]",
     "type": "Microsoft.Resources/deployments",
     "copy": { 
       "name": "recoverypools",

@@ -3,9 +3,6 @@ GO
 
 CREATE VIEW [dbo].[TenantsExtended]
     AS        
-        WITH databasesWithPriority AS (
-            SELECT *, RANK() OVER (PARTITION BY DatabaseName ORDER BY LastUpdated DESC) AS databasePriority FROM Databases  
-        )
         SELECT      tenant.TenantId,
                     tenant.TenantName,
                     CASE
@@ -27,6 +24,6 @@ CREATE VIEW [dbo].[TenantsExtended]
         JOIN        [__ShardManagement].[ShardMappingsGlobal] AS mapping ON (tenant.TenantId = mapping.MinValue)
         JOIN        [__ShardManagement].[ShardMapsGlobal] AS map ON (map.ShardMapId = mapping.ShardMapId)
         JOIN        [__ShardManagement].[ShardsGlobal] as shard ON (shard.ShardId = mapping.ShardId AND shard.ShardMapId = map.ShardMapId AND mapping.ShardMapId = map.ShardMapId)
-        LEFT JOIN   databasesWithPriority AS tenantDB ON (tenantDB.DatabaseName = shard.DatabaseName AND tenantDB.databasePriority = 1)
+        LEFT JOIN   Databases AS tenantDB ON (tenantDB.DatabaseName = shard.DatabaseName AND tenantDB.ServerName + '.database.windows.net' = shard.ServerName)
         LEFT JOIN   Servers AS tenantServer ON (tenantServer.ServerName = tenantDB.ServerName)
         WHERE       (map.Name = 'tenantcatalog');

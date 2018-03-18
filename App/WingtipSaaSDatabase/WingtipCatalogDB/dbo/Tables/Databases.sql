@@ -6,7 +6,7 @@ CREATE TABLE [dbo].[Databases]
     [ElasticPoolName] NVARCHAR(128) NULL, 
     [State] NVARCHAR(30) NOT NULL DEFAULT 'initial',
     [RecoveryState] NVARCHAR(30) NULL,
-	[RecoveryRowversion] BINARY(8) NULL,
+	[RecoveryChecksum] INT NULL,
     [LastUpdated] DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT [PK_Databases] PRIMARY KEY CLUSTERED ([ServerName],[DatabaseName])
 )

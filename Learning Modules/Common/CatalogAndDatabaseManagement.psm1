@@ -440,7 +440,7 @@ function Get-ExtendedDatabase{
 
     $config = Get-Configuration
 
-    $commandText = "SELECT DatabaseName, ServerName, ServiceObjective, ElasticPoolName, State, RecoveryState, RecoveryRowVersion, LastUpdated FROM [dbo].[Databases]"        
+    $commandText = "SELECT DatabaseName, ServerName, ServiceObjective, ElasticPoolName, State, RecoveryState, RecoveryChecksum, LastUpdated FROM [dbo].[Databases]"        
 
     # Qualify query if ServerName is specified
     if($ServerName)
@@ -684,7 +684,7 @@ function Get-Tenant
 <#
 .SYNOPSIS
     Returns an array of all tenants registered in the catalog.
-    The returned array contains the TenantName, TenantKey of all registered tenants
+    The returned array contains the TenantName, TenantKey, and ServicePlan of all registered tenants
 #>
 function Get-Tenants
 {
@@ -693,20 +693,31 @@ function Get-Tenants
         [object]$Catalog
     )
 
-    $tenantShards = $Catalog.ShardMap.GetMappings()
-    $registeredTenants = @()
+    $config = Get-Configuration
 
-    foreach ($tenantShard in $tenantShards)
+    $commandText = "SELECT TenantId, TenantName, ServicePlan FROM [dbo].[Tenants]"    
+    $tenantList = Invoke-SqlAzureWithRetry `
+                    -ServerInstance $Catalog.FullyQualifiedServerName `
+                    -Database $Catalog.Database.DatabaseName `
+                    -Query $commandText `
+                    -UserName $config.CatalogAdminUserName `
+                    -Password $config.CatalogAdminPassword `
+                    -ConnectionTimeout 30 `
+                    -QueryTimeout 15 `
+
+    $registeredTenants = @()
+    foreach ($tenant in $tenantList)
     {
+        $tenantKey = Get-TenantKey $tenant.TenantName
         $tenant = New-Object PSObject -Property @{
-            Name = $tenantShard.Shard.Location.Database
-            Key = $tenantShard.Value
+            Name = $tenant.TenantName
+            Key = $tenantKey
+            ServicePlan = $tenant.ServicePlan
         }
 
         # store tenant object in array
         $registeredTenants+= $tenant
     }
-
     return $registeredTenants            
 }
 
@@ -2019,52 +2030,22 @@ function Set-ExtendedDatabase {
     )
     $config = Get-Configuration
 
-    if ($Database.ServerName -match "$($config.RecoveryRoleSuffix)$")
-    {
-        $commandText = "SELECT @@DBTS AS Value"
-        $rawValueBytes =  Invoke-SqlAzureWithRetry `
-                                -ServerInstance "$($Database.ServerName).database.windows.net" `
-                                -Database $Database.DatabaseName `
-                                -Query $commandText `
-                                -UserName $config.TenantAdminUserName `
-                                -Password $config.TenantAdminPassword
-        $rawValueString = [BitConverter]::ToString($rawValueBytes.Value)
-        $recoveryRowVersion = "0x" + $rawValueString.Replace("-", "")  
-    
-        $commandText = "
-            MERGE INTO [dbo].[Databases] AS [target]
-            USING (VALUES
-                ('$($Database.ServerName)', '$($Database.DatabaseName)', '$($Database.CurrentServiceObjectiveName)', '$($Database.ElasticPoolName)', CURRENT_TIMESTAMP))
-            AS [source]
-                (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, LastUpdated)
-            ON target.ServerName = source.ServerName AND target.DatabaseName = source.DatabaseName 
-            WHEN MATCHED THEN
-                UPDATE SET
-                    ServiceObjective = source.ServiceObjective,
-                    ElasticPoolName = source.ElasticPoolName,
-                    LastUpdated = source.LastUpdated
-            WHEN NOT MATCHED THEN
-                INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, RecoveryState, RecoveryRowVersion, LastUpdated)
-                VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', 'n/a', $recoveryRowVersion, LastUpdated);"
-    }
-    else
-    {
-        $commandText = "
-            MERGE INTO [dbo].[Databases] AS [target]
-            USING (VALUES
-                ('$($Database.ServerName)', '$($Database.DatabaseName)', '$($Database.CurrentServiceObjectiveName)', '$($Database.ElasticPoolName)', CURRENT_TIMESTAMP))
-            AS [source]
-                (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, LastUpdated)
-            ON target.ServerName = source.ServerName AND target.DatabaseName = source.DatabaseName 
-            WHEN MATCHED THEN
-                UPDATE SET
-                    ServiceObjective = source.ServiceObjective,
-                    ElasticPoolName = source.ElasticPoolName,
-                    LastUpdated = source.LastUpdated
-            WHEN NOT MATCHED THEN
-                INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, RecoveryState, LastUpdated)
-                VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', 'n/a', LastUpdated);"
-    }
+   
+    $commandText = "
+        MERGE INTO [dbo].[Databases] AS [target]
+        USING (VALUES
+            ('$($Database.ServerName)', '$($Database.DatabaseName)', '$($Database.CurrentServiceObjectiveName)', '$($Database.ElasticPoolName)', CURRENT_TIMESTAMP))
+        AS [source]
+            (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, LastUpdated)
+        ON target.ServerName = source.ServerName AND target.DatabaseName = source.DatabaseName 
+        WHEN MATCHED THEN
+            UPDATE SET
+                ServiceObjective = source.ServiceObjective,
+                ElasticPoolName = source.ElasticPoolName,
+                LastUpdated = source.LastUpdated
+        WHEN NOT MATCHED THEN
+            INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, RecoveryState, LastUpdated)
+            VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', 'n/a', LastUpdated);"    
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -2162,9 +2143,9 @@ function Set-ExtendedServer {
 
 <#
 .SYNOPSIS
-    Adds or updates the recovery row version of a tenant database
+    Adds or updates the recovery checksum of a tenant database
 #>
-function Set-TenantDatabaseRecoveryRowVersion
+function Set-TenantDatabaseRecoveryChecksum
 {
     param(
     [parameter(Mandatory=$true)]
@@ -2178,19 +2159,33 @@ function Set-TenantDatabaseRecoveryRowVersion
     )
 
     $config = Get-Configuration
-    $commandText = "SELECT @@DBTS AS Value"
-    $rawValueBytes =  Invoke-SqlAzureWithRetry `
-                        -ServerInstance "$ServerName.database.windows.net" `
-                        -Database $DatabaseName `
-                        -Query $commandText `
-                        -UserName $config.TenantAdminUserName `
-                        -Password $config.TenantAdminPassword
-    $rawValueString = [BitConverter]::ToString($rawValueBytes.Value)
-    $recoveryRowVersion = "0x" + $rawValueString.Replace("-", "")  
+    $commandText = "
+    WITH RowVersionSums AS
+    (
+        SELECT SUM(CAST(Rowversion AS bigint)) AS RowVersionSum from dbo.Customers
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Events
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Venue
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Sections
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.EventSections
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.TicketPurchases
+    )
+    SELECT SUM(RowVersionSum) AS RecoveryChecksum FROM RowVersionSums;"
+    $result =  Invoke-SqlAzureWithRetry `
+                    -ServerInstance "$ServerName.database.windows.net" `
+                    -Database $DatabaseName `
+                    -Query $commandText `
+                    -UserName $config.TenantAdminUserName `
+                    -Password $config.TenantAdminPassword 
+    $recoveryChecksum = $result.RecoveryChecksum     
     
     $commandText = "
     UPDATE [dbo].[Databases]
-    SET    RecoveryRowVersion = $recoveryRowVersion
+    SET    RecoveryChecksum = $recoveryChecksum
     WHERE  ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';
     "
     $commandOutput = Invoke-SqlAzureWithRetry `
@@ -2418,27 +2413,7 @@ function Stop-TenantRestoreOperations
                             -Database $Catalog.Database.DatabaseName `
                             -Query $cancelRestoreOperationsQuery `
                             -UserName $config.CatalogAdminUserName `
-                            -Password $config.CatalogAdminPassword
-
-        # Update recovery states of affected tenants
-        $tenantRecoveryStates = @{ 'startReset' = @{"beginState" = ('RestoringTenantData', 'RestoredTenantData', 'UpdatingTenantShardToRecovery', 'OnlineInRecovery'); "endState" = ('ResettingTenantToOrigin')} }
-        $requestedState = $tenantRecoveryStates['startReset'].endState
-        $validInitialStates = $tenantRecoveryStates['startReset'].beginState
-        $validInitialStates = "'$($validInitialStates -join "','")'"
-        
-        $updateTenantStateQuery = "
-        UPDATE  [dbo].[Tenants] SET
-                RecoveryState = '$requestedState',
-                LastUpdated = CURRENT_TIMESTAMP
-        WHERE   RecoveryState IN ($validInitialStates)
-        "
-
-        $commandOutput = Invoke-SqlAzureWithRetry `
-                            -ServerInstance $Catalog.FullyQualifiedServerName `
-                            -Database $Catalog.Database.DatabaseName `
-                            -Query $updateTenantStateQuery `
-                            -UserName $config.CatalogAdminUserName `
-                            -Password $config.CatalogAdminPassword        
+                            -Password $config.CatalogAdminPassword            
     } 
 }
 
@@ -2460,26 +2435,42 @@ function Test-IfTenantDataChanged
 
     $config = Get-Configuration
     $tenantProperties = Get-ExtendedTenant -Catalog $Catalog -TenantKey (Get-TenantKey $TenantName)
-    $tenantServerName = $tenantProperties.ServerName.split('.')[0] 
+    $tenantServerName = $tenantProperties.ServerName.split('.')[0]
     $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $Catalog -ServerName $tenantServerName -DatabaseName $tenantProperties.DatabaseName
-    $recoveryRowVersion = $tenantDatabaseProperties.RecoveryRowVersion
+    $recoveryChecksum = $tenantDatabaseProperties.RecoveryChecksum
 
     # Return false if tenant database has not been recovered
-    if (!$recoveryRowVersion)
+    if ($recoveryChecksum.GetType().Name -eq 'DBNull')
     {
         return $false
     }
 
     # Retrieve current tenant database rowversion
-    $commandText = "SELECT @@DBTS AS Value"
-    $currRowVersion =  Invoke-SqlAzureWithRetry `
+    $commandText = "
+    WITH RowVersionSums AS
+    (
+        SELECT SUM(CAST(Rowversion AS bigint)) AS RowVersionSum from dbo.Customers
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Events
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Venue
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Sections
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.EventSections
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.TicketPurchases
+    )
+    SELECT SUM(RowVersionSum) AS RecoveryChecksum FROM RowVersionSums;"
+    $result =  Invoke-SqlAzureWithRetry `
                             -ServerInstance $tenantProperties.ServerName `
                             -Database $tenantProperties.DatabaseName `
                             -Query $commandText `
                             -UserName $config.TenantAdminUserName `
                             -Password $config.TenantAdminPassword
+    $currChecksum = $result.RecoveryChecksum
     
-    if ($currRowVersion.Value -eq $recoveryRowVersion)
+    if ($currChecksum -eq $recoveryChecksum)
     {
         return $false
     }
@@ -2888,12 +2879,14 @@ function Update-TenantResourceRecoveryState
         --------------------------------------------------------------------------
         restoring               |   resetting           |   cancelAndReset     (reset back to origin if region comes back online during recovery operations)
         n/a                     |   resetting           |   cancelAndReset     (reset back to origin if region comes back online during recovery operations)       
+        n/a                     |   resetting           |   startReset         (reset back to origin if data in recovery region is identical to origin region)                
         restored                |   resetting           |   startReset         (reset back to origin if data in recovery region is identical to origin region)        
         errorState              |   resetting           |   startReset         (reset back to origin if data in recovery region is identical to origin region)
         resetting               |   complete            |   endReset           (reset operations successfully completed)
         resetting               |   errorState          |   markError          (reset operations failed)
         --------------------------------------------------------------------------
         restoring               |   restored            |   endRecovery        (recovery operations successfully completed)
+        complete                |   restored            |   endRecovery        (recovery operations successfully completed)
         failingOver             |   failedOver          |   endFailover        (failover operations successfully completed)
         restoring               |   errorState          |   markError          (recovery operations failed)
         failingOver             |   errorState          |   markError          (failover operations failed)
@@ -2919,10 +2912,10 @@ function Update-TenantResourceRecoveryState
         'startRecovery' = @{ "beginState" = ('n/a', 'complete', 'errorState'); "endState" = ('restoring') };
         'startFailover' = @{ "beginState" = ('n/a', 'complete', 'errorState'); "endState" = ('failingOver') };
         'cancelAndReset' = @{ "beginState" = ('restoring', 'n/a'); "endState" = ('resetting') };
-        'startReset' = @{ "beginState" = ('restored', 'errorState'); "endState" = ('resetting') };
+        'startReset' = @{ "beginState" = ('n/a','restored', 'errorState'); "endState" = ('resetting') };
         'endReset' = @{ "beginState" = ('resetting'); "endState" = ('complete') };
         'markError' = @{ "beginState" = ('restoring', 'resetting', 'failingOver', 'replicating', 'repatriating'); "endState" = ('errorState')};
-        'endRecovery' = @{ "beginState" = ('restoring'); "endState" = ('restored') };
+        'endRecovery' = @{ "beginState" = ('restoring','complete'); "endState" = ('restored') };
         'endFailover' = @{ "beginState" = ('failingOver'); "endState" = ('failedOver') };        
         'startReplication' = @{ "beginState" = ('restored', 'errorState', 'n/a'); "endState" = ('replicating') };
         'endReplication' = @{ "beginState" = ('replicating'); "endState" = ('replicated') };

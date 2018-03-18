@@ -101,7 +101,7 @@ foreach ($server in $serverList)
     # Mark servers in queue as recovering
     $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -ServerName $server.ServerName
   }
-  elseif (($server.RecoveryState -In "restoring") -and ($restoredServers.Name -contains $serverRecoveryName))
+  elseif (($server.RecoveryState -In "restoring", "complete") -and ($restoredServers.Name -contains $serverRecoveryName))
   {
     # Mark previously recovered servers
     $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $server.ServerName

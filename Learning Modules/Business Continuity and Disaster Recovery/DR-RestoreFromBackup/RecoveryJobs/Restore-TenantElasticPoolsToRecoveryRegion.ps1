@@ -86,7 +86,7 @@ foreach ($pool in $tenantElasticPools)
   $compoundPoolName = "$($recoveredServerName)/$($pool.ElasticPoolName)"
   $pool | Add-Member "CompoundPoolName" $compoundPoolName
 
-  if (($restoredElasticPools.Name -contains $pool.CompoundPoolName) -and ($pool.RecoveryState -In 'restoring'))
+  if (($restoredElasticPools.Name -contains $pool.CompoundPoolName) -and ($pool.RecoveryState -In 'restoring', 'complete'))
   {
     $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $pool.ServerName -ElasticPoolName $pool.ElasticPoolName
     $recoveredPoolCount += 1
