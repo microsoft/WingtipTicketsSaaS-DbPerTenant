@@ -6,7 +6,7 @@
 
 ## ---------------  PARAMETERS ----------------------------------------------------------------------
 
-$DemoScenario = 1
+$DemoScenario = 3
 <# Select the scenario that will be run. Run the scenarios below in order. 
    Scenario
       1     Start synchronizing tenant server, pool, and database configuration info into the catalog

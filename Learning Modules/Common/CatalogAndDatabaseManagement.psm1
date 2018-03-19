@@ -706,13 +706,13 @@ function Get-Tenants
                     -QueryTimeout 15 `
 
     $registeredTenants = @()
-    foreach ($tenant in $tenantList)
+    foreach ($extendedTenant in $tenantList)
     {
-        $tenantKey = Get-TenantKey $tenant.TenantName
+        $tenantKey = Get-TenantKey $extendedTenant.TenantName
         $tenant = New-Object PSObject -Property @{
-            Name = $tenant.TenantName
+            Name = $extendedTenant.TenantName
             Key = $tenantKey
-            ServicePlan = $tenant.ServicePlan
+            ServicePlan = $extendedTenant.ServicePlan
         }
 
         # store tenant object in array
@@ -1733,7 +1733,8 @@ function Remove-Tenant
 
     $tenantMapping = $Catalog.ShardMap.GetMappingForKey($TenantKey)
     $tenantShardLocation = $tenantMapping.Shard.Location
-    $tenantServerName = $tenantShardLocation.Server
+    $fullyQualifiedTenantServerName = $tenantShardLocation.Server
+    $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0]
 
     # Find tenant server in Azure 
     $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
@@ -1762,7 +1763,8 @@ function Remove-Tenant
     # Delete tenant database, ignore error if already deleted
     if (!$KeepTenantDatabase)
     {
-        Remove-AzureRmSqlDatabase -ResourceGroupName $tenantServer.ResourceGroupName `
+        Remove-AzureRmSqlDatabase `
+            -ResourceGroupName $tenantServer.ResourceGroupName `
             -ServerName $tenantServerName `
             -DatabaseName $tenantShard.Location.Database `
             -ErrorAction Continue `
@@ -1773,7 +1775,7 @@ function Remove-Tenant
     Remove-ExtendedTenant `
         -Catalog $Catalog `
         -TenantKey $TenantKey `
-        -ServerName $tenantServerName `
+        -ServerName $fullyQualifiedTenantServerName `
         -DatabaseName $tenantShard.Location.Database    
 }
 

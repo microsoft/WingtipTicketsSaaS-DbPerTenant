@@ -88,7 +88,7 @@ foreach ($server in $serverList)
   {
     $serverQueue += $serverRecoveryName
     $tenantAdmins += $config.TenantAdminUserName
-    $tenantAdminPasswords += $config.TenantAdminPassword    
+    $tenantAdminPasswords += "$($config.TenantAdminPassword)"    
   }
   else
   {

@@ -30,6 +30,7 @@ Import-Module "$using:scriptPath\..\..\WtpConfig" -Force
 Import-Module "$using:scriptPath\..\..\UserConfig" -Force
 
 # Import-Module "$PSScriptRoot\..\..\..\Common\CatalogAndDatabaseManagement" -Force
+# Import-Module "$PSScriptRoot\..\..\..\Common\AzureSqlAsyncManagement" -Force
 # Import-Module "$PSScriptRoot\..\..\..\WtpConfig" -Force
 # Import-Module "$PSScriptRoot\..\..\..\UserConfig" -Force
 
@@ -45,6 +46,7 @@ if (!$credentialLoad)
 
 # Get deployment configuration  
 $wtpUser = Get-UserConfig
+$config = Get-Configuration
 
 # Get the tenant catalog in the recovery region
 $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
@@ -76,10 +78,10 @@ function Start-AsynchronousDatabaseFailover
 
   # Get replication link Id
   $replicationObject = Get-AzureRmSqlDatabaseReplicationLink `
-                          -ResourceGroupName $wtpUser.ResourceGroupName `
+                          -ResourceGroupName $WingtipRecoveryResourceGroup `
                           -ServerName $SecondaryTenantServerName `
                           -DatabaseName $TenantDatabaseName `
-                          -PartnerResourceGroupName $WingtipRecoveryResourceGroup
+                          -PartnerResourceGroupName $wtpUser.ResourceGroupName
 
   # Issue asynchronous failover operation
   $taskObject = Invoke-AzureSQLDatabaseFailoverAsync `
@@ -159,16 +161,20 @@ foreach ($tenant in $eligibleTenantList)
   {
     # Get replication status of tenant database
     $replicationLink = Get-AzureRmSqlDatabaseReplicationLink `
-                            -ResourceGroupName $wtpUser.ResourceGroupName `
-                            -ServerName $originTenantServerName `
-                            -DatabaseName $tenant.DatabaseName `
-                            -PartnerResourceGroupName $WingtipRecoveryResourceGroup `
-                            -PartnerServerName $recoveryTenantServerName `
-                            -ErrorAction Stop
+                        -ResourceGroupName $WingtipRecoveryResourceGroup `
+                        -ServerName $recoveryTenantServerName `
+                        -DatabaseName $tenant.DatabaseName `
+                        -PartnerResourceGroupName $wtpUser.ResourceGroupName `
+                        -PartnerServerName $originTenantServerName `
+                        -ErrorAction Stop
 
-    if ($replicationLink.Role -eq 'Primary')
+    if (!$replicationLink)
     {
-      failoverQueue += $originDatabase
+      throw "Could not find replication link for tenant database: $originTenantServerName/$($tenant.DatabaseName)"
+    }
+    elseif ($replicationLink.Role -eq 'Secondary')
+    {
+      $failoverQueue += $originDatabase
     }
     else
     {
@@ -182,7 +188,7 @@ $replicatedDatabaseCount = $failoverQueue.Count
 
 if ($replicatedDatabaseCount -eq 0)
 {
-  Write-Output "100% (0 of 0)"
+  Write-Output "100% ($failoverCount of $replicatedDatabaseCount)"
   exit
 }
 
@@ -203,14 +209,14 @@ while ($operationQueue.Count -le $MaxConcurrentFailoverOperations)
       "DatabaseName" = $currentDatabase.DatabaseName
     }
     $failoverQueue = $failoverQueue -ne $currentDatabase
+    $originServerName = ($currentDatabase.ServerName -split "$($config.RecoveryRoleSuffix)$")[0]
+    $recoveryServerName = $originServerName + $config.RecoveryRoleSuffix
 
     # Update recovery state of tenant resources
-    $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailover" -ServerName $currentDatabase.ServerName
     $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailover" -ServerName $currentDatabase.ServerName -DatabaseName $currentDatabase.DatabaseName
-    $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailover" -ServerName $currentDatabase.ServerName -ElasticPoolName $currentDatabase.ElasticPoolName
 
     # Issue asynchronous failover request
-    $operationObject = Start-AsynchronousDatabaseReplication -AzureContext $azureContext -TenantDatabase $currentDatabase
+    $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $recoveryTenantServerName -TenantDatabaseName $currentDatabase.DatabaseName
     $databaseDetails = @{
       "ServerName" = $currentDatabase.ServerName
       "DatabaseName" = $currentDatabase.DatabaseName
@@ -249,6 +255,8 @@ while ($operationQueue.Count -gt 0)
           "DatabaseName" = $currentDatabase.DatabaseName
         }
         $failoverQueue = $failoverQueue -ne $currentDatabase
+        $originServerName = ($currentDatabase.ServerName -split "$($config.RecoveryRoleSuffix)$")[0]
+        $recoveryServerName = $originServerName + $config.RecoveryRoleSuffix
 
         # Update recovery state of tenant resources
         $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailover" -ServerName $currentDatabase.ServerName
@@ -256,7 +264,7 @@ while ($operationQueue.Count -gt 0)
         $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailover" -ServerName $currentDatabase.ServerName -ElasticPoolName $currentDatabase.ElasticPoolName
 
         # Issue asynchronous failover request
-        $operationObject = Start-AsynchronousDatabaseReplication -AzureContext $azureContext -TenantDatabase $currentDatabase
+        $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $recoveryServerName -TenantDatabaseName $currentDatabase.DatabaseName
         $databaseDetails = @{
           "ServerName" = $currentDatabase.ServerName
           "DatabaseName" = $currentDatabase.DatabaseName
@@ -290,7 +298,7 @@ while ($operationQueue.Count -gt 0)
       $failoverJobId = $failoverJob.Id
       $databaseDetails = $operationQueueMap["$failoverJobId"]
 
-      Write-Verbose "Could not replicate database: '$($databaseDetails.ServerName)/$($databaseDetails.DatabaseName)'"      
+      Write-Verbose "Could not failover database: '$($databaseDetails.ServerName)/$($databaseDetails.DatabaseName)'"      
     }
   }
 }

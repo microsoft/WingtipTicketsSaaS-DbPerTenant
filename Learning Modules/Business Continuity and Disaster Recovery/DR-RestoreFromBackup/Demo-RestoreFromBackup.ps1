@@ -148,7 +148,7 @@ if ($DemoScenario -eq 6)
   # Remove recovery server entries from the catalog
   foreach($recoveryserver in $recoveryServerList)
   {
-    Remove-ExtendedServer -Catalog $tenantCatalog -ServerName $recoveryserver > $null
+    Remove-ExtendedServer -Catalog $tenantCatalog -ServerName $recoveryserver.ServerName > $null
   }
 
   # Remove recovery elastic pool entries from the catalog

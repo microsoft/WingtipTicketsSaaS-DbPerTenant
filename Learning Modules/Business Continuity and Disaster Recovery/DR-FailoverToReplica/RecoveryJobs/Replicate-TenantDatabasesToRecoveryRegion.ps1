@@ -77,7 +77,7 @@ function Start-AsynchronousDatabaseReplication
   )
 
   # Construct replication parameters
-  $recoveryServerName = TenantDatabase.ServerName + $config.RecoveryRoleSuffix
+  $recoveryServerName = $TenantDatabase.ServerName + $config.RecoveryRoleSuffix
   $recoveryServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceNameEquals $recoveryServerName
   $databaseId = "/subscriptions/$currentSubscriptionId/resourceGroups/$($wtpUser.ResourceGroupName)/providers/Microsoft.Sql/servers/$($TenantDatabase.ServerName)/databases/$($TenantDatabase.DatabaseName)"
 
@@ -289,6 +289,7 @@ while ($operationQueue.Count -gt 0)
       Write-Verbose "Could not replicate database: '$($databaseDetails.ServerName)/$($databaseDetails.DatabaseName)'"      
     }
   }
+}
 
 # Output replication progress
 $DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$tenantDatabaseCount,2)

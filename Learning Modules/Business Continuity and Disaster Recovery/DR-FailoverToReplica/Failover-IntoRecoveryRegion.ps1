@@ -28,9 +28,9 @@ param (
 #----------------------------------------------------------[Initialization]----------------------------------------------------------
 
 Import-Module $PSScriptRoot\..\..\Common\CatalogAndDatabaseManagement -Force
+Import-Module $PSScriptRoot\..\..\Common\FormatJobOutput -Force
 Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 Import-Module $PSScriptRoot\..\..\UserConfig -Force
-Import-Module $PSScriptRoot\FormatJobOutput -Force
 
 # Stop execution on error 
 $ErrorActionPreference = "Stop"
@@ -80,7 +80,7 @@ if (($catalogFailoverGroup.ReplicationState -eq 'CATCH_UP') -and ($catalogFailov
     -ResourceGroupName $recoveryResourceGroupName `
     -ServerName $recoveryCatalogServerName `
     -FailoverGroupName $catalogFailoverGroupName `
-    -AllowDataLoss`
+    -AllowDataLoss `
     -ErrorAction Stop `
     >$null
 }
@@ -110,6 +110,26 @@ if ($activeCatalogServerName -ne $recoveryCatalogServerName)
     -OldResourceGroupName $wtpUser.ResourceGroupName `
     -OldServerName $activeCatalogServerName `
     -PollDnsUpdate
+}
+
+# Update tenant provisioning server alias to point to recovery region (if applicable)
+$newTenantAlias = $config.NewTenantAliasStem + $wtpUser.Name
+$fullyQualifiedNewTenantAlias = $newTenantAlias + ".database.windows.net"
+$originProvisioningServerName = $config.TenantServerNameStem + $wtpUser.Name
+$recoveryProvisioningServerName = $originProvisioningServerName + $config.RecoveryRoleSuffix
+$currentProvisioningServerName = Get-ServerNameFromAlias $fullyQualifiedNewTenantAlias
+
+if ($currentProvisioningServerName -ne $recoveryProvisioningServerName)
+{
+  Write-Output "Updating DNS alias for new tenant provisioning ..."
+  Set-DnsAlias `
+    -ResourceGroupName $recoveryResourceGroupName `
+    -ServerName $recoveryProvisioningServerName `
+    -ServerDNSAlias $newTenantAlias `
+    -OldResourceGroupName $wtpUser.ResourceGroupName `
+    -OldServerName $originProvisioningServerName `
+    -PollDnsUpdate `
+    >$null
 }
 
 # Initalize Azure context for background scripts  
