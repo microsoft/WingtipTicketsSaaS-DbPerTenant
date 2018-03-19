@@ -60,7 +60,7 @@ $startTime = Get-Date
 Write-Output "Original region: $primaryLocation,  Recovery region: $recoveryLocation"
 
 # Disable traffic manager web app endpoint in primary region (idempotent)
-Write-Output "Disabling Traffic Manager endpoint for Wingtip Events app..."
+Write-Output "Disabling Traffic Manager endpoint in origin region ..."
 $profileName = $config.EventsAppNameStem + $wtpUser.Name
 $webAppEndpoint = $config.EventsAppNameStem + $primaryLocation + '-' + $wtpUser.name
 Disable-AzureRmTrafficManagerEndpoint -Name $webAppEndpoint -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -Force -ErrorAction SilentlyContinue > $null
@@ -86,7 +86,7 @@ try
   if ($replicationLink -and ($replicationLink.Role -eq "Secondary"))
   {
     Write-Output "Catalog database is detected to be a replica. Failing over catalog database to recovery region..."
-    $catalogFailoverGroupName = $config.CatalogServerNameStem + "group" + $wtpUser.Name
+    $catalogFailoverGroupName = $config.CatalogFailoverGroupNameStem + $wtpUser.Name
       
     # Failover catalog database to recovery region
     Switch-AzureRmSqlDatabaseFailoverGroup `
@@ -160,7 +160,7 @@ if (!($runningScripts -like "*Sync-TenantConfiguration*"))
 $tenantList = Get-Tenants -Catalog $tenantCatalog -ErrorAction Stop
 
 # Mark all non-recovered tenants as unavailable in the recovery catalog
-Write-Output "Marking tenants offline in the catalog..."
+Write-Output "Marking non-recovered tenants offline in the catalog..."
 foreach ($tenant in $tenantList)
 {
   $tenantStatus = (Get-ExtendedTenant -Catalog $tenantCatalog -TenantKey $tenant.Key).TenantRecoveryState
