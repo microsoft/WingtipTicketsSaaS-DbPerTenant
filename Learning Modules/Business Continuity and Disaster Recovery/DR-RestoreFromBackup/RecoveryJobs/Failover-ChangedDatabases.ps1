@@ -9,19 +9,13 @@
 .PARAMETER WingtipRecoveryResourceGroup
   Resource group in the recovery region that contains recovered resources
 
-.PARAMETER MaxConcurrentFailoverOperations
-  Maximum number of failover operations that can be run concurrently
-
 .EXAMPLE
   [PS] C:\>.\Failover-ChangedTenantDatabases.ps1 -WingtipRecoveryResourceGroup "sampleRecoveryResourceGroup"
 #>
 [cmdletbinding()]
 param (
   [parameter(Mandatory=$true)]
-  [String] $WingtipRecoveryResourceGroup,
-
-  [parameter(Mandatory=$false)]
-  [int] $MaxConcurrentFailoverOperations=50 
+  [String] $WingtipRecoveryResourceGroup
 )
 
 Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -Force
@@ -143,7 +137,7 @@ function Complete-AsynchronousDatabaseFailover
 
 #----------------------------Main script--------------------------------------------------
 $failoverQueue = @()
-$tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
+$tenantList = Get-ExtendedTenant -Catalog $tenantCatalog -SortTenants
 $tenantDatabaseList = Get-ExtendedDatabase -Catalog $tenantCatalog
 
 # Add tenant databases that have been changed (or added) in the recovery region to queue of databases that will be failed over
@@ -202,7 +196,7 @@ if ($replicatedDatabaseCount -eq 0)
   exit
 }
 
-# Wait for all database replicas to be created
+# Wait for all databases to have replicas before failover
 $allReplicasCreated = $false
 while (!$allReplicasCreated)
 {
@@ -231,9 +225,9 @@ while (!$allReplicasCreated)
   Write-Output "waiting for database replicas to be created ..." 
 }
 
-# Issue a request to failover tenant databases asynchronously till concurrent operation limit is reached
+# Issue a request to failover tenant databases asynchronously
 $azureContext = Get-RestAPIContext
-while ($operationQueue.Count -le $MaxConcurrentFailoverOperations)
+while ($true)
 {
   $currentDatabase = $failoverQueue[0]
   
@@ -245,23 +239,33 @@ while ($operationQueue.Count -le $MaxConcurrentFailoverOperations)
       "DatabaseName" = $currentDatabase.DatabaseName
     }
     $failoverQueue = $failoverQueue -ne $currentDatabase
-    $originServerName = ($currentDatabase.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
-
-    # Update recovery state of tenant resources
-    $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName
-    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -DatabaseName $currentDatabase.DatabaseName
-    $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -ElasticPoolName $currentDatabase.ElasticPoolName
+    $originServerName = ($currentDatabase.ServerName -split "$($config.RecoveryRoleSuffix)")[0]   
 
     # Issue asynchronous call to failover databases
     $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $originServerName -TenantDatabaseName $currentDatabase.DatabaseName
 
-    # Add operation to queue for tracking
-    $operationId = $operationObject.Id
-    if (!$operationQueueMap.ContainsKey("$operationId"))
+    if ($operationObject.Exception)
     {
-      $operationQueue += $operationObject
-      $operationQueueMap.Add("$operationId", $dbProperties)
-    }  
+      Write-Verbose $operationObject.Exception.InnerException
+
+      # Mark tenant database replication error
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $currentDatabase.ServerName -DatabaseName $currentDatabase.DatabaseName
+    }
+    else
+    {
+      # Update recovery state of tenant resources
+      $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -DatabaseName $currentDatabase.DatabaseName
+      $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -ElasticPoolName $currentDatabase.ElasticPoolName
+
+      # Add operation to queue for tracking
+      $operationId = $operationObject.Id
+      if (!$operationQueueMap.ContainsKey("$operationId"))
+      {
+        $operationQueue += $operationObject
+        $operationQueueMap.Add("$operationId", $dbProperties)
+      } 
+    }    
   }
   else
   {
@@ -270,43 +274,13 @@ while ($operationQueue.Count -le $MaxConcurrentFailoverOperations)
   }
 }
 
-# Check on status of database recovery operations 
+# Check on status of database failover operations 
 while ($operationQueue.Count -gt 0)
 {
   foreach($failoverJob in $operationQueue)
   {
     if (($failoverJob.IsCompleted) -and ($failoverJob.Status -eq 'RanToCompletion'))
     {
-      # Issue new failover requests if there are any databases left to failover
-      $currentDatabase = $failoverQueue[0]
-  
-      if ($currentDatabase)
-      {
-        # Remove database from failover queue
-        $dbProperties = @{
-          "ServerName" = $currentDatabase.ServerName
-          "DatabaseName" = $currentDatabase.DatabaseName
-        }
-        $failoverQueue = $failoverQueue -ne $currentDatabase
-        $originServerName = ($currentDatabase.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
-
-        # Update recovery state of tenant resources
-        $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName
-        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -DatabaseName $currentDatabase.DatabaseName
-        $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -ElasticPoolName $currentDatabase.ElasticPoolName
-
-        # Issue asynchronous call to failover databases
-        $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $originServerName -TenantDatabaseName $currentDatabase.DatabaseName
-
-        # Add operation to queue for tracking
-        $operationId = $operationObject.Id
-        if (!$operationQueueMap.ContainsKey("$operationId"))
-        {
-          $operationQueue += $operationObject
-          $operationQueueMap.Add("$operationId", $dbProperties)
-        }  
-      }
-
       # Update tenant database recovery state
       Complete-AsynchronousDatabaseFailover -FailoverJobId $failoverJob.Id 
 

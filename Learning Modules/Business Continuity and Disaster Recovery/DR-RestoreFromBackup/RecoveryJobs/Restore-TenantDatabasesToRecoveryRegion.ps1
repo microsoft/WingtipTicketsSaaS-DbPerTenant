@@ -9,19 +9,13 @@
 .PARAMETER WingtipRecoveryResourceGroup
   Resource group that will be used to contain recovered resources
 
-.PARAMETER MaxConcurrentRestoreOperations
-  Maximum number of restore operations that can be run concurrently
-
 .EXAMPLE
   [PS] C:\>.\Restore-TenantDatabasesToRecoveryRegion.ps1 -WingtipRecoveryResourceGroup "sampleRecoveryResourceGroup"
 #>
 [cmdletbinding()]
 param (
     [parameter(Mandatory=$true)]
-    [String] $WingtipRecoveryResourceGroup,    
-
-    [parameter(Mandatory=$false)]
-    [int] $MaxConcurrentRestoreOperations=200
+    [String] $WingtipRecoveryResourceGroup
 )
 
 Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -Force
@@ -297,9 +291,10 @@ $DatabaseRecoveryPercentage = [math]::Round($recoveredDatabaseCount/$tenantDatab
 $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
 Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"
 
-# Issue a request to restore tenant databases asynchronously till concurrent operation limit is reached
+# Issue a request to restore tenant databases asynchronously
+# Note: This process can be sped up by using background threads to issue multiple requests at the same time.
 $azureContext = Get-RestAPIContext
-while($operationQueue.Count -le $MaxConcurrentRestoreOperations)
+while($true)
 {
   $tenantListPerPool = Select-HighestPriorityUnrecoveredTenantPerPool -Catalog $tenantCatalog
 
@@ -309,10 +304,6 @@ while($operationQueue.Count -le $MaxConcurrentRestoreOperations)
     foreach ($elasticPool in $tenantListPerPool.Keys)
     {
       $tenantDatabase = $tenantListPerPool[$elasticPool]
-
-      # Update tenant database recovery state
-      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -ServerName $tenantDatabase.ServerName -DatabaseName $tenantdatabase.DatabaseName
-
       $operationObject = Start-AsynchronousDatabaseRecovery -AzureContext $azureContext -TenantDatabase $tenantDatabase
       $databaseDetails = @{
         "ServerName" = $tenantDatabase.ServerName
@@ -321,13 +312,26 @@ while($operationQueue.Count -le $MaxConcurrentRestoreOperations)
         "ElasticPoolName" = $tenantDatabase.ElasticPoolName
       }
 
-      # Add operation object to queue for tracking later
-      $operationId = $operationObject.Id
-      if (!$operationQueueMap.ContainsKey("$operationId"))
+      if ($operationObject.Exception)
       {
-        $operationQueue += $operationObject
-        $operationQueueMap.Add("$operationId", $databaseDetails)      
+        Write-Verbose $operationObject.Exception.InnerException
+
+        # Mark tenant database recovery error
+        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $tenantDatabase.ServerName -DatabaseName $tenantdatabase.DatabaseName
       }
+      else
+      {
+        # Mark tenant database as starting recovery
+        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -ServerName $tenantDatabase.ServerName -DatabaseName $tenantdatabase.DatabaseName
+
+        # Add operation object to queue for tracking later
+        $operationId = $operationObject.Id
+        if (!$operationQueueMap.ContainsKey("$operationId"))
+        {
+          $operationQueue += $operationObject
+          $operationQueueMap.Add("$operationId", $databaseDetails)      
+        }     
+      }     
     }  
   }  
   else 
@@ -349,33 +353,6 @@ while ($operationQueue.Count -gt 0)
 
       if ($operationDetails.Status.Value -contains "Succeeded")
       {
-        # Start new restore operation if there are any databases left to recover
-        $tenantListPerPool = Select-HighestPriorityUnrecoveredTenantPerPool -Catalog $tenantCatalog
-        if ($tenantListPerPool.Count -gt 0)
-        {
-          $selectedPool = $tenantListPerPool.Keys | Select-Object -First 1  
-          $tenantDatabase = $tenantListPerPool[$selectedPool]
-
-          # Update tenant database recovery state
-          $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -ServerName $tenantDatabase.ServerName -DatabaseName $tenantdatabase.DatabaseName
-
-          $operationObject = Start-AsynchronousDatabaseRecovery -AzureContext $azureContext -TenantDatabase $tenantDatabase
-          $databaseDetails = @{
-            "ServerName" = $tenantDatabase.ServerName
-            "DatabaseName" = $tenantDatabase.DatabaseName
-            "ServiceObjective" = $tenantDatabase.ServiceObjective
-            "ElasticPoolName" = $tenantDatabase.ElasticPoolName
-          }
-
-          # Add operation object to queue for tracking later
-          $operationId = $operationObject.Id
-          if (!$operationQueueMap.ContainsKey("$operationId"))
-          {
-            $operationQueue += $operationObject
-            $operationQueueMap.Add("$operationId", $databaseDetails) 
-          }
-        }
-
         # Update tenant database recovery state
         Complete-AsynchronousDatabaseRecovery -RecoveryJobId $recoveryJob.Id 
 
@@ -400,33 +377,6 @@ while ($operationQueue.Count -gt 0)
     }
     elseif (($recoveryJob.IsCompleted) -and ($recoveryJob.Status -eq 'RanToCompletion'))
     {
-      # Start new restore operation if there are any databases left to recover
-      $tenantListPerPool = Select-HighestPriorityUnrecoveredTenantPerPool -Catalog $tenantCatalog
-      if ($tenantListPerPool.Count -gt 0)
-      {
-        $selectedPool = $tenantListPerPool.Keys | Select-Object -First 1  
-        $tenantDatabase = $tenantListPerPool[$selectedPool]
-
-        # Update tenant database recovery state
-        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -ServerName $tenantDatabase.ServerName -DatabaseName $tenantdatabase.DatabaseName
-
-        $operationObject = Start-AsynchronousDatabaseRecovery -AzureContext $azureContext -TenantDatabase $tenantDatabase
-        $databaseDetails = @{
-          "ServerName" = $tenantDatabase.ServerName
-          "DatabaseName" = $tenantDatabase.DatabaseName
-          "ServiceObjective" = $tenantDatabase.ServiceObjective
-          "ElasticPoolName" = $tenantDatabase.ElasticPoolName
-        }
-
-        # Add operation object to queue for tracking later
-        $operationId = $operationObject.Id
-        if (!$operationQueueMap.ContainsKey("$operationId"))
-        {
-          $operationQueue += $operationObject
-          $operationQueueMap.Add("$operationId", $databaseDetails) 
-        }
-      }
-
       # Update tenant database recovery state
       Complete-AsynchronousDatabaseRecovery -RecoveryJobId $recoveryJob.Id 
 

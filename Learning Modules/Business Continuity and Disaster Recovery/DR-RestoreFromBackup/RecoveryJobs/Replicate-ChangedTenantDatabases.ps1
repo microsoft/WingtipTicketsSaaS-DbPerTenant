@@ -9,19 +9,13 @@
 .PARAMETER WingtipRecoveryResourceGroup
   Resource group in the recovery region that contains recovered resources
 
-.PARAMETER MaxConcurrentReplicationOperations
-  Maximum number of replication operations that can be run concurrently
-
 .EXAMPLE
   [PS] C:\>.\Replicate-ChangedTenantDatabases.ps1 -WingtipRecoveryResourceGroup "sampleRecoveryResourceGroup"
 #>
 [cmdletbinding()]
 param (
   [parameter(Mandatory=$true)]
-  [String] $WingtipRecoveryResourceGroup,
-
-  [parameter(Mandatory=$false)]
-  [int] $MaxConcurrentReplicationOperations=50 
+  [String] $WingtipRecoveryResourceGroup
 )
 
 Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -Force
@@ -195,9 +189,9 @@ $DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$changedDat
 $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
 Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $changedDatabaseCount)"
 
-# Issue a request to replicate changed tenant databases asynchronously till concurrent operation limit is reached
+# Issue a request to replicate changed tenant databases asynchronously
 $azureContext = Get-RestAPIContext
-while($operationQueue.Count -le $MaxConcurrentReplicationOperations)
+while($true)
 {
   $currentTenant = $replicationQueue[0]
 
@@ -205,11 +199,7 @@ while($operationQueue.Count -le $MaxConcurrentReplicationOperations)
   {
     $replicationQueue = $replicationQueue -ne $currentTenant
     $tenantServerName = $currentTenant.ServerName.split('.')[0]
-    $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $tenantServerName -DatabaseName $currentTenant.DatabaseName
-
-    # Update tenant database recovery state
-    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $tenantServerName -DatabaseName $currentTenant.DatabaseName
-    
+    $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $tenantServerName -DatabaseName $currentTenant.DatabaseName    
     $operationObject = Start-AsynchronousDatabaseReplication -AzureContext $azureContext -TenantDatabase $tenantDatabaseProperties
     $databaseDetails = @{
       "ServerName" = $tenantDatabaseProperties.ServerName
@@ -218,13 +208,26 @@ while($operationQueue.Count -le $MaxConcurrentReplicationOperations)
       "ElasticPoolName" = $tenantDatabaseProperties.ElasticPoolName
     }
 
-    # Add operation to queue for tracking
-    $operationId = $operationObject.Id
-    if (!$operationQueueMap.ContainsKey("$operationId"))
+    if ($operationObject.Exception)
     {
-      $operationQueue += $operationObject
-      $operationQueueMap.Add("$operationId", $databaseDetails)
-    }     
+      Write-Verbose $operationObject.Exception.InnerException
+
+      # Mark tenant database replication error
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $tenantServerName -DatabaseName $currentTenant.DatabaseName
+    }
+    else
+    {
+      # Update tenant database recovery state
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $tenantServerName -DatabaseName $currentTenant.DatabaseName
+
+      # Add operation to queue for tracking
+      $operationId = $operationObject.Id
+      if (!$operationQueueMap.ContainsKey("$operationId"))
+      {
+        $operationQueue += $operationObject
+        $operationQueueMap.Add("$operationId", $databaseDetails)
+      }       
+    }      
   }  
   else 
   {
@@ -233,41 +236,13 @@ while($operationQueue.Count -le $MaxConcurrentReplicationOperations)
   }
 }
 
-# Check on status of database recovery operations 
+# Check on status of database replication operations 
 while ($operationQueue.Count -gt 0)
 {
   foreach($replicationJob in $operationQueue)
   {
     if (($replicationJob.IsCompleted) -and ($replicationJob.Status -eq 'RanToCompletion'))
     {
-      # Start new replication operation if there are any databases left to replicate
-      $currentTenant = $replicationQueue[0]
-      if ($currentTenant)
-      {
-        $replicationQueue = $replicationQueue -ne $currentTenant
-        $tenantServerName = $currentTenant.ServerName.split('.')[0]
-        $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $tenantCatalog -ServerName $tenantServerName -DatabaseName $currentTenant.DatabaseName
-
-        # Update tenant database recovery state
-        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $tenantServerName -DatabaseName $currentTenant.DatabaseName
-    
-        $operationObject = Start-AsynchronousDatabaseReplication -AzureContext $azureContext -TenantDatabase $tenantDatabaseProperties
-        $databaseDetails = @{
-          "ServerName" = $tenantDatabaseProperties.ServerName
-          "DatabaseName" = $tenantDatabaseProperties.DatabaseName
-          "ServiceObjective" = $tenantDatabaseProperties.ServiceObjective
-          "ElasticPoolName" = $tenantDatabaseProperties.ElasticPoolName
-        }
-
-        # Add operation to queue for tracking
-        $operationId = $operationObject.Id
-        if (!$operationQueueMap.ContainsKey("$operationId"))
-        {
-          $operationQueue += $operationObject
-          $operationQueueMap.Add("$operationId", $databaseDetails)
-        }     
-      }
-
       # Update tenant database recovery state
       Complete-AsynchronousDatabaseReplication -replicationJobId $replicationJob.Id 
 
@@ -297,12 +272,3 @@ while ($operationQueue.Count -gt 0)
 $DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$changedDatabaseCount,2)
 $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
 Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $changedDatabaseCount)"
-
-
-
-
-
-
-
-
-
