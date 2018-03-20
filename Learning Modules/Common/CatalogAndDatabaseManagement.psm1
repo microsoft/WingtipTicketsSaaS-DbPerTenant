@@ -2715,14 +2715,17 @@ function Update-TenantShardInfo
             if (($tenantServer -ne $FullyQualifiedTenantServerName) -or ($tenantShardLocation.Database -ne $TenantDatabaseName))
             {
                 $recoveryShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($FullyQualifiedTenantServerName, $TenantDatabaseName, 'tcp', '1433')
-                $recoveryManager.DetachShard($tenantShardLocation)
-                $recoveryManager.AttachShard($recoveryShardLocation)
-
-                $mappingDifferences = $recoveryManager.DetectMappingDifferences($recoveryShardLocation)
-                foreach ($diff in $mappingDifferences)
+                if ($recoveryShardLocation)
                 {
-                    $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
-                }
+                    $recoveryManager.DetachShard($tenantShardLocation)
+                    $recoveryManager.AttachShard($recoveryShardLocation)
+
+                    $mappingDifferences = $recoveryManager.DetectMappingDifferences($recoveryShardLocation)
+                    foreach ($diff in $mappingDifferences)
+                    {
+                        $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
+                    }
+                }               
             }    
         }
         catch [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementException]
@@ -2732,13 +2735,16 @@ function Update-TenantShardInfo
             if ($_.Exception.Message -match $mappingErrorMessage)
             {
                 $recoveryShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($FullyQualifiedTenantServerName, $TenantDatabaseName, 'tcp', '1433')
-                $recoveryManager.AttachShard($recoveryShardLocation)  
-
-                $mappingDifferences = $recoveryManager.DetectMappingDifferences($recoveryShardLocation)
-                foreach ($diff in $mappingDifferences)
+                if ($recoveryShardLocation)
                 {
-                    $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
-                }
+                    $recoveryManager.AttachShard($recoveryShardLocation)  
+
+                    $mappingDifferences = $recoveryManager.DetectMappingDifferences($recoveryShardLocation)
+                    foreach ($diff in $mappingDifferences)
+                    {
+                        $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
+                    }
+                }               
             }
             else
             {

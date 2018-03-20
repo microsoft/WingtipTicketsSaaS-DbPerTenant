@@ -80,7 +80,7 @@ function Start-AsynchronousDatabaseFailover
   # Issue asynchronous failover operation
   $taskObject = Invoke-AzureSQLDatabaseFailoverAsync `
                   -AzureContext $AzureContext `
-                  -ResourceGroupName $wtpUser.ResourceGroupName `
+                  -ResourceGroupName $WingtipRecoveryResourceGroup `
                   -ServerName $SecondaryTenantServerName `
                   -DatabaseName $TenantDatabaseName `
                   -ReplicationLinkId "$($replicationObject.LinkId)"  
@@ -198,16 +198,12 @@ while ($true)
   $currentDatabase = $failoverQueue[0]
   if ($currentDatabase)
   {
-    $dbProperties = @{
-      "ServerName" = $currentDatabase.ServerName
-      "DatabaseName" = $currentDatabase.DatabaseName
-    }
     $failoverQueue = $failoverQueue -ne $currentDatabase
     $originServerName = ($currentDatabase.ServerName -split "$($config.RecoveryRoleSuffix)$")[0]
     $recoveryServerName = $originServerName + $config.RecoveryRoleSuffix
 
     # Issue asynchronous failover request
-    $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $recoveryTenantServerName -TenantDatabaseName $currentDatabase.DatabaseName
+    $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $recoveryServerName -TenantDatabaseName $currentDatabase.DatabaseName
     $databaseDetails = @{
       "ServerName" = $currentDatabase.ServerName
       "DatabaseName" = $currentDatabase.DatabaseName
