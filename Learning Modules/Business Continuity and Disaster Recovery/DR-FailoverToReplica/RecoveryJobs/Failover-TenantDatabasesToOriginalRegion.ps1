@@ -9,19 +9,13 @@
 .PARAMETER WingtipRecoveryResourceGroup
   Resource group in the recovery region that contains recovered resources
 
-.PARAMETER MaxConcurrentFailoverOperations
-  Maximum number of failover operations that can be run concurrently
-
 .EXAMPLE
   [PS] C:\>.\Failover-TenantDatabasesToOriginalRegion.ps1 -WingtipRecoveryResourceGroup "sampleRecoveryResourceGroup"
 #>
 [cmdletbinding()]
 param (
   [parameter(Mandatory=$true)]
-  [String] $WingtipRecoveryResourceGroup,
-
-  [parameter(Mandatory=$false)]
-  [int] $MaxConcurrentFailoverOperations=50 
+  [String] $WingtipRecoveryResourceGroup
 )
 
 Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -Force
@@ -196,18 +190,46 @@ if ($replicatedDatabaseCount -eq 0)
   exit
 }
 
+# Wait for all databases to have replicas before failover
+$allReplicasCreated = $false
+while (!$allReplicasCreated)
+{
+  foreach ($database in $failoverQueue)
+  {
+    $currServerName = $database.ServerName
+    $originServerName = ($currServerName -split "$($config.RecoveryRoleSuffix)$")[0]
+    $recoveryServerName = $originServerName + $config.RecoveryRoleSuffix
+
+    # Get replication status of tenant database in recovery region
+    $replicationLink = Get-AzureRmSqlDatabaseReplicationLink `
+                          -ResourceGroupName $WingtipRecoveryResourceGroup `
+                          -ServerName $recoveryServerName `
+                          -DatabaseName $database.DatabaseName `
+                          -PartnerResourceGroupName $wtpUser.ResourceGroupName `
+                          -PartnerServerName $originServerName `
+                          -ErrorAction SilentlyContinue
+    if (!$replicationLink)
+    {
+      $allReplicasCreated = $false
+      break
+    }
+    
+    $allReplicasCreated = $true      
+  }
+  Write-Output "waiting for database replicas to be created ..." 
+}
+
 # Output recovery progress
 $DatabaseRecoveryPercentage = [math]::Round($failoverCount/$replicatedDatabaseCount,2)
 $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
 Write-Output "$DatabaseRecoveryPercentage% ($($failoverCount) of $replicatedDatabaseCount)"
 
-# Issue a request to failover tenant databases asynchronously till concurrent operation limit is reached
+# Issue a request to failover tenant databases asynchronously
 $azureContext = Get-RestAPIContext
-while ($operationQueue.Count -le $MaxConcurrentFailoverOperations)
+while ($true)
 {
   # Issue asynchronous call to failover eligible databases
-  $queuedDatabases = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object{(($_.ServerName -In $failoverQueue.ServerName) -and ($_.DatabaseName -In $failoverQueue.DatabaseName) -and ($_.RecoveryState -In 'replicated', 'failedOver'))}
-  $currentDatabase = $queuedDatabases[0]
+  $currentDatabase = $failoverQueue[0]
 
   if ($currentDatabase)
   {
@@ -215,26 +237,34 @@ while ($operationQueue.Count -le $MaxConcurrentFailoverOperations)
     "ServerName" = $currentDatabase.ServerName
     "DatabaseName" = $currentDatabase.DatabaseName
     }
-
-    $queuedObject = $failoverQueue | Where-Object{(($_.ServerName -eq $currentDatabase.ServerName) -and ($_.DatabaseName -eq $currentDatabase.DatabaseName))}
-    $failoverQueue = $failoverQueue -ne $queuedObject
-    $originServerName = ($currentDatabase.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
-
-    # Update recovery state of tenant resources
-    $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName
-    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -DatabaseName $currentDatabase.DatabaseName
-    $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -ElasticPoolName $currentDatabase.ElasticPoolName
+    $failoverQueue = $failoverQueue -ne $currentDatabase
+    $originServerName = ($currentDatabase.ServerName -split "$($config.RecoveryRoleSuffix)")[0]   
 
     # Issue asynchronous call to failover databases
     $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $originServerName -TenantDatabaseName $currentDatabase.DatabaseName
 
-    # Add operation to queue for tracking
-    $operationId = $operationObject.Id
-    if (!$operationQueueMap.ContainsKey("$operationId"))
+    if ($operationObject.Exception)
     {
-      $operationQueue += $operationObject
-      $operationQueueMap.Add("$operationId", $dbProperties)
+      Write-Verbose $operationObject.Exception.InnerException
+
+      # Mark database failover error
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $currentDatabase.ServerName -DatabaseName $currentDatabase.DatabaseName
     }
+    else
+    { 
+      # Update recovery state of tenant resources
+      $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -DatabaseName $currentDatabase.DatabaseName
+      $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -ElasticPoolName $currentDatabase.ElasticPoolName
+
+      # Add operation to queue for tracking
+      $operationId = $operationObject.Id
+      if (!$operationQueueMap.ContainsKey("$operationId"))
+      {
+        $operationQueue += $operationObject
+        $operationQueueMap.Add("$operationId", $dbProperties)
+      }  
+    } 
   }
   else
   {
@@ -250,37 +280,6 @@ while ($operationQueue.Count -gt 0)
   {
     if (($failoverJob.IsCompleted) -and ($failoverJob.Status -eq 'RanToCompletion'))
     {
-      # Failover any eligible databases
-      $queuedDatabases = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object{(($_.ServerName -In $failoverQueue.ServerName) -and ($_.DatabaseName -In $failoverQueue.DatabaseName) -and ($_.RecoveryState -In 'replicated', 'failedOver'))}
-      $currentDatabase = $queuedDatabases[0]
-
-      if ($currentDatabase)
-      {
-        $dbProperties = @{
-        "ServerName" = $currentDatabase.ServerName
-        "DatabaseName" = $currentDatabase.DatabaseName
-        }
-        $queuedObject = $failoverQueue | Where-Object{(($_.ServerName -eq $currentDatabase.ServerName) -and ($_.DatabaseName -eq $currentDatabase.DatabaseName))}
-        $failoverQueue = $failoverQueue -ne $queuedObject
-        $originServerName = ($currentDatabase.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
-
-        # Update recovery state of tenant resources
-        $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName
-        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -DatabaseName $currentDatabase.DatabaseName
-        $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $currentDatabase.ServerName -ElasticPoolName $currentDatabase.ElasticPoolName
-
-        # Issue asynchronous call to failover databases
-        $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $originServerName -TenantDatabaseName $currentDatabase.DatabaseName
-
-        # Add operation to queue for tracking
-        $operationId = $operationObject.Id
-        if (!$operationQueueMap.ContainsKey("$operationId"))
-        {
-          $operationQueue += $operationObject
-          $operationQueueMap.Add("$operationId", $dbProperties)
-        }
-      }
-
       # Update tenant database recovery state
       Complete-AsynchronousDatabaseFailover -FailoverJobId $failoverJob.Id 
 
