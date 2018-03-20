@@ -12,6 +12,7 @@ Import-Module sqlserver -ErrorAction SilentlyContinue
 
 # Stop execution on error
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
 
 <#
 .SYNOPSIS
@@ -930,7 +931,7 @@ function Get-TenantRawKey
     $rawValueString = "0x" + $rawValueString.Replace("-", "")
 
     $tenantRawKey = New-Object PSObject -Property @{
-        RawKeyBytes = $shardKeyRawValueBytes
+        RawKeyBytes = $rawValueBytes
         RawKeyHexString = $rawValueString
     }
 
@@ -2922,7 +2923,7 @@ function Update-TenantResourceRecoveryState
         'cancelAndReset' = @{ "beginState" = ('restoring', 'n/a'); "endState" = ('resetting') };
         'startReset' = @{ "beginState" = ('n/a','restored', 'errorState'); "endState" = ('resetting') };
         'endReset' = @{ "beginState" = ('resetting'); "endState" = ('complete') };
-        'markError' = @{ "beginState" = ('restoring', 'resetting', 'failingOver', 'replicating', 'repatriating'); "endState" = ('errorState')};
+        'markError' = @{ "beginState" = ('n/a','restoring', 'resetting', 'failingOver', 'replicating', 'repatriating'); "endState" = ('errorState')};
         'endRecovery' = @{ "beginState" = ('restoring','complete'); "endState" = ('restored') };
         'endFailover' = @{ "beginState" = ('failingOver'); "endState" = ('failedOver') };        
         'startReplication' = @{ "beginState" = ('restored', 'errorState', 'n/a'); "endState" = ('replicating') };

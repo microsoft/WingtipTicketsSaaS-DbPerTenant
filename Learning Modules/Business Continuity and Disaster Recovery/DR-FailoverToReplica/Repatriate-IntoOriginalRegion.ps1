@@ -170,7 +170,7 @@ foreach ($database in $databaselist)
 {
   if ($database.RecoveryState -In 'replicating', 'repatriating')
   {
-    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
+    $dbState = Update-TenantResourceRecoveryState -Catalog $catalog -UpdateAction "markError" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
   }
 }
 
@@ -183,7 +183,7 @@ if ($reconfigureJobStatus.State -eq "Failed")
 }
 
 # Start background job to replicate tenant databases that have been created in the recovery region
-$replicateDbJob = Start-Job -Name "ReplicateDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Replicate-TenantDatabasesToOriginalRegion" -ArgumentList @($recoveryResourceGroupName)
+$replicateDbJob = Start-Job -Name "ReplicateDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Replicate-TenantDatabasesToOriginalRegion.ps1" -ArgumentList @($recoveryResourceGroupName)
 
 # Start background job to failover tenant databases to the origin region
 $failoverDbJob = Start-Job -Name "FailoverDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Failover-TenantDatabasesToOriginalRegion.ps1" -ArgumentList @($recoveryResourceGroupName)

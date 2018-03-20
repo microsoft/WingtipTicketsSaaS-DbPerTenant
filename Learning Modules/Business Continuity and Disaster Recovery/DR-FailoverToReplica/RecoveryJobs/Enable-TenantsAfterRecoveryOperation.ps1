@@ -274,7 +274,7 @@ while ($true)
         # Take tenant offline if applicable
         if ($tenant.TenantStatus -ne "Offline")
         {
-          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey -ErrorAction SilentlyContinue
         }
 
         # Get tenant resources
@@ -306,7 +306,7 @@ while ($true)
         # Take tenant offline if applicable
         if ($tenant.TenantStatus -ne "Offline")
         {
-          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey -ErrorAction SilentlyContinue
         }
 
         # Update tenant shard to point to recovered database
@@ -326,6 +326,14 @@ while ($true)
           $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToOrigin" -TenantKey $tenantKey
         }  
       }
+      elseif (($restoredDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'OnlineInRecovery'))
+      {
+        # Update tenant recovery status to 'RepatriatingTenantData' if applicable 
+        if ($tenantRecoveryState -ne 'RepatriatingTenantData')
+        {
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startRepatriation" -TenantKey $tenantKey
+        }
+      }
       elseif (($restoredDatabaseRecoveryStatus.RecoveryState -In 'complete') -and ($tenantRecoveryState -eq 'UpdatingTenantShardToOrigin'))
       {
         $restoredTenantServer = $restoredTenantDatabase.Name.Split('/')[0]
@@ -334,7 +342,7 @@ while ($true)
         # Take tenant offline if applicable
         if ($tenant.TenantStatus -ne "Offline")
         {
-          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey
+          Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey -ErrorAction SilentlyContinue
         }
 
         # Update tenant shard to point to origin database

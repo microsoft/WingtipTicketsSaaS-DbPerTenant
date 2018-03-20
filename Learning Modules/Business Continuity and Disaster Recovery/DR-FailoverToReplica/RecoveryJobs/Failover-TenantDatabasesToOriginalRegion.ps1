@@ -176,17 +176,23 @@ foreach ($database in $recoveryDatabaseList)
       {
         # Mark database recovery state as complete
         $failoverCount += 1
+        $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailback" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
         $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
       }
     }
   }  
 }
 
-$replicatedDatabaseCount = $failoverQueue.Count
+$replicatedDatabaseCount = $failoverQueue.Count + $failoverCount
 
 if ($replicatedDatabaseCount -eq 0)
 {
   Write-Output "100% (0 of 0)"
+  exit
+}
+elseif ($replicatedDatabaseCount -eq $failoverCount)
+{
+  Write-Output "100% ($failoverCount of $replicatedDatabaseCount)"
   exit
 }
 
@@ -229,10 +235,10 @@ $azureContext = Get-RestAPIContext
 while ($true)
 {
   # Issue asynchronous call to failover eligible databases
-  $currentDatabase = $failoverQueue[0]
-
-  if ($currentDatabase)
+  if ($failoverQueue.Count -gt 0)
   {
+    $currentDatabase = $failoverQueue[0]
+
     $dbProperties = @{
     "ServerName" = $currentDatabase.ServerName
     "DatabaseName" = $currentDatabase.DatabaseName
