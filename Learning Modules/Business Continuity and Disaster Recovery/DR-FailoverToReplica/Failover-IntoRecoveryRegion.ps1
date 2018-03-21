@@ -136,12 +136,13 @@ if ($currentProvisioningServerName -ne $recoveryProvisioningServerName)
 $scriptPath= $PSScriptRoot
 Save-AzureRmContext -Path "$env:TEMP\profile.json" -Force -ErrorAction Stop
 
-# Start background process to sync tenant server, pool, and database configuration info into the catalog 
-$runningScripts = (Get-WmiObject -Class Win32_Process -Filter "Name='PowerShell.exe'").CommandLine
-if (!($runningScripts -like "*Sync-TenantConfiguration*"))
+$runningScripts = (Get-WmiObject -Class Win32_Process -Filter "Name='PowerShell.exe'") | Where-Object{$_.CommandLine -like "*Sync-TenantConfiguration*"}
+foreach($script in $runningScripts)
 {
-  Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Sync-TenantConfiguration.ps1'"
+  $script.Terminate()
 }
+# Start background process to sync tenant server, pool, and database configuration info into the catalog 
+Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Sync-TenantConfiguration.ps1'"
 
 # Get the active tenant catalog 
 $tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name

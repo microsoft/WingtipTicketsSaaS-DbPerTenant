@@ -144,6 +144,7 @@ if ($DemoScenario -eq 6)
   $recoveryServerList = Get-ExtendedServer -Catalog $tenantCatalog | Where-Object{$_.ServerName -match "$($config.RecoveryRoleSuffix)$"}
   $recoveryPoolList = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object{$_.ServerName -match "$($config.RecoveryRoleSuffix)$"}
   $recoveryDatabaseList = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object{$_.ServerName -match "$($config.RecoveryRoleSuffix)$"}
+  Write-Output "Removing recovery resources from the catalog ..."
 
   # Remove recovery server entries from the catalog
   foreach($recoveryserver in $recoveryServerList)
@@ -163,6 +164,7 @@ if ($DemoScenario -eq 6)
     Remove-ExtendedDatabase -Catalog $tenantCatalog -ServerName $recoverydatabase.ServerName -DatabaseName $recoverydatabase.DatabaseName > $null
   }   
 
+  Write-Output "Deleting recovery resources in Azure ..."
   $recoveryResourceGroupName = $wtpUser.ResourceGroupName + $config.RecoveryRoleSuffix
   Remove-AzureRmResourceGroup -Name $recoveryResourceGroupName -Force -ErrorAction SilentlyContinue > $null
   exit

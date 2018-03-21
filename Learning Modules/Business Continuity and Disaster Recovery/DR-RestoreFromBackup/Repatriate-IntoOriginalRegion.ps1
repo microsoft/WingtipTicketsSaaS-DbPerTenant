@@ -237,7 +237,6 @@ else
   Reset-TrafficManagerEndpoints 
 }
 
-# Cancel any existing sync process. They will error out due to the failover
 $runningScripts = (Get-WmiObject -Class Win32_Process -Filter "Name='PowerShell.exe'") | Where-Object{$_.CommandLine -like "*Sync-TenantConfiguration*"}
 foreach($script in $runningScripts)
 {
