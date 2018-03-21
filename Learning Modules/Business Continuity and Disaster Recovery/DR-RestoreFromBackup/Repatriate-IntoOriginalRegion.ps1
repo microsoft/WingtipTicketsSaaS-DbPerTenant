@@ -108,13 +108,6 @@ $startTime = Get-Date
 $scriptPath= $PSScriptRoot
 Save-AzureRmContext -Path "$env:TEMP\profile.json" -Force -ErrorAction Stop
 
-# Start background process to sync tenant server, pool, and database configuration info into the catalog 
-$runningScripts = (Get-WmiObject -Class Win32_Process -Filter "Name='PowerShell.exe'").CommandLine
-if (!($runningScripts -like "*Sync-TenantConfiguration*"))
-{
-  Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Sync-TenantConfiguration.ps1'"
-}
-
 # Cancel tenant restore operations that are still in-flight.
 Write-Output "Stopping any pending restore operations ..."
 Stop-TenantRestoreOperations -Catalog $catalog 
@@ -123,7 +116,7 @@ Stop-TenantRestoreOperations -Catalog $catalog
 # Note: This assumes that the DNS alias for the catalog server is only updated during the process of recovery.
 if ($catalog.Database.ResourceGroupName -ne $recoveryResourceGroupName)
 {
-  Write-Output "Resetting catalog database and traffic manager endpoint to origin ..."
+  Write-Output "Catalog database already failed over to origin. Resetting traffic manager endpoint to origin ..."
   Reset-TrafficManagerEndpoints
 }
 else
@@ -194,7 +187,7 @@ else
       Remove-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originCatalogServerName -DatabaseName ($config.GoldenTenantDatabaseName).ToLower() -ErrorAction SilentlyContinue >$null
 
       # Create failover group for catalog databases
-      Write-Output "Creating failover group for catalog databases ..."
+      Write-Output "Creating failover group for databases in catalog server ..."
       $catalogFailoverGroup = New-AzureRmSqlDatabaseFailoverGroup `
                                 -FailoverGroupName $catalogFailoverGroupName `
                                 -ResourceGroupName $recoveryResourceGroupName `
@@ -204,7 +197,7 @@ else
                                 -FailoverPolicy Manual      
 
       $catalogDatabases = Get-AzureRmSqlDatabase -ResourceGroupName $recoveryResourceGroupName -ServerName $recoveryCatalogServerName | Where-Object{$_.DatabaseName -ne 'master'}
-      Write-Output "Adding catalog databases to failover group ..."
+      Write-Output "Adding catalog server databases to failover group ..."
       foreach ($database in $catalogDatabases)
       {
         Add-AzureRmSqlDatabaseToFailoverGroup `
@@ -216,7 +209,7 @@ else
       }
 
       # Failover catalog databases to origin
-      Write-Output "Failing over catalog database to origin ..."
+      Write-Output "Failing over catalog server to origin ..."
       Switch-AzureRmSqlDatabaseFailoverGroup `
         -ResourceGroupName $wtpUser.ResourceGroupName `
         -ServerName $originCatalogServerName `
@@ -243,6 +236,16 @@ else
   # Enable traffic manager endpoint in origin, disable endpoint in recovery
   Reset-TrafficManagerEndpoints 
 }
+
+# Cancel any existing sync process. They will error out due to the failover
+$runningScripts = (Get-WmiObject -Class Win32_Process -Filter "Name='PowerShell.exe'") | Where-Object{$_.CommandLine -like "*Sync-TenantConfiguration*"}
+foreach($script in $runningScripts)
+{
+  $script.Terminate()
+}
+# Start background process to sync tenant server, pool, and database configuration info into the catalog 
+Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Sync-TenantConfiguration.ps1'"
+
 
 # Reconfigure servers and elastic pools in original region to match settings in the recovery region 
 Write-Output "Reconfiguring tenant servers and elastic pools in original region to match recovery region ..."

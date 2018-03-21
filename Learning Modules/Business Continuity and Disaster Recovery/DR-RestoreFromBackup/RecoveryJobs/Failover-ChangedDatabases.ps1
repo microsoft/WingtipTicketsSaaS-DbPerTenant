@@ -78,14 +78,21 @@ function Start-AsynchronousDatabaseFailover
                           -PartnerResourceGroupName $WingtipRecoveryResourceGroup
 
   # Issue asynchronous failover operation
-  $taskObject = Invoke-AzureSQLDatabaseFailoverAsync `
-                  -AzureContext $AzureContext `
-                  -ResourceGroupName $wtpUser.ResourceGroupName `
-                  -ServerName $SecondaryTenantServerName `
-                  -DatabaseName $TenantDatabaseName `
-                  -ReplicationLinkId "$($replicationObject.LinkId)"  
-   
-  return $taskObject
+  if ($replicationObject)
+  {
+    $taskObject = Invoke-AzureSQLDatabaseFailoverAsync `
+                    -AzureContext $AzureContext `
+                    -ResourceGroupName $wtpUser.ResourceGroupName `
+                    -ServerName $SecondaryTenantServerName `
+                    -DatabaseName $TenantDatabaseName `
+                    -ReplicationLinkId "$($replicationObject.LinkId)"  
+     
+    return $taskObject
+  }
+  else
+  {
+    return $null
+  }
 }
 
 <#
@@ -219,11 +226,21 @@ while (!$allReplicasCreated)
       $allReplicasCreated = $false
       break
     }
-    
-    $allReplicasCreated = $true      
+    else
+    {
+      $allReplicasCreated = $true
+    }    
   }
-  Write-Output "waiting for database replicas to be created ..." 
+  if (!$allReplicasCreated)
+  {
+    Write-Output "waiting for database replicas to be created ..." 
+  }
 }
+
+# Output recovery progress 
+$DatabaseRecoveryPercentage = [math]::Round($failoverCount/$replicatedDatabaseCount,2)
+$DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
+Write-Output "$DatabaseRecoveryPercentage% ($($failoverCount) of $replicatedDatabaseCount)"
 
 # Issue a request to failover tenant databases asynchronously
 $azureContext = Get-RestAPIContext
@@ -244,7 +261,7 @@ while ($true)
     # Issue asynchronous call to failover databases
     $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $originServerName -TenantDatabaseName $currentDatabase.DatabaseName
 
-    if ($operationObject.Exception)
+    if ($operationObject.Exception -or !$operationObject)
     {
       Write-Verbose $operationObject.Exception.InnerException
 

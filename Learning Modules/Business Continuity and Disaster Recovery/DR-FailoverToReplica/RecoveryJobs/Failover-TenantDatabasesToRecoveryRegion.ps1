@@ -78,14 +78,21 @@ function Start-AsynchronousDatabaseFailover
                           -PartnerResourceGroupName $wtpUser.ResourceGroupName
 
   # Issue asynchronous failover operation
-  $taskObject = Invoke-AzureSQLDatabaseFailoverAsync `
-                  -AzureContext $AzureContext `
-                  -ResourceGroupName $WingtipRecoveryResourceGroup `
-                  -ServerName $SecondaryTenantServerName `
-                  -DatabaseName $TenantDatabaseName `
-                  -ReplicationLinkId "$($replicationObject.LinkId)"  
-   
-  return $taskObject
+  if ($replicationObject)
+  {
+    $taskObject = Invoke-AzureSQLDatabaseFailoverAsync `
+                    -AzureContext $AzureContext `
+                    -ResourceGroupName $WingtipRecoveryResourceGroup `
+                    -ServerName $SecondaryTenantServerName `
+                    -DatabaseName $TenantDatabaseName `
+                    -ReplicationLinkId "$($replicationObject.LinkId)"  
+     
+    return $taskObject
+  }
+  else
+  {
+    return $null
+  }
 }
 
 <#
@@ -211,7 +218,7 @@ while ($true)
       "ElasticPoolName" = $currentDatabase.ElasticPoolName
     }
 
-    if ($operationObject.Exception)
+    if ($operationObject.Exception -or !$operationObject)
     {
       Write-Verbose $operationObject.Exception.InnerException
 
