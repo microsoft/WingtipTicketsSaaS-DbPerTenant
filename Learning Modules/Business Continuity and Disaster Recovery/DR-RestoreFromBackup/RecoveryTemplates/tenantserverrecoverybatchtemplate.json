@@ -2,19 +2,16 @@
   "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "location":    { "type": "string" },
-    "serverNames": { "type": "array" },
-    "adminLogins": { "type": "array" },
-    "adminPasswords": { "type": "array" }
+    "ServerConfigurationObjects": {"type": "array"}  
   },
   "resources": [ 
   { 
     "apiVersion": "2015-01-01", 
-    "name": "[concat('Server-',parameters('serverNames')[copyIndex()])]",
+    "name": "[concat('ServerRestore-',parameters('ServerConfigurationObjects')[copyIndex()].ServerName)]",
     "type": "Microsoft.Resources/deployments",
     "copy": { 
-      "name": "recoveryservers",
-      "count": "[length(parameters('serverNames'))]"
+      "name": "restoreservers",
+      "count": "[length(parameters('ServerConfigurationObjects'))]"
     }, 
     "properties": { 
       "mode": "Incremental", 
@@ -23,10 +20,10 @@
         "contentVersion": "1.0.0.0"
       }, 
       "parameters": {
-        "serverName": {"value": "[parameters('serverNames')[copyIndex()]]" },
-        "location": {"value": "[parameters('location')]" },        
-        "adminLogin": {"value": "[parameters('adminLogins')[copyIndex()]]" },
-        "adminPassword": {"value": "[parameters('adminPasswords')[copyIndex()]]"}
+        "serverName": {"value": "[parameters('ServerConfigurationObjects')[copyIndex()].ServerName]" },
+        "location": {"value": "[parameters('ServerConfigurationObjects')[copyIndex()].Location]" },        
+        "adminLogin": {"value": "[parameters('ServerConfigurationObjects')[copyIndex()].AdminLogin]" },
+        "adminPassword": {"value": "[parameters('ServerConfigurationObjects')[copyIndex()].AdminPassword]"}
         }
     }
   } 

@@ -42,9 +42,8 @@ $tenantCatalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpU
 # Get the recovery region resource group
 $recoveryResourceGroup = Get-AzureRmResourceGroup -Name $WingtipRecoveryResourceGroup
 
-[String[]]$serverQueue = @()
-[String[]]$tenantAdmins = @()
-[String[]]$tenantAdmminPasswords = @()
+$serverQueue = @()
+[array]$serverConfigurations = @()
 $replicatedServers = 0
 $sleepInterval = 10
 $pastDeploymentWaitTime = 0
@@ -69,8 +68,7 @@ while (($pastDeployment) -and ($pastDeployment.ProvisioningState -NotIn "Succeed
   {
       Stop-AzureRmResourceGroupDeployment -ResourceGroupName $WingtipRecoveryResourceGroup -Name $deploymentName -ErrorAction SilentlyContinue 1>$null 2>$null
       break
-  }
-  
+  }  
 }
 
 # Get list of servers to be replicated
@@ -87,8 +85,23 @@ foreach ($server in $serverList)
   if ($restoredServers.Name -notcontains $serverRecoveryName)
   {
     $serverQueue += $serverRecoveryName
-    $tenantAdmins += $config.TenantAdminUserName
-    $tenantAdminPasswords += "$($config.TenantAdminPassword)"    
+    if ($server.ServerName -match $config.CatalogServerNameStem)
+    {
+      $adminLogin = $config.CatalogAdminUserName
+      $adminPassword = $config.CatalogAdminPassword
+    }
+    else
+    {
+      $adminLogin = $config.TenantAdminUserName
+      $adminPassword = $config.TenantAdminPassword
+    }
+
+    [array]$serverConfigurations += @{
+      ServerName = "$serverRecoveryName"
+      Location = "$($recoveryResourceGroup.Location)"
+      AdminLogin = "$adminLogin"
+      AdminPassword = "$adminPassword"
+    }        
   }
   else
   {
@@ -110,10 +123,7 @@ if ($serverQueue.Count -gt 0)
                   -Name $deploymentName `
                   -ResourceGroupName $recoveryResourceGroup.ResourceGroupName `
                   -TemplateFile ("$using:scriptPath\RecoveryTemplates\" + $config.TenantServerRestoreBatchTemplate) `
-                  -Location $recoveryResourceGroup.Location `
-                  -ServerNames $serverQueue `
-                  -adminLogins $tenantAdmins `
-                  -adminPasswords $tenantAdminPasswords `
+                  -ServerConfigurationObjects $serverConfigurations `                  
                   -ErrorAction Stop
 
   $replicatedServers += $serverQueue.Length

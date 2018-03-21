@@ -51,9 +51,8 @@ while ($tenantCatalog.Database.ResourceGroupName -ne $WingtipRecoveryResourceGro
   $tenantCatalog = Get-Catalog -ResourceGroupName $WingtipRecoveryResourceGroup -WtpUser $wtpUser.Name
 }
 
-[String[]]$serverQueue = @()
-[String[]]$tenantAdmins = @()
-[String[]]$tenantAdmminPasswords = @()
+$serverQueue = @()
+[array]$serverConfigurations = @()
 $recoveredServers = 0
 $sleepInterval = 10
 $pastDeploymentWaitTime = 0
@@ -91,25 +90,19 @@ $restoredServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecover
 foreach ($server in $serverList)
 {
   # Only recover servers that haven't already been recovered or haven't started repatriation
-  $serverRecoveryName = ($server.ServerName) + $config.RecoveryRoleSuffix
-  if (($server.RecoveryState -In "n/a","restoring","complete") -and ($restoredServers.Name -notcontains $serverRecoveryName))
+  $serverRecoveryName = $server.ServerName + $config.RecoveryRoleSuffix
+  if ($restoredServers.Name -notcontains $serverRecoveryName)
   {
     $serverQueue += $serverRecoveryName
-    $tenantAdmins += $config.TenantAdminUserName
-    $tenantAdminPasswords += $config.TenantAdminPassword  
-
-    # Mark servers in queue as recovering
-    $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -ServerName $server.ServerName
-  }
-  elseif (($server.RecoveryState -In "restoring", "complete") -and ($restoredServers.Name -contains $serverRecoveryName))
-  {
-    # Mark previously recovered servers
-    $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $server.ServerName
-    $recoveredServers += 1
-  }
-  elseif ($server.RecoveryState -In 'restored')
-  {
-    $recoveredServers += 1
+    $adminLogin = $config.TenantAdminUserName
+    $adminPassword = $config.TenantAdminPassword
+    
+    [array]$serverConfigurations += @{
+      ServerName = "$serverRecoveryName"
+      Location = "$($recoveryResourceGroup.Location)"
+      AdminLogin = "$adminLogin"
+      AdminPassword = "$adminPassword"
+    }   
   }
 }
   
@@ -127,10 +120,7 @@ if ($serverQueue.Count -gt 0)
                   -Name "TenantServerRecovery" `
                   -ResourceGroupName $recoveryResourceGroup.ResourceGroupName `
                   -TemplateFile ("$using:scriptPath\RecoveryTemplates\" + $config.TenantServerRestoreBatchTemplate) `
-                  -Location $recoveryResourceGroup.Location `
-                  -ServerNames $serverQueue `
-                  -adminLogins $tenantAdmins `
-                  -adminPasswords $tenantAdminPasswords `
+                  -ServerConfigurationObjects $serverConfigurations `                  
                   -ErrorAction Stop
 
   # Mark 'origin' servers as recovered 
