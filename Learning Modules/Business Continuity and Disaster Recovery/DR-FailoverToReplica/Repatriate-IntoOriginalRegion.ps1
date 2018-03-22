@@ -112,13 +112,6 @@ $catalogFailoverGroupName = $config.CatalogFailoverGroupNameStem + $wtpUser.Name
 $scriptPath= $PSScriptRoot
 Save-AzureRmContext -Path "$env:TEMP\profile.json" -Force -ErrorAction Stop
 
-# Start background process to sync tenant server, pool, and database configuration info into the catalog 
-$runningScripts = (Get-WmiObject -Class Win32_Process -Filter "Name='PowerShell.exe'").CommandLine
-if (!($runningScripts -like "*Sync-TenantConfiguration*"))
-{
-  Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Sync-TenantConfiguration.ps1'"
-}
-
 # Get catalog failover group
 $catalogFailoverGroup = Get-AzureRmSqlDatabaseFailoverGroup `
                           -ResourceGroupName $wtpUser.ResourceGroupName `
@@ -159,6 +152,14 @@ if ($activeCatalogServer -ne $originCatalogServerName)
     
 # Enable traffic manager endpoint in origin, disable endpoint in recovery
 Reset-TrafficManagerEndpoints 
+
+$runningScripts = (Get-WmiObject -Class Win32_Process -Filter "Name='PowerShell.exe'") | Where-Object{$_.CommandLine -like "*Sync-TenantConfiguration*"}
+foreach($script in $runningScripts)
+{
+  $script.Terminate() > $null
+}
+# Start background process to sync tenant server, pool, and database configuration info into the catalog 
+Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Sync-TenantConfiguration.ps1'"
 
 # Reconfigure servers and elastic pools in original region to match settings in the recovery region 
 Write-Output "Reconfiguring tenant servers and elastic pools in original region to match recovery region ..."

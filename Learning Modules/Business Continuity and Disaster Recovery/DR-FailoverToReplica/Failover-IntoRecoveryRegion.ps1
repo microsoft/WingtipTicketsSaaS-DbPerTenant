@@ -139,7 +139,7 @@ Save-AzureRmContext -Path "$env:TEMP\profile.json" -Force -ErrorAction Stop
 $runningScripts = (Get-WmiObject -Class Win32_Process -Filter "Name='PowerShell.exe'") | Where-Object{$_.CommandLine -like "*Sync-TenantConfiguration*"}
 foreach($script in $runningScripts)
 {
-  $script.Terminate()
+  $script.Terminate() > $null
 }
 # Start background process to sync tenant server, pool, and database configuration info into the catalog 
 Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Sync-TenantConfiguration.ps1'"

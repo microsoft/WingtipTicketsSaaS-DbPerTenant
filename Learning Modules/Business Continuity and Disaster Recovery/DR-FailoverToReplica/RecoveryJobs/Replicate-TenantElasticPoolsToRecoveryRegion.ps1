@@ -80,7 +80,7 @@ while (!$replicatedServers)
 {
   Start-Sleep $sleepInterval
   $replicatedServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameContains "tenants"
-  Write-Output "waiting for server to complete replication ..."
+  Write-Output "waiting for tenant server(s) to complete replication ..."
 }
 
 # Check for elastic pools that have previously been recovered 

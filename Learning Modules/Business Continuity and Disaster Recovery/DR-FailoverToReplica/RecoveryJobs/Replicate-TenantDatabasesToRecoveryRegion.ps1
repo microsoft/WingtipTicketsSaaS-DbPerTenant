@@ -125,7 +125,7 @@ while (@($replicatedElasticPools).Count -lt $poolCount)
 {
   Start-Sleep $sleepInterval
   $replicatedElasticPools = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
-  Write-Output "waiting for pools to complete replication ..."
+  Write-Output "waiting for pool(s) to complete replication ..."
 }
 
 # Find previous replication operations that are not yet complete. 

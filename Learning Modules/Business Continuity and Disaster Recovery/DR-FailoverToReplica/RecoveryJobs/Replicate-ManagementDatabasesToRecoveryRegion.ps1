@@ -48,14 +48,6 @@ $pastDeploymentWaitTime = 0
 $originCatalogServerName = $config.CatalogServerNameStem + $wtpUser.Name
 $recoveryCatalogServerName = $config.CatalogServerNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix
 
-# Wait until catalog recovery server has been created before starting catalog database replication
-$recoveryCatalogServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameEquals $recoveryCatalogServerName
-while (!$recoveryCatalogServer)
-{
-  Start-Sleep $sleepInterval
-  $recoveryCatalogServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameEquals $recoveryCatalogServerName
-}
-
 # Find any previous database recovery operations to get most current state of recovered resources 
 # This allows the script to be re-run if an error during deployment 
 $pastDeployment = Get-AzureRmResourceGroupDeployment -ResourceGroupName $WingtipRecoveryResourceGroup -Name "DeployCatalogFailoverGroup" -ErrorAction SilentlyContinue 2>$null
@@ -76,6 +68,15 @@ while (($pastDeployment) -and ($pastDeployment.ProvisioningState -NotIn "Succeed
     Stop-AzureRmResourceGroupDeployment -ResourceGroupName $WingtipRecoveryResourceGroup -Name "DeployCatalogFailoverGroup" -ErrorAction SilentlyContinue 1>$null 2>$null
     break
   }    
+}
+
+# Wait until catalog recovery server has been created before starting catalog database replication
+$recoveryCatalogServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameEquals $recoveryCatalogServerName
+while (!$recoveryCatalogServer)
+{
+  Start-Sleep $sleepInterval
+  $recoveryCatalogServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameEquals $recoveryCatalogServerName
+  Write-Output "waiting for catalog server to complete replication ..."
 }
 
 $managementDatabaseCount = (Get-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originCatalogServerName | Where-Object {$_.DatabaseName -ne 'master'}).Count

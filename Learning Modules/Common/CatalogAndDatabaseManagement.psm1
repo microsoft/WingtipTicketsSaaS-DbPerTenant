@@ -2029,7 +2029,10 @@ function Set-ExtendedDatabase {
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [object]$Database    
+        [object]$Database,
+
+        [parameter(Mandatory=$false)]
+        [String]$RecoveryState='n/a'    
     )
     $config = Get-Configuration
 
@@ -2048,7 +2051,7 @@ function Set-ExtendedDatabase {
                 LastUpdated = source.LastUpdated
         WHEN NOT MATCHED THEN
             INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, RecoveryState, LastUpdated)
-            VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', 'n/a', LastUpdated);"    
+            VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', $RecoveryState, LastUpdated);"    
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -2070,7 +2073,10 @@ function Set-ExtendedElasticPool{
     [object]$Catalog,
 
     [parameter(Mandatory=$true)]
-    [object]$ElasticPool   
+    [object]$ElasticPool,
+
+    [parameter(Mandatory=$false)]
+    [String]$RecoveryState='n/a' 
     )
 
     $config = Get-Configuration
@@ -2099,7 +2105,7 @@ function Set-ExtendedElasticPool{
                 LastUpdated = source.LastUpdated
         WHEN NOT MATCHED THEN
             INSERT (ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, State, RecoveryState, LastUpdated)
-            VALUES (ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, 'created', 'n/a', LastUpdated);"
+            VALUES (ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, 'created', $RecoveryState, LastUpdated);"
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -2120,7 +2126,10 @@ function Set-ExtendedServer {
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [object]$Server
+        [object]$Server,
+
+        [parameter(Mandatory=$false)]
+        [String]$RecoveryState='n/a'
     )
  
     $config = Get-Configuration
@@ -2134,7 +2143,7 @@ function Set-ExtendedServer {
         ON target.ServerName = source.ServerName 
         WHEN NOT MATCHED THEN
             INSERT (ServerName, State, RecoveryState, Location, LastUpdated)
-            VALUES (ServerName, 'created', 'n/a', Location, LastUpdated);"
+            VALUES (ServerName, 'created', $RecoveryState, Location, LastUpdated);"
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -2906,6 +2915,7 @@ function Update-TenantResourceRecoveryState
         replicating             |   replicated          |   endReplication     (replication to origin successfully completed)
         replicating             |   errorState          |   markError          (replication to origin failed)
         --------------------------------------------------------------------------
+        n/a                     |   repatriating        |   startFailback      (failback to origin)
         replicated              |   repatriating        |   startFailback      (failback to origin)
         failedOver              |   repatriating        |   startFailback      (failback to origin)
         markError               |   repatriating        |   startFailback      (failback to origin)
@@ -2928,7 +2938,7 @@ function Update-TenantResourceRecoveryState
         'endFailover' = @{ "beginState" = ('failingOver'); "endState" = ('failedOver') };        
         'startReplication' = @{ "beginState" = ('restored', 'errorState', 'n/a'); "endState" = ('replicating') };
         'endReplication' = @{ "beginState" = ('replicating'); "endState" = ('replicated') };
-        'startFailback' = @{ "beginState" = ('replicated', 'failedOver', 'errorState'); "endState" = ('repatriating') };
+        'startFailback' = @{ "beginState" = ('n/a','replicated', 'failedOver', 'errorState'); "endState" = ('repatriating') };
         'conclude' = @{ "beginState" = ('repatriating'); "endState" = ('complete') };
     }    
 
