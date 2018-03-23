@@ -2051,7 +2051,7 @@ function Set-ExtendedDatabase {
                 LastUpdated = source.LastUpdated
         WHEN NOT MATCHED THEN
             INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, RecoveryState, LastUpdated)
-            VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', $RecoveryState, LastUpdated);"    
+            VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', '$RecoveryState', LastUpdated);"    
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -2105,7 +2105,7 @@ function Set-ExtendedElasticPool{
                 LastUpdated = source.LastUpdated
         WHEN NOT MATCHED THEN
             INSERT (ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, State, RecoveryState, LastUpdated)
-            VALUES (ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, 'created', $RecoveryState, LastUpdated);"
+            VALUES (ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, 'created', '$RecoveryState', LastUpdated);"
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -2143,7 +2143,7 @@ function Set-ExtendedServer {
         ON target.ServerName = source.ServerName 
         WHEN NOT MATCHED THEN
             INSERT (ServerName, State, RecoveryState, Location, LastUpdated)
-            VALUES (ServerName, 'created', $RecoveryState, Location, LastUpdated);"
+            VALUES (ServerName, 'created', '$RecoveryState', Location, LastUpdated);"
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -2747,7 +2747,15 @@ function Update-TenantShardInfo
                 $recoveryShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($FullyQualifiedTenantServerName, $TenantDatabaseName, 'tcp', '1433')
                 if ($recoveryShardLocation)
                 {
-                    $recoveryManager.AttachShard($recoveryShardLocation)  
+                    if ($recoveryManager)
+                    {
+                        $recoveryManager.AttachShard($recoveryShardLocation)  
+                    }
+                    else
+                    {
+                        $recoveryManager = ($Catalog.ShardMapManager).getRecoveryManager()
+                        $recoveryManager.AttachShard($recoveryShardLocation)  
+                    }
 
                     $mappingDifferences = $recoveryManager.DetectMappingDifferences($recoveryShardLocation)
                     foreach ($diff in $mappingDifferences)

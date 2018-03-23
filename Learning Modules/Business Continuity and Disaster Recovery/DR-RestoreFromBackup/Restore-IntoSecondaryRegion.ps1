@@ -38,7 +38,18 @@ $wtpUser = Get-UserConfig
 $config = Get-Configuration
 
 # Get Azure credentials if not already logged on
-Initialize-Subscription -NoEcho:$NoEcho.IsPresent
+$credentialLoad = Import-AzureRmContext -Path "$env:TEMP\profile.json"
+if (!$credentialLoad)
+{
+    Initialize-Subscription -NoEcho:$NoEcho.IsPresent
+}
+else
+{
+  $AzureContext = Get-AzureRmContext
+  $subscriptionId = Get-SubscriptionId
+  $subscriptionName = Get-SubscriptionName
+  Write-Output "Signed-in as $($AzureContext.Account), Subscription '$($subscriptionId)' '$($subscriptionName)'"    
+}
 
 # Get location of primary region
 $primaryLocation = (Get-AzureRmResourceGroup -ResourceGroupName $wtpUser.ResourceGroupName).Location
@@ -244,14 +255,27 @@ while ($true)
   $newTenantProvisioningStatus = Format-JobOutput $newTenantProvisioningStatus 
   $tenantRecoveryStatus = Format-JobOutput $tenantRecoveryStatus
  
+  if ($newTenantProvisioningStatus -eq "Done")
+  {
+    $newTenantServerRecoveryStatus = "100% (1 of 1)"
+    $newTenantPoolRecoveryStatus = "100% (1 of 1)"
+  }
+  else
+  {
+    $newTenantServerRecoveryStatus = "0% (0 of 1)"
+    $newTenantPoolRecoveryStatus = "0% (0 of 1)" 
+  }
+
   # Output status of recovery jobs to console
   [PSCustomObject] @{
-    WingtipSaaSApp = $appRecoveryStatus
-    Tenants = $tenantRecoveryStatus
-    TenantServers = $serverRecoveryStatus
-    TenantPools = $poolRecoveryStatus
-    TenantDatabases = $databaseRecoveryStatus
-    NewTenantResources = $newTenantProvisioningStatus
+    "Wingtip App" = $appRecoveryStatus
+    "Catalog Server & Database" = "100% (2 of 2)"
+    "New Tenant Server" = $newTenantServerRecoveryStatus
+    "New Tenant Pool" = $newTenantPoolRecoveryStatus
+    "Tenant Servers" = $serverRecoveryStatus
+    "Tenant Pools" = $poolRecoveryStatus 
+    "Tenant Databases" =  $databaseRecoveryStatus
+    "Tenants Online" = $tenantRecoveryStatus 
   } | Format-List
   
 
@@ -263,7 +287,7 @@ while ($true)
   }
   else
   {
-    Write-Output "---`nRefreshing status in $StatusCheckTimeInterval seconds..."
+    Write-Output "---`nRefreshing recovery status in $StatusCheckTimeInterval seconds..."
     Start-Sleep $StatusCheckTimeInterval
     $elapsedTime = (Get-Date) - $startTime
   }          

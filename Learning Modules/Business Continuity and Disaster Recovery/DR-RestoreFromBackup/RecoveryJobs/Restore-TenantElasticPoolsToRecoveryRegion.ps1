@@ -142,6 +142,7 @@ while ($recoveredPoolCount -lt $poolCount)
         }
         elseif ($elasticPool.RecoveryState -NotIn "n/a","restoring","complete")
         {
+          $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $elasticPool.ServerName -ElasticPoolName $elasticPool.ElasticPoolName
           $recoveredPoolCount += 1
         }        
     }

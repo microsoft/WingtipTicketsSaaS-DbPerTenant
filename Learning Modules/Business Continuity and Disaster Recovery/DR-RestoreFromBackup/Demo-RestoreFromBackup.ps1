@@ -67,9 +67,12 @@ if ($DemoScenario -eq 1)
 ### Recover the app into the recovery region by restoring from geo-redundant backups
 if ($DemoScenario -eq 2)
 {
+  # Save login credentials for background job
+  Save-AzureRmContext -Path "$env:TEMP\profile.json" -Force
+
   Write-Output "`nStarting geo-restore of application. This may take 20 minutes or more..."  
   
-  & $PSScriptRoot\Restore-IntoSecondaryRegion.ps1 -NoEcho
+  Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Restore-IntoSecondaryRegion.ps1'"
      
   exit
 }
@@ -128,10 +131,13 @@ if ($DemoScenario -eq 4)
 ### Repatriate the app into its original region
 if ($DemoScenario -eq 5)
 {
+  # Save login credentials for background job
+  Save-AzureRmContext -Path "$env:TEMP\profile.json" -Force
+  
   Write-Output "Repatriating app into original region. This may take several minutes..."
-  
-  & $PSScriptRoot\Repatriate-IntoOriginalRegion.ps1 -NoEcho
-  
+
+  Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Repatriate-IntoOriginalRegion.ps1'"
+
   exit
 }
 

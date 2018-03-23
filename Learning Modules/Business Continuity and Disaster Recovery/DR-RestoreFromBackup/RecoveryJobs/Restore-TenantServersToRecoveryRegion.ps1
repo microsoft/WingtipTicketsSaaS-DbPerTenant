@@ -102,7 +102,14 @@ foreach ($server in $serverList)
       Location = "$($recoveryResourceGroup.Location)"
       AdminLogin = "$adminLogin"
       AdminPassword = "$adminPassword"
-    }   
+    }
+    $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -ServerName $server.ServerName   
+  }
+  else
+  {
+    $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startRecovery" -ServerName $server.ServerName
+    $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $server.ServerName
+    $recoveredServers+=1
   }
 }
   
@@ -120,7 +127,7 @@ if ($serverQueue.Count -gt 0)
                   -Name "TenantServerRecovery" `
                   -ResourceGroupName $recoveryResourceGroup.ResourceGroupName `
                   -TemplateFile ("$using:scriptPath\RecoveryTemplates\" + $config.TenantServerRestoreBatchTemplate) `
-                  -ServerConfigurationObjects $serverConfigurations `                  
+                  -ServerConfigurationObjects $serverConfigurations `
                   -ErrorAction Stop
 
   # Mark 'origin' servers as recovered 

@@ -124,5 +124,5 @@ elseif ($existingGoldenTenantDatabase -and !$existingNewTenantPool)
 }
 
 # Output recovery progress
-Write-Output "100% (3 of 3)"
+Write-Output "Done"
 
