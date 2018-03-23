@@ -53,7 +53,7 @@ while ($true)
 {
   $tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
   $tenantCount = (Get-Tenants -Catalog $tenantCatalog).Count
-  $offlineTenants = $tenantList | Where-Object {(($_.TenantStatus -ne 'Online') -or ($_.TenantRecoveryState -In 'n/a', 'OnlineInOrigin'))}   
+  $offlineTenants = @($tenantList).Where({(($_.TenantStatus -ne 'Online') -or ($_.TenantRecoveryState -In 'n/a', 'OnlineInOrigin'))})
   $tenantsInRecovery = $tenantList | Where-Object{$_.TenantRecoveryState -ne 'OnlineInOrigin'}
   $onlineTenantCount = $tenantCount - ($offlineTenants.Count)
   $repatriatedTenantCount = $tenantCount - ($tenantsInRecovery.Count)
@@ -133,6 +133,16 @@ while ($true)
         {
           Set-TenantOffline -Catalog $tenantCatalog -TenantKey $tenantKey 
         }  
+      }
+      elseif ($restoredTenantDatabase -and !$originTenantDatabase)
+      {
+        # Mark tenants that are created in the recovery region as 'OnlineInRecovery'
+        if ($tenantRecoveryState -ne 'OnlineInRecovery')
+        {
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -TenantKey $tenantKey
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "startShardUpdateToRecovery" -TenantKey $tenantKey
+          $tenantState = Update-TenantRecoveryState -Catalog $tenantCatalog -UpdateAction "endShardUpdateToRecovery" -TenantKey $tenantKey
+        }
       }
       elseif (($originDatabaseRecoveryStatus.RecoveryState -In ('restored', 'failedOver')) -and ($tenantRecoveryState -eq 'RestoredTenantData'))
       {

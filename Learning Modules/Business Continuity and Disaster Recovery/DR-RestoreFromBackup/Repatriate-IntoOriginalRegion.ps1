@@ -256,6 +256,8 @@ foreach($script in $runningScripts)
 # Start background process to sync tenant server, pool, and database configuration info into the catalog 
 Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Sync-TenantConfiguration.ps1'"
 
+# Get the active tenant catalog 
+$catalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
 
 # Reconfigure servers and elastic pools in original region to match settings in the recovery region 
 Write-Output "Reconfiguring tenant servers and elastic pools in original region to match recovery region ..."
@@ -267,7 +269,7 @@ foreach ($database in $databaselist)
 {
   if ($database.RecoveryState -In 'resetting', 'replicating', 'repatriating')
   {
-    $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
+    $dbState = Update-TenantResourceRecoveryState -Catalog $catalog -UpdateAction "markError" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
   }
 }
 
