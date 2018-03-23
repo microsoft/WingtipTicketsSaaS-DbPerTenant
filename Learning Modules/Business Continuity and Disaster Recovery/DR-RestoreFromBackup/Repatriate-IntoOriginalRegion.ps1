@@ -307,9 +307,9 @@ while ($true)
  
   # Output status of repatriation jobs to console
   [PSCustomObject] @{
-    RepatriatedTenants = $tenantRecoveryStatus
-    ResetDatabases = $resetDatabaseStatus
-    RepatriatedDatabases = $failoverDatabaseStatus
+    "Reset Tenant Databases" = $resetDatabaseStatus
+    "Repatriated Tenant Databases" = $failoverDatabaseStatus
+    "Tenants Repatriated" = $tenantRecoveryStatus
   } | Format-List
   
 

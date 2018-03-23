@@ -2368,6 +2368,7 @@ function Stop-TenantRestoreOperations
     )
 
     $config = Get-Configuration
+    $wtpUser = Get-UserConfig
 
     # Cancel restore operations for single tenant
     if ($TenantName)
@@ -2399,8 +2400,9 @@ function Stop-TenantRestoreOperations
         $requestedState = $resourceRecoveryStates['cancelAndReset'].endState
         $validInitialStates = $resourceRecoveryStates['cancelAndReset'].beginState
         $validInitialStates = "'$($validInitialStates -join "','")'"
+        $tenantServerName = $config.TenantServerNameStem + $wtpUser.Name
 
-        $serverNameStem = ($ServerName -split "$($config.RecoveryRoleSuffix)")[0]
+        $serverNameStem = ($tenantServerName -split "$($config.RecoveryRoleSuffix)")[0]
         $validServerNames = "'$serverNameStem'"
 
         $cancelRestoreOperationsQuery = "
