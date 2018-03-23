@@ -44,11 +44,11 @@ $wingtipRecoveryApp = Find-AzureRmResource `
 
 if ($wingtipRecoveryApp)
 {
-    Write-Output "100% (1 of 1)"
+    Write-Output "Done"
 }
 else
 {
-    Write-Output "0% (0 of 1)"
+    Write-Output "Deploying ..."
     $templatePath = "$using:scriptPath\RecoveryTemplates\" + $config.WebApplicationRecoveryTemplate
     $catalogRecoveryServerName = $config.CatalogServerNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix
     $tenantsRecoveryServerName = $config.TenantServerNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix
@@ -63,5 +63,5 @@ else
                     -TenantsRecoveryServer $tenantsRecoveryServerName `
                     -ErrorAction Stop
 
-    Write-Output "100% (1 of 1)"                    
+    Write-Output "Done"                    
 }

@@ -220,10 +220,12 @@ while ($true)
 
   # Enable traffic manager endpoint in recovery region if resources have been created for new tenants 
   # This signals that the app is ready to receive traffic and can process new tenant registrations while recovery operations are underway
+  $appAvailable = $false
   if (($newTenantProvisioningJob.State -eq "Completed") -and ($appRecoveryJob.State -eq "Completed") -and ($serverRecoveryJob.State -eq "Completed"))
   {
     $profileName = $config.EventsAppNameStem + $wtpUser.Name
     $endpointName = $config.EventsAppNameStem + $recoveryLocation + '-' + $wtpUser.Name
+    $appAvailable = $true
 
     $webAppEndpoint = Get-AzureRmTrafficManagerEndpoint -Name $endpointName -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName
     
@@ -266,10 +268,19 @@ while ($true)
     $newTenantPoolRecoveryStatus = "0% (0 of 1)" 
   }
 
+  if ($appAvailable)
+  {
+    $appRecoveryStatus = "Online"
+  }
+  elseif ($appRecoveryStatus -eq "Done")
+  {
+    $appRecoveryStatus = "Deployed (offline)"
+  }
+
   # Output status of recovery jobs to console
   [PSCustomObject] @{
-    "Wingtip App" = $appRecoveryStatus
-    "Catalog Server & Database" = "100% (2 of 2)"
+    "Catalog Server & Database" = "Available"
+    "Wingtip App" = $appRecoveryStatus    
     "New Tenant Server" = $newTenantServerRecoveryStatus
     "New Tenant Pool" = $newTenantPoolRecoveryStatus
     "Tenant Servers" = $serverRecoveryStatus

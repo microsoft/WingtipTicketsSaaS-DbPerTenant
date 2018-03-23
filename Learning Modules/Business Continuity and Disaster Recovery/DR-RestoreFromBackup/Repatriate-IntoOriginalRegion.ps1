@@ -208,7 +208,7 @@ else
                                 -FailoverPolicy Manual      
 
       $catalogDatabases = Get-AzureRmSqlDatabase -ResourceGroupName $recoveryResourceGroupName -ServerName $recoveryCatalogServerName | Where-Object{$_.DatabaseName -ne 'master'}
-      Write-Output "Adding catalog server databases to failover group ..."
+      Write-Output "Geo-replicating databases in catalog server failover group ..."
       foreach ($database in $catalogDatabases)
       {
         Add-AzureRmSqlDatabaseToFailoverGroup `
@@ -310,8 +310,8 @@ while ($true)
   # Output status of repatriation jobs to console
   [PSCustomObject] @{
     "Reset Tenant Databases" = $resetDatabaseStatus
-    "Repatriated Tenant Databases" = $failoverDatabaseStatus
-    "Tenants Repatriated" = $tenantRecoveryStatus
+    "FailedOver Tenant Databases" = $failoverDatabaseStatus
+    "Tenants In Origin" = $tenantRecoveryStatus
   } | Format-List
   
 

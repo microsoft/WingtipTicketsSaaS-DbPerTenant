@@ -174,7 +174,7 @@ foreach ($tenant in $tenantList)
     $failoverQueue += $dbProperties
   }
   # Include tenant databases that were modified in the recovery region
-  elseif (($tenantDataChanged) -and ($tenant.TenantRecoveryState -ne 'OnlineInOrigin'))
+  elseif (($tenantDataChanged) -and ($tenant.TenantRecoveryState -ne 'OnlineInOrigin') -and ($replicationLink.Role -eq 'Primary'))
   {
     $dbProperties = @{
       "ServerName" = $currTenantServerName
@@ -193,9 +193,10 @@ foreach ($tenant in $tenantList)
     {
       $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "conclude" -ServerName $recoveryTenantServerName -ElasticPoolName $tenantDatabaseObject.ElasticPoolName
     }
+    $failoverCount+= 1
   }
 }
-$replicatedDatabaseCount = $failoverQueue.Count
+$replicatedDatabaseCount = $failoverQueue.Count + $failoverCount
 
 if ($replicatedDatabaseCount -eq 0)
 {
