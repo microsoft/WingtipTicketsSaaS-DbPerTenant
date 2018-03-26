@@ -2449,6 +2449,12 @@ function Test-IfTenantDataChanged
 
     $config = Get-Configuration
     $tenantProperties = Get-ExtendedTenant -Catalog $Catalog -TenantKey (Get-TenantKey $TenantName)
+
+    if (!$tenantProperties.ServerName)
+    {
+        return $false
+    }
+
     $tenantServerName = $tenantProperties.ServerName.split('.')[0]
     $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $Catalog -ServerName $tenantServerName -DatabaseName $tenantProperties.DatabaseName
     $recoveryChecksum = $tenantDatabaseProperties.RecoveryChecksum

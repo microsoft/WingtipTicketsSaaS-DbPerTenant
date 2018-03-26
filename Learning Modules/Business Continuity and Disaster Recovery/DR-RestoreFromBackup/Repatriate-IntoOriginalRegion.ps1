@@ -130,7 +130,32 @@ if ($catalog.Database.ResourceGroupName -ne $recoveryResourceGroupName)
   Write-Output "Catalog database already failed over to origin. Resetting traffic manager endpoint to origin ..."
   Reset-TrafficManagerEndpoints
 }
-else
+
+# Reconfigure servers and elastic pools in original region to match settings in the recovery region 
+Write-Output "Reconfiguring tenant servers and elastic pools in original region to match recovery region ..."
+$updateTenantResourcesJob = Start-Job -Name "ReconfigureTenantResources" -FilePath "$PSScriptRoot\RecoveryJobs\Update-TenantResourcesInOriginalRegion.ps1" -ArgumentList @($recoveryResourceGroupName)
+
+# Start background job to reset tenant databases that have not been changed in the recovery region 
+$resetDbJob = Start-Job -Name "ResetDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Reset-UnchangedDatabases.ps1" -ArgumentList @($recoveryResourceGroupName)
+
+# Wait to reconfigure servers and pools in origin region before proceeding
+$reconfigureJobStatus = Wait-Job $updateTenantResourcesJob
+if ($reconfigureJobStatus.State -eq "Failed")
+{
+  Receive-Job $updateTenantResourcesJob
+  exit
+}
+
+# Wait till all tenant databases that have not been changed in the recovery region are reset
+$resetDbJobStatus = Wait-Job $resetDbJob
+if ($resetDbJobStatus.State -eq "Failed")
+{
+  Receive-Job $resetDbJob
+  exit
+}
+
+# Failover the active catalog database to origin (if applicable)
+if ($catalog.Database.ResourceGroupName -eq $recoveryResourceGroupName)
 {
   $tenantDatabaseList = Get-ExtendedDatabase -Catalog $catalog
   $defaultRecoveryTenantServerName = $config.TenantServerNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix
@@ -245,7 +270,7 @@ else
   }
   
   # Enable traffic manager endpoint in origin, disable endpoint in recovery
-  Reset-TrafficManagerEndpoints 
+  Reset-TrafficManagerEndpoints  
 }
 
 $runningScripts = (Get-WmiObject -Class Win32_Process -Filter "Name='PowerShell.exe'") | Where-Object{$_.CommandLine -like "*Sync-TenantConfiguration*"}
@@ -259,10 +284,6 @@ Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Sync-TenantC
 # Get the active tenant catalog 
 $catalog = Get-Catalog -ResourceGroupName $wtpUser.ResourceGroupName -WtpUser $wtpUser.Name
 
-# Reconfigure servers and elastic pools in original region to match settings in the recovery region 
-Write-Output "Reconfiguring tenant servers and elastic pools in original region to match recovery region ..."
-$updateTenantResourcesJob = Start-Job -Name "ReconfigureTenantResources" -FilePath "$PSScriptRoot\RecoveryJobs\Update-TenantResourcesInOriginalRegion.ps1" -ArgumentList @($recoveryResourceGroupName)
-
 # Mark any databases stuck in repatriating state as in error
 $databaselist = Get-ExtendedDatabase -Catalog $catalog
 foreach ($database in $databaselist)
@@ -272,17 +293,6 @@ foreach ($database in $databaselist)
     $dbState = Update-TenantResourceRecoveryState -Catalog $catalog -UpdateAction "markError" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
   }
 }
-
-# Wait to reconfigure servers and pools in origin region before proceeding
-$reconfigureJobStatus = Wait-Job $updateTenantResourcesJob
-if ($reconfigureJobStatus.State -eq "Failed")
-{
-  Receive-Job $updateTenantResourcesJob
-  exit
-}
-
-# Start background job to reset tenant databases that have not been changed in the recovery region 
-$resetDbJob = Start-Job -Name "ResetDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Reset-UnchangedDatabases.ps1" -ArgumentList @($recoveryResourceGroupName)
 
 # Start background job to replicate tenant databases that have been changed in the recovery region to origin region
 $replicateDbJob = Start-Job -Name "ReplicateDatabases" -FilePath "$PSScriptRoot\RecoveryJobs\Replicate-ChangedTenantDatabases.ps1" -ArgumentList @($recoveryResourceGroupName)
@@ -328,6 +338,6 @@ while ($true)
     $elapsedTime = (Get-Date) - $startTime
   }          
 }
-
-Write-Output "'$($wtpUser.ResourceGroupName)' deployment repatriated back into '$primaryLocation' region in $($elapsedTime.TotalMinutes) minutes."     
+$elapsedTime = [math]::Round($elapsedTime.TotalMinutes,2)
+Write-Output "'$($wtpUser.ResourceGroupName)' deployment repatriated back into '$primaryLocation' region in $elapsedTime minutes."     
 

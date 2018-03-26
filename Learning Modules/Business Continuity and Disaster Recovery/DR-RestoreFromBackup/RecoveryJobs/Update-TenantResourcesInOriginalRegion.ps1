@@ -76,23 +76,50 @@ foreach($server in $recoveryRegionServers)
 {
   $originServerName = ($server.ServerName -split $config.RecoveryRoleSuffix)[0]
 
-  [array]$tenantServerConfigurations += @{
+  # Check if server exists in origin region
+  $originServerExists = Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.ResourceGroupName -ResourceNameEquals $originServerName -ResourceType "Microsoft.Sql/servers"
+
+  if (!$originServerExists)
+  {
+    [array]$tenantServerConfigurations += @{
         ServerName = "$originServerName"
         AdminLogin = "$($config.TenantAdminUserName)"
         AdminPassword = "$($config.TenantAdminPassword)"           
-  }
+    }
   
-  $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $originServerName 
+    $serverState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $originServerName 
+  }  
 }
 
 # Save elastic pool configuration settings. 
-# Pools are updated even though they may exist in the original region to sync any configuration changes that happened during recovery 
 [array]$tenantElasticPoolConfigurations = @()
 foreach($pool in $recoveryRegionElasticPools)
 {
   $originServerName = ($pool.ServerName -split $config.RecoveryRoleSuffix)[0]
 
-  [array]$tenantElasticPoolConfigurations += @{
+  # Check if pool exists with correct configuration
+  $originPoolSynced = $false
+  $originPoolExists = Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.ResourceGroupName -ResourceNameEquals "$originServerName/$($pool.ElasticPoolName)"
+  
+  if ($originPoolExists)
+  {
+    $originPool = Get-AzureRmSqlElasticPool -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originServerName
+    if
+    (
+      $originPool.Edition -eq $pool.Edition -and
+      $originPool.Dtu -eq $pool.Dtu -and 
+      $originPool.DatabaseDtuMax -eq $pool.DatabaseDtuMax -and
+      $originPool.DatabaseDtuMin -eq $pool.DatabaseDtuMin -and
+      $originPool.StorageMB -eq $pool.StorageMB       
+    )
+    {
+      $originPoolSynced = $true
+    }
+  }
+
+  if (!$originPoolSynced)
+  {
+    [array]$tenantElasticPoolConfigurations += @{
       ServerName = "$originServerName"
       ElasticPoolName = "$($pool.ElasticPoolName)"
       Edition = "$($pool.Edition)"
@@ -103,10 +130,17 @@ foreach($pool in $recoveryRegionElasticPools)
     }
     # Update elastic pool recovery state 
     $poolState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startReplication" -ServerName $originServerName -ElasticPoolName $pool.ElasticPoolName
+  }  
 }
 $tenantResourceCount = $tenantServerConfigurations.Count + $tenantElasticPoolConfigurations.Count
 
-# Output recovery progress 
+if ($tenantResourceCount -eq 0)
+{
+  Write-Output "All resources synced"
+  exit
+}
+
+# Output recovery progress
 Write-Output "0% (0 of $tenantResourceCount)"
 
 # Reconfigure servers and elastic pools in primary region to match settings in the recovery region 

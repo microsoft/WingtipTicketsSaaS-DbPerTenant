@@ -54,7 +54,7 @@ while ($true)
   $tenantList = Get-ExtendedTenant -Catalog $tenantCatalog
   $tenantCount = (Get-Tenants -Catalog $tenantCatalog).Count
   $offlineTenants = @($tenantList).Where({(($_.TenantStatus -ne 'Online') -or ($_.TenantRecoveryState -In 'n/a', 'OnlineInOrigin'))})
-  $tenantsInRecovery = $tenantList | Where-Object{$_.TenantRecoveryState -ne 'OnlineInOrigin'}
+  $tenantsInRecovery = @($tenantList).Where({$_.TenantRecoveryState -ne 'OnlineInOrigin'})
   $onlineTenantCount = $tenantCount - ($offlineTenants.Count)
   $repatriatedTenantCount = $tenantCount - ($tenantsInRecovery.Count)
 
