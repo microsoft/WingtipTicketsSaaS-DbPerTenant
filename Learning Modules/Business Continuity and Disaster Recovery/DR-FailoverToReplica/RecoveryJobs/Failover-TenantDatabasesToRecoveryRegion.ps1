@@ -85,7 +85,8 @@ function Start-AsynchronousDatabaseFailover
                     -ResourceGroupName $WingtipRecoveryResourceGroup `
                     -ServerName $SecondaryTenantServerName `
                     -DatabaseName $TenantDatabaseName `
-                    -ReplicationLinkId "$($replicationObject.LinkId)"  
+                    -ReplicationLinkId "$($replicationObject.LinkId)" `
+                    -AllowDataLoss
      
     return $taskObject
   }
@@ -218,12 +219,20 @@ while ($true)
       "ElasticPoolName" = $currentDatabase.ElasticPoolName
     }
 
-    if ($operationObject.Exception -or !$operationObject)
+    if ($operationObject.Exception)
     {
       Write-Verbose $operationObject.Exception.InnerException
 
       # Mark database failover error
       $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $currentDatabase.ServerName -DatabaseName $currentDatabase.DatabaseName
+      $failoverQueue = @($currentDatabase) + $failoverQueue
+      Start-Sleep 10
+    }
+    elseif (!$operationObject)
+    {
+      # Retry failover if unsuccessful
+      $failoverQueue = @($currentDatabase) + $failoverQueue
+      Start-Sleep 10
     }
     else
     {
@@ -270,10 +279,28 @@ while ($operationQueue.Count -gt 0)
       $failoverJobId = $failoverJob.Id
       $databaseDetails = $operationQueueMap["$failoverJobId"]
 
-      Write-Verbose "Could not failover database: '$($databaseDetails.ServerName)/$($databaseDetails.DatabaseName)'" 
-
       # Mark database failover error
       $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $databaseDetails.ServerName -DatabaseName $databaseDetails.DatabaseName
+
+      # Retry failover for database
+      $originServerName = ($databaseDetails.ServerName -split "$($config.RecoveryRoleSuffix)$")[0]
+      $recoveryServerName = $originServerName + $config.RecoveryRoleSuffix
+      $operationObject = Start-AsynchronousDatabaseFailover -AzureContext $azureContext -SecondaryTenantServerName $recoveryServerName -TenantDatabaseName $databaseDetails.DatabaseName
+
+      # Update recovery state of tenant resources
+      $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "startFailover" -ServerName $databaseDetails.ServerName -DatabaseName $databaseDetails.DatabaseName
+
+      # Add operation to queue for tracking
+      $operationId = $operationObject.Id
+      $dbProperties = @{
+        "ServerName" = $databaseDetails.ServerName
+        "DatabaseName" = $databaseDetails.DatabaseName
+      }
+      if (!$operationQueueMap.ContainsKey("$operationId"))
+      {
+        $operationQueue += $operationObject
+        $operationQueueMap.Add("$operationId", $dbProperties)
+      } 
     }
   }
 }

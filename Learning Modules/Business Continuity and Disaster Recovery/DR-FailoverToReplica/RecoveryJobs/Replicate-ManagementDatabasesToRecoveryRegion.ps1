@@ -76,14 +76,13 @@ while (!$recoveryCatalogServer)
 {
   Start-Sleep $sleepInterval
   $recoveryCatalogServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameEquals $recoveryCatalogServerName
-  Write-Output "waiting for catalog server to complete replication ..."
 }
 
 $managementDatabaseCount = (Get-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originCatalogServerName | Where-Object {$_.DatabaseName -ne 'master'}).Count
 $catalogFailoverGroupName = $config.CatalogServerNameStem + "group-" + $wtpUser.Name
 
 # Output recovery progress 
-Write-Output "0% (0 of $managementDatabaseCount)"
+Write-Output "Replicating ... (0 of $managementDatabaseCount complete)"
 
 # Deploy failover group for catalog server  
 $deployment = New-AzureRmResourceGroupDeployment `
@@ -103,4 +102,4 @@ $managementDatabases = Get-AzureRmSqlDatabase -ServerName $originCatalogServerNa
 $catalogFailoverGroup = $catalogFailoverGroup | Add-AzureRmSqlDatabaseToFailoverGroup -Database $managementDatabases
 
 # Output recovery progress 
-Write-Output "100% ($managementDatabaseCount of $managementDatabaseCount)"
+Write-Output "Replicated ($managementDatabaseCount of $managementDatabaseCount)"

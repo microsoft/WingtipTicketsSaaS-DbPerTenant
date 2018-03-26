@@ -45,6 +45,13 @@ if (!$credentialLoad)
 {
   Initialize-Subscription -NoEcho:$NoEcho.IsPresent
 }
+else
+{
+  $AzureContext = Get-AzureRmContext
+  $subscriptionId = Get-SubscriptionId
+  $subscriptionName = Get-SubscriptionName
+  Write-Output "Signed-in as $($AzureContext.Account), Subscription '$($subscriptionId)' '$($subscriptionName)'"    
+}
 
 $recoveryResourceGroupName = $wtpUser.ResourceGroupName + $config.RecoveryRoleSuffix
 $originLocation = (Get-AzureRmResourceGroup -ResourceGroupName $wtpUser.ResourceGroupName).Location
@@ -191,8 +198,8 @@ while ($true)
   
   # Output status of recovery jobs to console
   [PSCustomObject] @{
-    Tenants = $tenantRecoveryStatus
-    TenantDatabases = $databaseRecoveryStatus
+    "Tenants in recovery region" = $tenantRecoveryStatus
+    "Tenant Databases in recovery region" = $databaseRecoveryStatus
   } | Format-List
   
 
@@ -209,5 +216,5 @@ while ($true)
     $elapsedTime = (Get-Date) - $startTime
   }          
 }
-
-Write-Output "'$($wtpUser.ResourceGroupName)' deployment recovered into '$recoveryLocation' region in $($elapsedTime.TotalMinutes) minutes."
+$elapsedTime = [math]::Round($elapsedTime.TotalMinutes,2)
+Write-Output "'$($wtpUser.ResourceGroupName)' deployment recovered into '$recoveryLocation' region in $elapsedTime minutes."

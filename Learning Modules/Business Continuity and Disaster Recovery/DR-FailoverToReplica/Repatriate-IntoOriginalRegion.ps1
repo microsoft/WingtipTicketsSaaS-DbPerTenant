@@ -38,7 +38,18 @@ $config = Get-Configuration
 $currentSubscriptionId = Get-SubscriptionId
 
 # Get Azure credentials if not already logged on
-Initialize-Subscription -NoEcho:$NoEcho.IsPresent
+$credentialLoad = Import-AzureRmContext -Path "$env:TEMP\profile.json" -ErrorAction SilentlyContinue
+if (!$credentialLoad)
+{
+  Initialize-Subscription -NoEcho:$NoEcho.IsPresent
+}
+else
+{
+  $AzureContext = Get-AzureRmContext
+  $subscriptionId = Get-SubscriptionId
+  $subscriptionName = Get-SubscriptionName
+  Write-Output "Signed-in as $($AzureContext.Account), Subscription '$($subscriptionId)' '$($subscriptionName)'"    
+}
 
 # Get location of primary region
 $primaryLocation = (Get-AzureRmResourceGroup -ResourceGroupName $wtpUser.ResourceGroupName).Location
@@ -205,12 +216,8 @@ while ($true)
   $tenantRecoveryStatus = Format-JobOutput $tenantRecoveryStatus
  
   # Output status of repatriation jobs to console
-  [PSCustomObject] @{
-    RepatriatedTenants = $tenantRecoveryStatus
-    RepatriatedDatabases = $failoverDatabaseStatus
-  } | Format-List
-  
-
+  Write-Output "Databases geo-replicated and failed-over to original region: $failoverDatabaseStatus"
+ 
   # Exit recovery if all tenants have been repatriated to origin 
   if (($replicateDbJob.State -eq "Completed") -and ($failoverDbJob.State -eq "Completed") -and ($tenantRecoveryJob.State -eq "Completed"))
   {
@@ -224,6 +231,6 @@ while ($true)
     $elapsedTime = (Get-Date) - $startTime
   }          
 }
-
-Write-Output "'$($wtpUser.ResourceGroupName)' deployment repatriated into '$primaryLocation' region in $($elapsedTime.TotalMinutes) minutes."     
+$elapsedTime = [math]::Round($elapsedTime.TotalMinutes,2)
+Write-Output "'$($wtpUser.ResourceGroupName)' deployment repatriated into '$primaryLocation' region in $elapsedTime minutes."     
 

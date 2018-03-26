@@ -78,9 +78,9 @@ while (($pastDeployment) -and ($pastDeployment.ProvisioningState -NotIn "Succeed
 $replicatedServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameContains "tenants"
 while (!$replicatedServers)
 {
+  Write-Output "waiting for tenant server(s) to complete replication ..."
   Start-Sleep $sleepInterval
   $replicatedServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameContains "tenants"
-  Write-Output "waiting for tenant server(s) to complete replication ..."
 }
 
 # Check for elastic pools that have previously been recovered 
@@ -100,7 +100,7 @@ foreach ($pool in $tenantElasticPools)
 # Output recovery progress 
 $elasticPoolRecoveryPercentage = [math]::Round($recoveredPoolCount/$poolCount,2)
 $elasticPoolRecoveryPercentage = $elasticPoolRecoveryPercentage * 100
-Write-Output "$elasticPoolRecoveryPercentage% ($recoveredPoolCount of $poolCount)"
+Write-Output "Replicating ... ($recoveredPoolCount of $poolCount complete)"
 
 # Recover all elastic pools in restored tenant servers 
 while ($recoveredPoolCount -lt $poolCount)
@@ -148,6 +148,11 @@ while ($recoveredPoolCount -lt $poolCount)
     # Output recovery progress 
     $elasticPoolRecoveryPercentage = [math]::Round($recoveredPoolCount/$poolCount,2)
     $elasticPoolRecoveryPercentage = $elasticPoolRecoveryPercentage * 100
-    Write-Output "$elasticPoolRecoveryPercentage% ($recoveredPoolCount of $poolCount)"      
+    Write-Output "Replicating ... ($recoveredPoolCount of $poolCount complete)"      
   }
 }
+
+# Output recovery progress 
+$elasticPoolRecoveryPercentage = [math]::Round($recoveredPoolCount/$poolCount,2)
+$elasticPoolRecoveryPercentage = $elasticPoolRecoveryPercentage * 100
+Write-Output "Replicated ($recoveredPoolCount of $poolCount)"  

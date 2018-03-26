@@ -82,7 +82,7 @@ function Start-AsynchronousDatabaseReplication
   $databaseId = "/subscriptions/$currentSubscriptionId/resourceGroups/$($wtpUser.ResourceGroupName)/providers/Microsoft.Sql/servers/$($TenantDatabase.ServerName)/databases/$($TenantDatabase.DatabaseName)"
 
   # Delete any existing tenant database in the recovery location
-  Remove-AzureRmSqlDatabase -ResourceGroupName $WingtipRecoveryResourceGroup -ServerName $recoveryServerName -DatabaseName $TenantDatabase.DatabaseName -ErrorAction SilentlyContinue
+  Remove-AzureRmSqlDatabase -ResourceGroupName $WingtipRecoveryResourceGroup -ServerName $recoveryServerName -DatabaseName $TenantDatabase.DatabaseName -ErrorAction SilentlyContinue >$null
 
   # Issue asynchronous replication operation
   if ($TenantDatabase.ServiceObjective -eq 'ElasticPool')
@@ -208,7 +208,7 @@ foreach ($database in $tenantDatabaseList)
 # Output recovery progress
 $DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$tenantDatabaseCount,2)
 $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $tenantDatabaseCount)"
+Write-Output "Replicating ... ($($replicatedDatabaseCount) of $tenantDatabaseCount complete)"
 
 # Issue a request to replicate databases asynchronously till concurrent operation limit is reached
 $azureContext = Get-RestAPIContext
@@ -277,7 +277,7 @@ while ($operationQueue.Count -gt 0)
       # Output recovery progress 
       $DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$tenantDatabaseCount,2)
       $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-      Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $tenantDatabaseCount)"               
+      Write-Output "Replicating ... ($($replicatedDatabaseCount) of $tenantDatabaseCount complete)"               
     }
     elseif (($replicationJob.IsCompleted) -and ($replicationJob.Status -eq "Faulted"))
     {
@@ -294,4 +294,4 @@ while ($operationQueue.Count -gt 0)
 # Output replication progress
 $DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$tenantDatabaseCount,2)
 $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $tenantDatabaseCount)"
+Write-Output "Replicated ($($replicatedDatabaseCount) of $tenantDatabaseCount)"

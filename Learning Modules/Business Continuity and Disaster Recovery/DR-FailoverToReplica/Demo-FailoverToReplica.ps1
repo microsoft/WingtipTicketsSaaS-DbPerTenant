@@ -64,9 +64,13 @@ if ($DemoScenario -eq 1)
 ### Replicate SaaS app and databases to recovery region
 if ($DemoScenario -eq 2)
 {
-  Write-Output "Creating replica for '$($wtpUser.ResourceGroupName)' Wingtip deployment. This may take several minutes ..."  
+  # Save login credentials for background job
+  Save-AzureRmContext -Path "$env:TEMP\profile.json" -Force 
   
-  & $PSScriptRoot\Deploy-WingtipTicketsReplica.ps1 -NoEcho
+  # Start background process
+  Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Deploy-WingtipTicketsReplica.ps1'"
+
+  Write-Output "Creating replica for '$($wtpUser.ResourceGroupName)' Wingtip deployment. This may take several minutes ..."   
      
   exit
 }
@@ -75,10 +79,14 @@ if ($DemoScenario -eq 2)
 ### Failover SaaS app and databases to recovery region 
 if ($DemoScenario -eq 3)
 {
-  Write-Output "Starting failover of application to recovery region ..."
+  # Save login credentials for background job
+  Save-AzureRmContext -Path "$env:TEMP\profile.json" -Force 
   
-  & $PSScriptRoot\Failover-IntoRecoveryRegion.ps1 -NoEcho
-  
+  # Start background process
+  Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Failover-IntoRecoveryRegion.ps1'"
+
+  Write-Output "Starting failover of application to recovery region ..."  
+ 
   exit
 }
 
@@ -132,9 +140,13 @@ if ($DemoScenario -eq 5)
 ### Repatriate the app into its original region
 if ($DemoScenario -eq 6)
 {
-  Write-Output "Repatriating app into original region. This may take several minutes..."
+  # Save login credentials for background job
+  Save-AzureRmContext -Path "$env:TEMP\profile.json" -Force 
   
-  & $PSScriptRoot\Repatriate-IntoOriginalRegion.ps1 -NoEcho
+  # Start background process
+  Start-Process powershell.exe -ArgumentList "-NoExit &'$PSScriptRoot\Repatriate-IntoOriginalRegion.ps1'"
+  
+  Write-Output "Repatriating app into original region. This may take several minutes..."  
   
   exit
 }

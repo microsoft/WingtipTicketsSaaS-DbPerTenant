@@ -316,56 +316,78 @@ function Get-Catalog
         [string]$WtpUser
     )
     $config = Get-Configuration
+    $retries = 0
+    $retryLimit = 2
+    $sleepInterval = 5
 
     # Resolve DNS alias to get current catalog server
-    $catalogAlias = $config.ActiveCatalogAliasStem + $WtpUser + ".database.windows.net"
-    $catalogServerName = Get-ServerNameFromAlias $catalogAlias
-
-    # Find catalog server in Azure 
-    $catalogServer = Find-AzureRmResource -ResourceNameEquals $catalogServerName -ResourceType "Microsoft.Sql/servers"
-    $fullyQualifiedServerName = $catalogServer.Name + ".database.windows.net"
-
-    # Check catalog database exists
-    $catalogDatabase = Get-AzureRmSqlDatabase `
-        -ResourceGroupName $catalogServer.ResourceGroupName `
-        -ServerName $catalogServer.Name `
-        -DatabaseName $config.CatalogDatabaseName `
-        -ErrorAction Stop
-
-    # Initialize shard map manager from catalog database
-    [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMapManager]$shardMapManager = Get-ShardMapManager `
-        -SqlServerName $fullyQualifiedServerName `
-        -UserName $config.CatalogAdminUserName `
-        -Password $config.CatalogAdminPassword `
-        -SqlDatabaseName $config.CatalogDatabaseName
-
-    if (!$shardmapManager)
+    do
     {
-        throw "Failed to initialize shard map manager from '$($config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
-    }
+        try
+        {
+            $catalogAlias = $config.ActiveCatalogAliasStem + $WtpUser + ".database.windows.net"
+            $catalogServerName = Get-ServerNameFromAlias $catalogAlias
 
-    # Initialize shard map
-    [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMap]$shardMap = Get-ListShardMap `
-        -KeyType $([int]) `
-        -ShardMapManager $shardMapManager `
-        -ListShardMapName $config.CatalogShardMapName
+            # Find catalog server in Azure 
+            $catalogServer = Find-AzureRmResource -ResourceNameEquals $catalogServerName -ResourceType "Microsoft.Sql/servers"
+            $fullyQualifiedServerName = $catalogServer.Name + ".database.windows.net"
 
-    If (!$shardMap)
-    {
-        throw "Failed to load shard map '$($config.CatalogShardMapName)' from '$($config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
-    }
-    else
-    {
-        $catalog = New-Object PSObject -Property @{
-            ShardMapManager=$shardMapManager
-            ShardMap=$shardMap
-            CatalogAlias = $catalogAlias
-            FullyQualifiedServerName = $fullyQualifiedServerName
-            Database = $catalogDatabase
+            # Check catalog database exists
+            $catalogDatabase = Get-AzureRmSqlDatabase `
+                -ResourceGroupName $catalogServer.ResourceGroupName `
+                -ServerName $catalogServer.Name `
+                -DatabaseName $config.CatalogDatabaseName `
+                -ErrorAction Stop
+
+            # Initialize shard map manager from catalog database
+            [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMapManager]$shardMapManager = Get-ShardMapManager `
+                -SqlServerName $fullyQualifiedServerName `
+                -UserName $config.CatalogAdminUserName `
+                -Password $config.CatalogAdminPassword `
+                -SqlDatabaseName $config.CatalogDatabaseName
+
+            if (!$shardmapManager)
+            {
+                throw "Failed to initialize shard map manager from '$($config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
+            }
+
+            # Initialize shard map
+            [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMap]$shardMap = Get-ListShardMap `
+                -KeyType $([int]) `
+                -ShardMapManager $shardMapManager `
+                -ListShardMapName $config.CatalogShardMapName
+
+            If (!$shardMap)
+            {
+                throw "Failed to load shard map '$($config.CatalogShardMapName)' from '$($config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
+            }
+            else
+            {
+                $catalog = New-Object PSObject -Property @{
+                    ShardMapManager=$shardMapManager
+                    ShardMap=$shardMap
+                    CatalogAlias = $catalogAlias
+                    FullyQualifiedServerName = $fullyQualifiedServerName
+                    Database = $catalogDatabase
+                }
+
+                return $catalog
+            }
         }
-
-        return $catalog
-    }
+        catch
+        {
+            if ($retries -gt $retryLimit)
+            {
+                throw $_.Exception.Message
+            }
+            else
+            {
+                $retries+=1
+                Start-Sleep $sleepInterval
+            }
+        }
+    } while ($true)   
+    
 }
 
 

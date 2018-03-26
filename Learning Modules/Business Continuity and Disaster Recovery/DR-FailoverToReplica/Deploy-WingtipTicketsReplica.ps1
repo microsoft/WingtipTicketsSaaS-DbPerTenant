@@ -52,6 +52,13 @@ if (!$credentialLoad)
 {
     Initialize-Subscription -NoEcho:$NoEcho.IsPresent
 }
+else
+{
+  $AzureContext = Get-AzureRmContext
+  $subscriptionId = Get-SubscriptionId
+  $subscriptionName = Get-SubscriptionName
+  Write-Output "Signed-in as $($AzureContext.Account), Subscription '$($subscriptionId)' '$($subscriptionName)'"    
+}
 
 # Use input recovery location or get paired Azure region as recovery region (more info: https://docs.microsoft.com/azure/best-practices-availability-paired-regions)
 $content = Get-Content "$PSScriptRoot\..\..\Utilities\AzurePairedRegions.txt" | Out-String
@@ -117,11 +124,11 @@ while ($true)
  
   # Output status of replication jobs to console
   [PSCustomObject] @{
-    WingtipTicketsSaaSApp = $appReplicationStatus
-    TenantServers = $serverReplicationStatus
-    ManagementDatabases = $managementServerReplicationStatus
-    TenantPools = $poolReplicationStatus
-    TenantDatabases = $databaseReplicationStatus  
+    "Wingtip App" = $appReplicationStatus
+    "Catalog Server & Database(s)" = $managementServerReplicationStatus
+    "Tenant Servers" = $serverReplicationStatus
+    "Tenant Pools" = $poolReplicationStatus
+    "Tenant Databases" = $databaseReplicationStatus  
   } | Format-List
   
   # Exit recovery if all tenant databases have been recovered 
@@ -137,5 +144,5 @@ while ($true)
     $elapsedTime = (Get-Date) - $startTime
   }          
 }
-
-Write-Output "'$($wtpUser.ResourceGroupName)' deployment replicated into '$recoveryLocation' region in $($elapsedTime.TotalMinutes) minutes."
+$elapsedTime = [math]::Round($elapsedTime.TotalMinutes,2)
+Write-Output "'$($wtpUser.ResourceGroupName)' deployment replicated into '$recoveryLocation' region in $elapsedTime minutes."
