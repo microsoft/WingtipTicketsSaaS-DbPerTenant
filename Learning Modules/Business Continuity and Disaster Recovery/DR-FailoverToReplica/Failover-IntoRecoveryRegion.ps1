@@ -198,8 +198,8 @@ while ($true)
   
   # Output status of recovery jobs to console
   [PSCustomObject] @{
-    "Tenants in recovery region" = $tenantRecoveryStatus
-    "Tenant Databases in recovery region" = $databaseRecoveryStatus
+    "Tenant databases failed-over into recovery region" = $databaseRecoveryStatus
+    "Tenants online in recovery region" = $tenantRecoveryStatus    
   } | Format-List
   
 
