@@ -76,7 +76,7 @@ function Start-AsynchronousDatabaseReplication
   $databaseId = "/subscriptions/$currentSubscriptionId/resourceGroups/$WingtipRecoveryResourceGroup/providers/Microsoft.Sql/servers/$($TenantDatabase.ServerName)/databases/$($TenantDatabase.DatabaseName)"
 
   # Delete existing tenant database
-  Remove-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originServerName -DatabaseName $TenantDatabase.DatabaseName -ErrorAction SilentlyContinue
+  Remove-AzureRmSqlDatabase -ResourceGroupName $wtpUser.ResourceGroupName -ServerName $originServerName -DatabaseName $TenantDatabase.DatabaseName -ErrorAction SilentlyContinue >$null
 
   # Issue asynchronous replication operation
   if ($TenantDatabase.ServiceObjective -eq 'ElasticPool')

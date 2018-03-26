@@ -319,9 +319,8 @@ while ($true)
  
   # Output status of repatriation jobs to console
   [PSCustomObject] @{
-    "Reset Tenant Databases" = $resetDatabaseStatus
-    "FailedOver Tenant Databases" = $failoverDatabaseStatus
-    "Tenants In Origin" = $tenantRecoveryStatus
+    "Unchanged databases reactivated in original region" = $resetDatabaseStatus
+    "Databases geo-replicated and failed-over to original region" = $failoverDatabaseStatus
   } | Format-List
   
 

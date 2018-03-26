@@ -221,6 +221,11 @@ if ($replicatedDatabaseCount -eq 0)
   Write-Output "100% (0 of 0)"
   exit
 }
+elseif ($failoverQueue.Count -eq 0)
+{
+  Write-Output "100% ($failoverCount of $replicatedDatabaseCount)"
+  exit
+}
 
 # Wait for all databases to have replicas before failover
 $allReplicasCreated = $false
