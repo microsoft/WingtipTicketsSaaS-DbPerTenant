@@ -9,8 +9,8 @@
 $DemoScenario = 1
 <# Select the scenario that will be run. Run the scenarios below in order. 
    Scenario
-      1     Start synchronizing tenant server, pool, and database configuration info into the catalog
-      2     Create replicas for an existing Wingtip deployment
+      1     Start a background job that syncs tenant server, and pool configuration info into the catalog
+      2     Start a background job to create replicas for an existing Wingtip deployment
       3     Recover the app into a recovery region by failing over to replicas
       4     Provision a new tenant in the recovery region 
       5     Delete an event from a tenant in the recovery region
