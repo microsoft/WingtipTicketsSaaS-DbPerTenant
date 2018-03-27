@@ -168,7 +168,8 @@ foreach ($venue in $venues)
     $venueTickets = 0
      
     $venueDatabaseName = $venue.Location.Database
-    $venueServer = $venue.Location.Server + ".database.windows.net" 
+    $fullyQualifiedVenueServer = $venue.Location.Server
+    $venueServer = $fullyQualifiedVenueServer.split('.')[0]
      
     # set the venue popularity, which determines the sales curves used: 1=popular, 2=moderate, 3=unpopular
 
@@ -190,12 +191,12 @@ foreach ($venue in $venues)
         "unpopular" {$venueCurves = $unpopularCurves}
     }
 
-    Write-Output "Purchasing tickets for $venueDatabaseName ($popularity) on server '$($venueServer.Split(".", 2)[0]).'"
+    Write-Output "Purchasing tickets for $venueDatabaseName ($popularity) on server '$venueServer'"
 
     # add customers to the venue
     $results = Invoke-SqlAzureWithRetry `
                 -Username "$AdminUserName" -Password "$AdminPassword" `
-                -ServerInstance $venueServer `
+                -ServerInstance $fullyQualifiedVenueServer `
                 -Database $venueDatabaseName `
                 -Query $customersSql 
 
@@ -218,7 +219,7 @@ foreach ($venue in $venues)
     $command = "SELECT SUM(SeatRows * SeatsPerRow) AS Capacity FROM Sections"        
     $capacity = Invoke-SqlAzureWithRetry `
                 -Username "$AdminUserName" -Password "$AdminPassword" `
-                -ServerInstance $venueServer `
+                -ServerInstance $fullyQualifiedVenueServer `
                 -Database $venueDatabaseName `
                 -Query $command
 
@@ -229,7 +230,7 @@ foreach ($venue in $venues)
        
     $events = Invoke-SqlAzureWithRetry `
                 -Username "$AdminUserName" -Password "$AdminPassword" `
-                -ServerInstance $venueServer `
+                -ServerInstance $fullyQualifiedVenueServer `
                 -Database $venueDatabaseName `
                 -Query $command 
 
@@ -267,7 +268,7 @@ foreach ($venue in $venues)
         $sections = @()
         $sections += Invoke-SqlAzureWithRetry `
                     -Username "$AdminUserName" -Password "$AdminPassword" `
-                    -ServerInstance $venueServer `
+                    -ServerInstance $fullyQualifiedVenueServer `
                     -Database $venueDatabaseName `
                     -Query $command
 
@@ -445,7 +446,7 @@ foreach ($venue in $venues)
     $ticketPurchasesExec = Invoke-SqlAzureWithRetry `
         -Username "$AdminUserName" `
         -Password "$AdminPassword" `
-        -ServerInstance $venueServer `
+        -ServerInstance $fullyQualifiedVenueServer `
         -Database $venueDatabaseName `
         -Query $ticketPurchaseSql `
         -QueryTimeout 120 
@@ -457,7 +458,7 @@ foreach ($venue in $venues)
     $ticketsExec = Invoke-SqlAzureWithRetry `
         -Username "$AdminUserName" `
         -Password "$AdminPassword" `
-        -ServerInstance $venueServer `
+        -ServerInstance $fullyQualifiedVenueServer `
         -Database $venueDatabaseName `
         -Query $ticketSql `
         -QueryTimeout 120 

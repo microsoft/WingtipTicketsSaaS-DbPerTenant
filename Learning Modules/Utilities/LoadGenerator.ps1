@@ -120,7 +120,8 @@ while (1 -eq 1)
     $ServerNames = @()
     foreach ($shard in $Shards)
     {
-        $serverName = $shard.Location.Server
+        $fullyQualifiedServerName = $shard.Location.Server
+        $serverName = $fullyQualifiedServerName.split('.')[0]
         $ServerNames += $serverName
     }
 

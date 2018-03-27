@@ -409,7 +409,8 @@ function Get-DatabasesForTenant
     $tenantDatabaseList = @()
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($tenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = $tenantMapping.Shard.Location.Server 
+    $fullyQualifiedTenantServerName = $tenantMapping.Shard.Location.Server
+    $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0]
 
     # Find tenant server in Azure 
     $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
@@ -422,10 +423,11 @@ function Get-DatabasesForTenant
                                 -ErrorAction SilentlyContinue
 
     # Get restored tenant database 
+    $restoredTenantDatabaseName = $tenantDatabaseName + "-old"
     $restoredTenantDatabase = Get-AzureRmSqlDatabase `
                                 -ResourceGroupName $tenantServer.ResourceGroupName `
                                 -ServerName $tenantServerName `
-                                -DatabaseName $tenantDatabaseName + "-old" `
+                                -DatabaseName $restoredTenantDatabaseName `
                                 -ErrorAction SilentlyContinue
 
     if ($activeTenantDatabase)
@@ -797,7 +799,8 @@ function Get-TenantDatabaseForRestorePoint
     $restorePointDatabase = $null 
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($tenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = $tenantMapping.Shard.Location.Server
+    $fullyQualifiedTenantServerName = $tenantMapping.Shard.Location.Server
+    $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0]
 
     # Find tenant server in Azure 
     $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
@@ -827,9 +830,13 @@ function Get-TenantDatabaseForRestorePoint
     foreach ($database in $tenantDatabaseList)
     {
         # Databases are available for restore 10 minutes after they are created 
+        $latestRestorePoint = $null
         $oldestRestorePoint = ($database.CreationDate).AddMinutes(10)
-        $latestRestorePoint = $database.DeletionDate
-
+        if ("DeletionDate" -In $database.PSObject.Properties.Name)
+        {
+            $latestRestorePoint = $database.DeletionDate
+        }
+       
         # Use current active tenant database if the time period matches
         if (($oldestRestorePoint -lt $RestorePoint) -and (!$latestRestorePoint))
         {
@@ -1823,7 +1830,8 @@ function Remove-TenantDatabaseForRestore
     $deletedTenantDatabase = $null
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = $tenantMapping.Shard.Location.Server 
+    $fullyQualifiedTenantServerName = $tenantMapping.Shard.Location.Server
+    $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0] 
 
     # Find tenant server in Azure 
     $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
@@ -1929,7 +1937,8 @@ function Rename-TenantDatabase
     # Get active tenant database location
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = $tenantMapping.Shard.Location.Server
+    $fullyQualifiedTenantServerName = $tenantMapping.Shard.Location.Server
+    $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0]
 
     # Find tenant server in Azure 
     $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
