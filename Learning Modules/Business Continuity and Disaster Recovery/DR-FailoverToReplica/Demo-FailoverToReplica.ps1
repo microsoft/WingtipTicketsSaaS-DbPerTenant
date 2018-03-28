@@ -36,6 +36,7 @@ Initialize-Subscription
 
 # Get the resource group and user names used when the application was deployed  
 $wtpUser = Get-UserConfig
+$config = Get-Configuration
 
 ## --------------- SCENARIOS -----------------------------------------------------------------------
 

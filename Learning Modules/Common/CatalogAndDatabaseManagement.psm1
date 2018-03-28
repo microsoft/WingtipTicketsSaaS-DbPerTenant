@@ -2350,6 +2350,7 @@ function Set-TenantOnline
         [int32]$TenantKey
     )
 
+    $config = Get-Configuration
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $recoveryManager = ($Catalog.ShardMapManager).getRecoveryManager()
 
