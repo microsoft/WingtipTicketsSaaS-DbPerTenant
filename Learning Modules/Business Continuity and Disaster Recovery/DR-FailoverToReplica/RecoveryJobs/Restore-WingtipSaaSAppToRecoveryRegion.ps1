@@ -44,11 +44,11 @@ $wingtipRecoveryApp = Find-AzureRmResource `
 
 if ($wingtipRecoveryApp)
 {
-    Write-Output "Replicated"
+    Write-Output "Deployed"
 }
 else
 {
-    Write-Output "Replicating"
+    Write-Output "Deploying"
     $templatePath = "$using:scriptPath\RecoveryTemplates\" + $config.WebApplicationRecoveryTemplate
     $catalogRecoveryServerName = $config.CatalogServerNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix
     $tenantsRecoveryServerName = $config.TenantServerNameStem + $wtpUser.Name + $config.RecoveryRoleSuffix
@@ -63,5 +63,5 @@ else
                     -TenantsRecoveryServer $tenantsRecoveryServerName `
                     -ErrorAction Stop
 
-    Write-Output "Replicated"                    
+    Write-Output "Deployed"                    
 }

@@ -125,8 +125,8 @@ while ($true)
   # Output status of replication jobs to console
   [PSCustomObject] @{
     "Wingtip App" = $appReplicationStatus
-    "Catalog Server & Database(s)" = $managementServerReplicationStatus
-    "Tenant Servers" = $serverReplicationStatus
+    "Management & Tenant Servers" = $serverReplicationStatus
+    "Catalog Database(s)" = $managementServerReplicationStatus
     "Tenant Pools" = $poolReplicationStatus
     "Tenant Databases" = $databaseReplicationStatus  
   } | Format-List

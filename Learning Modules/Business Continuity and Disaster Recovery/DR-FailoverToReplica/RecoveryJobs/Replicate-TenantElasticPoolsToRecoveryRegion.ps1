@@ -100,7 +100,7 @@ foreach ($pool in $tenantElasticPools)
 # Output recovery progress 
 $elasticPoolRecoveryPercentage = [math]::Round($recoveredPoolCount/$poolCount,2)
 $elasticPoolRecoveryPercentage = $elasticPoolRecoveryPercentage * 100
-Write-Output "Replicating ... ($recoveredPoolCount of $poolCount complete)"
+Write-Output "Deploying ... ($recoveredPoolCount of $poolCount complete)"
 
 # Recover all elastic pools in restored tenant servers 
 while ($recoveredPoolCount -lt $poolCount)
@@ -148,11 +148,11 @@ while ($recoveredPoolCount -lt $poolCount)
     # Output recovery progress 
     $elasticPoolRecoveryPercentage = [math]::Round($recoveredPoolCount/$poolCount,2)
     $elasticPoolRecoveryPercentage = $elasticPoolRecoveryPercentage * 100
-    Write-Output "Replicating ... ($recoveredPoolCount of $poolCount complete)"      
+    Write-Output "Deploying ... ($recoveredPoolCount of $poolCount complete)"      
   }
 }
 
 # Output recovery progress 
 $elasticPoolRecoveryPercentage = [math]::Round($recoveredPoolCount/$poolCount,2)
 $elasticPoolRecoveryPercentage = $elasticPoolRecoveryPercentage * 100
-Write-Output "Replicated ($recoveredPoolCount of $poolCount)"  
+Write-Output "Deployed ($recoveredPoolCount of $poolCount)"  

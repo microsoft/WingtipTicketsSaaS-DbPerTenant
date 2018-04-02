@@ -112,7 +112,7 @@ foreach ($server in $serverList)
 # Output recovery progress 
 $serverRecoveryPercentage = [math]::Round($replicatedServers/$serverList.length,2)
 $serverRecoveryPercentage = $serverRecoveryPercentage * 100
-Write-Output "Replicating ... ($($replicatedServers) of $($serverList.length) complete)"
+Write-Output "Deploying ... ($($replicatedServers) of $($serverList.length) complete)"
 
 
 # Replicate tenant servers and firewall rules in them 
@@ -132,4 +132,4 @@ if ($serverQueue.Count -gt 0)
 # Output recovery progress 
 $serverRecoveryPercentage = [math]::Round($replicatedServers/$serverList.length,2)
 $serverRecoveryPercentage = $serverRecoveryPercentage * 100
-Write-Output "Replicated ($($replicatedServers) of $($serverList.length))"
+Write-Output "Deployed ($($replicatedServers) of $($serverList.length))"
