@@ -72,6 +72,19 @@ $profileName = $config.EventsAppNameStem + $wtpUser.Name
 $originAppEndpoint = $config.EventsAppNameStem + $originLocation + '-' + $wtpUser.Name
 Disable-AzureRmTrafficManagerEndpoint -Name $originAppEndpoint -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -Force -ErrorAction SilentlyContinue > $null
 
+# Reconfigure servers and elastic pools in recovery region to match settings in origin region
+# This is to ensure that the resources in the recovery region can handle a full recovery load
+Write-Output "Reconfiguring tenant servers and elastic pools in recovery region to match original region ..."
+$updateTenantResourcesJob = Start-Job -Name "ReconfigureTenantResources" -FilePath "$PSScriptRoot\RecoveryJobs\Update-TenantResourcesInRecoveryRegion.ps1" -ArgumentList @($recoveryResourceGroupName)
+
+# Wait to reconfigure servers and pools in recovery region before proceeding
+$reconfigureJobStatus = Wait-Job $updateTenantResourcesJob
+if ($reconfigureJobStatus.State -eq "Failed")
+{
+  Receive-Job $updateTenantResourcesJob
+  exit
+}
+
 # Get catalog failover group
 $catalogFailoverGroup = Get-AzureRmSqlDatabaseFailoverGroup `
                           -ResourceGroupName $wtpUser.ResourceGroupName `
