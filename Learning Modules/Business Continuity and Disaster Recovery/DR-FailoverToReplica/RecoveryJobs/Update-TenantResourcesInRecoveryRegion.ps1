@@ -121,6 +121,17 @@ foreach($pool in $originRegionElasticPools)
       DatabaseDtuMax = "$($pool.DatabaseDtuMax)"
       DatabaseDtuMin = "$($pool.DatabaseDtuMin)"
       StorageMB = "$($pool.StorageMB)"
+    }
+
+    $poolServerConfiguration = @{
+      ServerName = "$recoveryServerName"
+      AdminLogin = "$($config.TenantAdminUserName)"
+      AdminPassword = "$($config.TenantAdminPassword)"     
+    }
+
+    if ($tenantServerConfigurations -notcontains $poolServerConfiguration)
+    {
+      $tenantServerConfigurations+= $poolServerConfiguration
     }    
   }  
 }

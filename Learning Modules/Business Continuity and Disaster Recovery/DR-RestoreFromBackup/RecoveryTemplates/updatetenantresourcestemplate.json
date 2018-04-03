@@ -29,7 +29,7 @@
         "condition": "[greater(length(parameters('ServerConfigurationSettings')), 0)]",
         "dependsOn": ["[concat('Microsoft.Sql/servers/',parameters('ServerConfigurationSettings')[copyIndex()].ServerName)]" ],
         "apiVersion": "2014-04-01",
-        "name": "AllowAllAzureIps",
+        "name": "AllowAllAzureIPs",
         "properties": {
             "startIpAddress": "0.0.0.0",
             "endIpAddress": "0.0.0.0"

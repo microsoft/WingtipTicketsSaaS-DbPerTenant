@@ -78,7 +78,7 @@ while (($pastDeployment) -and ($pastDeployment.ProvisioningState -NotIn "Succeed
 $replicatedServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameContains "tenants"
 while (!$replicatedServers)
 {
-  Write-Output "waiting for tenant server(s) to complete replication ..."
+  Write-Output "waiting for tenant server(s) to complete deployment ..."
   Start-Sleep $sleepInterval
   $replicatedServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameContains "tenants"
 }

@@ -72,6 +72,10 @@ $profileName = $config.EventsAppNameStem + $wtpUser.Name
 $originAppEndpoint = $config.EventsAppNameStem + $originLocation + '-' + $wtpUser.Name
 Disable-AzureRmTrafficManagerEndpoint -Name $originAppEndpoint -Type AzureEndpoints -ProfileName $profileName -ResourceGroupName $wtpUser.ResourceGroupName -Force -ErrorAction SilentlyContinue > $null
 
+# Initalize Azure context for background scripts  
+$scriptPath= $PSScriptRoot
+Save-AzureRmContext -Path "$env:TEMP\profile.json" -Force -ErrorAction Stop
+
 # Reconfigure servers and elastic pools in recovery region to match settings in origin region
 # This is to ensure that the resources in the recovery region can handle a full recovery load
 Write-Output "Reconfiguring tenant servers and elastic pools in recovery region to match original region ..."
@@ -151,10 +155,6 @@ if ($currentProvisioningServerName -ne $recoveryProvisioningServerName)
     -PollDnsUpdate `
     >$null
 }
-
-# Initalize Azure context for background scripts  
-$scriptPath= $PSScriptRoot
-Save-AzureRmContext -Path "$env:TEMP\profile.json" -Force -ErrorAction Stop
 
 $runningScripts = (Get-WmiObject -Class Win32_Process -Filter "Name='PowerShell.exe'") | Where-Object{$_.CommandLine -like "*Sync-TenantConfiguration*"}
 foreach($script in $runningScripts)

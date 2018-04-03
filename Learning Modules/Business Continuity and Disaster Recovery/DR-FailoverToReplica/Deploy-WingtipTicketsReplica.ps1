@@ -126,8 +126,8 @@ while ($true)
   [PSCustomObject] @{
     "Wingtip App" = $appReplicationStatus
     "Management & Tenant Servers" = $serverReplicationStatus
-    "Catalog Database(s)" = $managementServerReplicationStatus
     "Tenant Pools" = $poolReplicationStatus
+    "Catalog Database(s)" = $managementServerReplicationStatus    
     "Tenant Databases" = $databaseReplicationStatus  
   } | Format-List
   

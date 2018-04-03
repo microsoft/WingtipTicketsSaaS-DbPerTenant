@@ -261,6 +261,7 @@ while ($true)
       Write-Verbose $operationObject.Exception.InnerException
 
       # Mark database failover error
+      # Note: To make this process more robust, you would likely check the HTTP status code that is returned and respond appropriately. For example, if a 429 | too many requests is received, you will want to pause for the appropriate amount of time
       $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $currentDatabase.ServerName -DatabaseName $currentDatabase.DatabaseName
 
       # Retry failover if unsuccessful
