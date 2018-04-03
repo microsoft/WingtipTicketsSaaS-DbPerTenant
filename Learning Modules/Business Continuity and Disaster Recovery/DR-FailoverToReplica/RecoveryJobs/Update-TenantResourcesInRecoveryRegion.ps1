@@ -101,10 +101,10 @@ foreach($pool in $originRegionElasticPools)
     if
     (
       $recoveryPool.Edition -eq $pool.Edition -and
-      $recoveryPool.Dtu -eq $pool.Dtu -and 
-      $recoveryPool.DatabaseDtuMax -eq $pool.DatabaseDtuMax -and
-      $recoveryPool.DatabaseDtuMin -eq $pool.DatabaseDtuMin -and
-      $recoveryPool.StorageMB -eq $pool.StorageMB       
+      $recoveryPool.Dtu -ge $pool.Dtu -and 
+      $recoveryPool.DatabaseDtuMax -ge $pool.DatabaseDtuMax -and
+      $recoveryPool.DatabaseDtuMin -ge $pool.DatabaseDtuMin -and
+      $recoveryPool.StorageMB -ge $pool.StorageMB       
     )
     {
       $recoveryPoolSynced = $true
