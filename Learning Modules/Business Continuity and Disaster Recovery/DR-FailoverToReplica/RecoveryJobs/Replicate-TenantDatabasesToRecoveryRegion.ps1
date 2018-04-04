@@ -117,7 +117,7 @@ function Start-AsynchronousDatabaseReplication
 
 # Wait until all elastic pools have been replicated to start replicating databases
 # This ensures that all required container resources have been acquired before database replication begins 
-$tenantPools = Get-ExtendedElasticPool -Catalog $tenantCatalog 
+$tenantPools = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {$_.ServerName -notmatch "$($config.RecoveryRoleSuffix)$"} 
 $poolCount = @($tenantPools).Count
 $replicatedElasticPools = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
 
@@ -178,7 +178,7 @@ if ($ongoingDeployments.Count -gt 0)
 $replicatedDatabaseInstances = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
 
 # Get list of tenant databases to be replicated
-$tenantDatabaseList = Get-ExtendedDatabase -Catalog $tenantCatalog
+$tenantDatabaseList = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object{$_.ServerName -notmatch "$($config.RecoveryRoleSuffix)$"}
 $tenantDatabaseCount = $tenantDatabaseList.Count
 foreach ($database in $tenantDatabaseList)
 {

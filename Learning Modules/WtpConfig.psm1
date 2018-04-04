@@ -19,19 +19,13 @@ elseif (!$Global:WingtipScriptsTarget)
 function Get-Configuration
 {
     $configuration = @{`
-        TemplatesLocationUrl = "https://wingtipsaas.blob.core.windows.net/templates"
-        TenantDatabaseTemplate = "tenantdatabasetemplate.json"
         TenantDatabaseCopyTemplate = "tenantdatabasecopytemplate.json"
-        TenantDatabaseBatchTemplate = "tenantdatabasebatchtemplate.json"
         TenantDatabaseCopyBatchTemplate = "tenantdatabasecopybatchtemplate.json"
-        WebApplicationTemplate = "webapplicationtemplate.json"
         FailovergroupTemplate = "failovergrouptemplate.json"
         WebApplicationRecoveryTemplate = "webappRecoveryTemplate.json"
         LogAnalyticsWorkspaceTemplate = "loganalyticsworkspacetemplate.json"
         LogAnalyticsWorkspaceNameStem = "wtploganalytics-"
         LogAnalyticsDeploymentLocation = "westcentralus"
-        DatabaseAndBacpacTemplate = "databaseandbacpactemplate.json"
-        TenantBacpacUrl = "https://wingtipsaas.blob.core.windows.net/bacpacs/wingtiptenantdb.bacpac"
         EventsAppNameStem = "events-wingtip-dpt-"
         GoldenTenantDatabaseName = "baseTenantDB"
         CatalogDatabaseName = "tenantcatalog"
@@ -49,13 +43,7 @@ function Get-Configuration
         TenantAdminUserName = "developer"
         TenantAdminPassword = "P@ssword1"
         TenantElasticPoolRestoreBatchTemplate = "tenantelasticpoolrecoverybatchtemplate.json"
-        TenantDatabaseRestoreBatchTemplate = "tenantdatabaserecoverybatchtemplate.json"
-        TenantServerRestoreBatchTemplate = "tenantserverrecoverybatchtemplate.json"
-        CatalogManagementAppNameStem = "catalogmanagement-"
-        CatalogManagementAppSku = "standard"
-        CatalogManagementAppSkuCode = "S1"
-        CatalogManagementAppWorkerSize = 0
-        ServicePrincipalPassword = "P@ssword1"
+        TenantServerRestoreBatchTemplate = "tenantserverrecoverybatchtemplate.json"       
         NewTenantResourcesProvisioningTemplate = "newtenantresourcestemplate.json"
         ReconfigureTenantResourcesTemplate = "updatetenantresourcestemplate.json"
         JobAccount = "jobaccount"
@@ -64,13 +52,8 @@ function Get-Configuration
         JobAccountCredentialName = "mydemocred"
         TenantAnalyticsDatabaseName = "tenantanalytics"
         TenantAnalyticsCSDatabaseName = "tenantanalytics-cs"
-        TenantAnalyticsDWDatabaseName = "tenantanalytics-dw"
         AdhocReportingDatabaseName = "adhocreporting"
         AdhocReportingDatabaseServiceObjective = "S0"
-        SearchDatabaseName = "tenantsearch"  
-        SearchDatabaseServiceObjective = "S0"              
-        StorageKeyType = "SharedAccessKey"
-        StorageAccessKey = (ConvertTo-SecureString -String "?" -AsPlainText -Force)
         DefaultVenueType = "multipurpose"
         TenantNameBatch = @(
             ("Poplar Dance Academy","dance","98402"),
