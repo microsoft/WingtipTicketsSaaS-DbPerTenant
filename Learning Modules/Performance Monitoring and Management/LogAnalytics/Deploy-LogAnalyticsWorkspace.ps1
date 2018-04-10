@@ -60,7 +60,7 @@ if($workspace)
 
 Write-output "Deploying Log Analytics workspace '$workspaceName'..."
 
-# deploy log analytics workspace (locations are currently restricted so a fixed location is used )
+# deploy log analytics workspace (locations are currently restricted so a fixed location is used)
 New-AzureRmResourceGroupDeployment `
         -ResourceGroupName $WtpResourceGroupName `
         -TemplateFile ($PSScriptRoot + "\" + $config.LogAnalyticsWorkspaceTemplate) `

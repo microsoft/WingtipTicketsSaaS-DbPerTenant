@@ -7,8 +7,8 @@ $DurationMinutes = 120
 # If set to "" a random tenant database is chosen.
 $SingleTenantDatabaseName = "contosoconcerthall"
 
-# If true, generator will run once. If false will keep looking for additional tenants and apply load to them 
-$OneTime = $true
+# If $true, generator will run once. If $false will keep looking for additional tenants and apply load to them 
+$OneTime = $false
 
 $DemoScenario = 0
 <# Select the demo scenario to run 
@@ -76,7 +76,8 @@ if ($DemoScenario -eq 2)
         -Wtpuser $wtpUser.Name `
         -Intensity $Intensity `
         -DurationMinutes $DurationMinutes `
-        -LongerBursts
+        -LongerBursts `
+        -OneTime $OneTime
 
     exit 
 }      
@@ -96,7 +97,8 @@ if ($DemoScenario -eq 3)
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -Wtpuser $wtpUser.Name `
         -Intensity $Intensity `
-        -DurationMinutes $DurationMinutes 
+        -DurationMinutes $DurationMinutes `
+        -OneTime $OneTime 
         
     exit        
 } 
@@ -118,7 +120,8 @@ if ($DemoScenario -eq 4)
         -Intensity $Intensity `
         -DurationMinutes $DurationMinutes `
         -SingleTenant `
-        -SingleTenantDatabaseName $SingleTenantDatabaseName
+        -SingleTenantDatabaseName $SingleTenantDatabaseName `
+        -OneTime $OneTime
     
     exit         
 }
@@ -139,7 +142,8 @@ if ($DemoScenario -eq 5)
         -Wtpuser $wtpUser.Name `
         -Intensity $Intensity `
         -DurationMinutes $DurationMinutes `
-        -Unbalanced 
+        -Unbalanced `
+        -OneTime $OneTime
      
      exit         
 }  

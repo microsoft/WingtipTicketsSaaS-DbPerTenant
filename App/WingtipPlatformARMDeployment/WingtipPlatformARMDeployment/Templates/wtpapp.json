@@ -37,11 +37,11 @@
         "tenantContosoConcertHallStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/',variables('tenantContosoConcertHall'),'.bacpac')]",
         "tenantFabrikamJazzClubStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/',variables('tenantFabrikamJazzClub'),'.bacpac')]",
         "tenantDogwoodDojoStorageUri": "[concat('https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/',variables('tenantDogwoodDojo'),'.bacpac')]",
-        "catalogDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/wingtipcatalogdb-synctables.bacpac",
+        "catalogDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/wingtipcatalogdb.bacpac",
         "baseTenantDatabaseStorageUri": "https://wingtipsaas.blob.core.windows.net/bacpacs-dpt/wingtiptenantdb.bacpac",
         "wtpEventsAppTrafficManagerUniqueDnsName": "[concat('events.wingtip','-',variables('databasePerTenantSuffix'),'.',variables('lowerCaseUser'))]",
         "wtpEventsApp": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('originLocation'),'-',variables('lowerCaseUser'))]",
-        "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage-v6.zip",
+        "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage.zip",
         "wtpEventsTrafficManagerProfileName": "[concat('events-wingtip-',variables('databasePerTenantSuffix'),'-',variables('lowerCaseUser'))]"
     },
     "resources": [
@@ -196,7 +196,7 @@
                             }
                         }
                     ]
-                }               
+                }
             ]
         },
         {
@@ -357,19 +357,19 @@
                 }
             },
             "resources": [
-              {
-                "dependsOn": [
-                  "[concat('Microsoft.Web/serverfarms/',variables('wtpEventsApp'))]",
-                  "[concat('Microsoft.Web/sites/',variables('wtpEventsApp'))]"
-                ],
-                "name": "MSDeploy",
-                "type": "extensions",
-                "location": "[variables('location')]",
-                "apiVersion": "2015-08-01",
-                "properties": {
-                  "packageUri": "[variables('wtpEventsAppPackageUri')]"
-                }
-              },
+                {
+                    "dependsOn": [
+                        "[concat('Microsoft.Web/serverfarms/',variables('wtpEventsApp'))]",
+                        "[concat('Microsoft.Web/sites/',variables('wtpEventsApp'))]"
+                    ],
+                    "name": "MSDeploy",
+                    "type": "extensions",
+                    "location": "[variables('location')]",
+                    "apiVersion": "2015-08-01",
+                    "properties": {
+                        "packageUri": "[variables('wtpEventsAppPackageUri')]"
+                    }
+                },
                 {
                     "dependsOn": [
                         "[concat('Microsoft.Web/sites/',variables('wtpEventsApp'))]",

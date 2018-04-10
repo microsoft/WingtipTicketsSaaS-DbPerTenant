@@ -1,6 +1,4 @@
->**WARNING:** This is an experimental branch that is being used to test DR tutorials. Scripts from this branch will not work with a standard WingtipTicketsSaaS deployment. To use the scripts in this branch, create a new WingtipTicketsSaaS deployment by clicking the 'Deploy to Azure' button below. 
-
-# [PREVIEW:] Wingtip Tickets SaaS - Database per Tenant
+# Wingtip Tickets SaaS - Database per Tenant
 Sample multi-tenant SaaS application and management scripts built on SQL Database using a database-per-tenant model.
 
 ![Versions of Wingtip Tickets SaaS apps](./Documentation/AppVersions.PNG)
@@ -17,14 +15,14 @@ This project showcases the database per tenant model. This model is effective fo
 
 ## Get started - Deploy sample app
 
->**NOTE:** if you install the application you will be charged for the Azure resources created.  Actual costs incurred are based on your subscription offer type but are nominal if the application is not scaled up unreasonably and is deleted promptly after you have finished exploring the tutorials.
+>**NOTE:** If you install the application, you will be charged for the Azure resources created.  Actual costs incurred are based on your subscription offer type but are nominal if the application is not scaled up unreasonably and is deleted promptly after you have finished exploring the tutorials.
 
-The basic application, which includes three pre-defined databases for three venues, can be installed in your Azure subscription under a single ARM resource group.  To uninstall the application, delete the resource group from the Azure Portal.
+The basic application, which includes three sample databases for three venues, installs in your Azure subscription under a single ARM resource group.  To uninstall the application, delete the resource group from the Azure Portal.
 
-To deploy the app to Azure, click the link below.  Deploy the app in a new resource group, and provide a short *user* value that will be appended to several resource names to make them globally unique.  Your initials and a number is a good pattern to use.
+To deploy the app to Azure, click the link below.  Deploy the app in a new resource group, and provide a short *user* value that is appended to resource names to make them globally unique.  Your initials and a number is a good pattern to use.
 
 
-<a href="https://aka.ms/deploywingtipdpt-v2" target="_blank">
+<a href="https://aka.ms/deploywingtipdpt" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
@@ -39,7 +37,7 @@ After deployment completes, launch the app by browsing to ```http://events.wingt
 >1. Right click the zip file and select **Properties**.
 >2. On the **General** tab, select **Unblock** and select **OK**.
 
-You will find management scripts in the repo that allow you to explore many SaaS management scenarios, including adding tenants and monitoring performance of tenants. You can find the tutorials associated with these scripts in [Azure SQL database documentation](https://docs.microsoft.com/en-us/azure/sql-database/saas-dbpertenant-wingtip-app-overview).
+You will find management scripts in the repo that allow you to explore many SaaS management scenarios, including provisioning tenants and monitoring performance, managing database schema, analytics, and more. You can find the tutorials associated with these scripts in [Azure SQL database documentation](https://docs.microsoft.com/en-us/azure/sql-database/saas-dbpertenant-wingtip-app-overview).
 
 Also available in the Documentation folder in this repo is an **overview presentation** that provides background, explores alternative database models, and walks through several of the SaaS patterns at a high level. There is also a demo script you can use with the presentation to give others a guided tour of the app and several of the patterns.
 

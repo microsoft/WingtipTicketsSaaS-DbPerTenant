@@ -66,21 +66,21 @@ function Enable-DiagnosticsForResources
             if($ResourceDiagnosticSetting.Metrics.Enabled -eq $False)
             {
                 Set-AzureRmDiagnosticSetting -WorkspaceId $WorkspaceId -ResourceId $Resource.ResourceId -Enabled $True
-                Write-Verbose "Diagnostics enabled for resource $($Resource.Name) of type [$($Resource.ResourceType)]"
+                Write-Verbose "Diagnostics enabled for $($Resource.Name) of type [$($Resource.ResourceType)]"
             }
             ElseIf($ResourceDiagnosticSetting.Metrics.Enabled -eq $True -and $ResourceDiagnosticSetting.WorkspaceId -eq $null)
             {
                 Set-AzureRmDiagnosticSetting -WorkspaceId $WorkspaceId -ResourceId $Resource.ResourceId
-                    Write-Verbose "Added workspace for resource $($Resource.Name) of type [$($Resource.ResourceType)]"
+                    Write-Verbose "Added workspace for $($Resource.Name) of type [$($Resource.ResourceType)]"
             }
             elseif($Update -eq $True)
             {
                 Set-AzureRmDiagnosticSetting -WorkspaceId $WorkspaceId -ResourceId $Resource.ResourceId -Enabled $True
-                    Write-Verbose "Updated the workspace for resource $($Resource.Name) of type [$($Resource.ResourceType)]" 
+                    Write-Verbose "Updated the workspace for $($Resource.Name) of type [$($Resource.ResourceType)]" 
             }
             else
             {
-                    Write-Verbose "No change required for resource $($Resource.Name) of type [$($Resource.ResourceType)]"
+                    Write-Verbose "No change required for $($Resource.Name) of type [$($Resource.ResourceType)]"
             }
         }
         catch

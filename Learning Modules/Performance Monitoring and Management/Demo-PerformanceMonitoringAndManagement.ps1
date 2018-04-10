@@ -3,8 +3,7 @@
 # Duration of the load generation sessions. Some activity may continue after this time. 
 $DurationMinutes = 120
 
-# If the SingleTenant scenario used, this is the tenant database that will have the high load applied, 
-# or if set to empty string ("") a random tenant database will be chosen.
+# For the Single Tenant scenario (5), this is the tenant database that will have the high load applied.
 $SingleTenantDatabaseName = "contosoconcerthall"
 
 $DemoScenario = 0

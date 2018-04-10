@@ -9,8 +9,8 @@ $VenueType  = "motorracing"      # valid types: blues, classicalmusic, dance, ja
 $PostalCode = "98052"
 
 $DemoScenario = 1
-<# Select the demo scenario to run
-    Demo    Scenario
+<# Select the scenario to run
+   Scenario
       1       Provision a single tenant
       2       Remove a provisioned tenant
       3       Provision a batch of tenants

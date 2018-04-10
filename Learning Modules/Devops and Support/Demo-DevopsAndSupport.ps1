@@ -1,20 +1,19 @@
-﻿# Find tenants by name, then open the selected tenant's database in the Azure Portal  
-# Start a load on the databases first with scenario 1 and let it run for a few minutes 
-# to make the exploration more interesting.
+﻿# Find tenants by name, then open the selected tenant's database in the Azure Portal
+  
+# To make the exploration more interesting, start a load on the databases with scenario 1 and let it run for a few minutes.
 
 # Duration of the load generation session. Some activity may continue after this time. 
 $DurationMinutes = 60
 
-# This specifies a tenant database to be overloaded in scenario 1. If set to "" a random tenant database is chosen.
+# This specifies a tenant database to be overloaded in scenario 1.
 $SingleTenantDatabaseName = "fabrikamjazzclub"
 
 # In scenario 2, try entering 'jazz' when prompted to quickly locate Fabrikam Jazz Club. 
 
-$DemoScenario = 0
-<# Select the demo scenario to run
-    Demo    Scenario
-      0       None
-      1       Generate a high intensity load (approx 95 DTU) on a single tenant plas a normal intensity load (40 DTU) on all other tenants 
+$DemoScenario = 1
+<# Select the scenario to run
+   Scenario
+      1       Generate a high intensity load (approx 90 DTU) on a single tenant plas a normal intensity load (40 DTU) on all other tenants 
       2       Open a specific tenant's database in the portal plus their public events page
 #>
 
@@ -38,7 +37,7 @@ if ($DemoScenario -eq 0)
 }
 
 
-### Generate a high intensity load (approx 95 DTU) on a single tenant plas a normal intensity load (30 DTU) on all other tenants
+### Generate a high intensity load (approx 90 DTU) on a single tenant plas a normal intensity load (30 DTU) on all other tenants
 if ($DemoScenario -eq 1)
 {       
     # First, stop and remove any prior running jobs
