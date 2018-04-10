@@ -11,7 +11,7 @@ Initialize-Subscription -NoEcho
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
 
-$DemoScenario = 1
+$DemoScenario = 0
 
 <# Select the demo scenario that will be run. It is recommended you run the scenarios below in order. 
      Demo   Scenario

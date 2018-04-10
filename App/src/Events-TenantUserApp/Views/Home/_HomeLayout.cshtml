@@ -20,12 +20,12 @@
             </div>
         </div>
         <div class="col-xs-11" style="padding-right: 0.8%">
-            <div class="logo-heading2"><span>@Localizer["Wingtip Tickets Platform"]</span></div>
+            <div class="logo-heading2" style="padding-top:20px"><span style="margin-top:4px;display:inline-block">@Localizer["Wingtip Tickets Platform"]</span></div>
         </div>
     </div>
     <div class="row">
         <div class="col-xs-12">
-            <div class="logo-heading" style="width: 100.75%"><span>@Localizer["Events Hub"]</span></div>
+            <div class="logo-heading" style="width: 100.75%;padding-top:20px;height:90px;background-color:#626262"><span>@Localizer["Events Hub"]</span></div>
         </div>
     </div>
 </div>
@@ -34,51 +34,24 @@
     @RenderBody()
 </div>
 
-<footer class="footer" style="width: 102%; margin-left: -8px">
-
-    <div class="row">
-        <div class="col-xs-1" style="padding-left: 30px">
-            <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg" />
-        </div>
-        <div class="col-xs-5" style="padding-left: 30px">
-            <div class="logo-heading2" style="padding-right: 0.8%"><span>@Localizer["Wingtip Tickets Platform"]</span></div>
-        </div>
-        <div class="col-xs-6 pull-right">
-            <div class="row">
-                <div class="footerLinks_desc">
-                    <p>
-                        <a href=@Startup.DatabaseConfig.LearnHowFooterUrl target="_blank">@Localizer["LEARN HOW TO BUILD A SAAS APP ON SQL DATABASE"]</a>
-                    </p>
-                </div>
-            </div>
-
-            <div class="copyright">
-                <div class="p-copyright">
-                    @Localizer["server:"] @Startup.CatalogConfig.CatalogServer <br />
-                    @Localizer["database:"] @Startup.CatalogConfig.CatalogDatabase<br />
-                </div>
-            </div>
-
+<footer class="footer" style="width: 102%; margin-left: -8px; margin-bottom: 1px">
+    <div class="footer-left-third">
+        <img class="logo-image pull-left" src="~/images/ticketmaestro-logo.jpg">
+        <div class="logo-heading"><span>@Localizer["Wingtip Tickets Platform"]</span></div>
+        <div class="copyright">
+            <p>Running on Azure SQL Database. &copy; @DateTime.Now.Year @Localizer["Microsoft"] </p>
         </div>
     </div>
-
-    <div class="row">
-        <div class="col-xs-12">
-            <div class="col-xs-1" style="padding-left: 30px">
-            </div>
-            <div class="col-xs-6" style="padding-left: 20px">
-                <div class="btm-orange col-xs-4" style="width:auto;margin-top: 10px;">
-                    @Localizer["POWERED BY THE WINGTIP TICKETS PLATFORM"]
-                </div>
-            </div>
-            <div class="col-xs-5 pull-right">
-                <div class="copyright col-xs-12 text-left">
-                    <div class="div-copyright">
-                        @Localizer["Running on Azure SQL Database."] &copy; @DateTime.Now.Year @Localizer["Microsoft"]<br />
-                    </div>
-                </div>
-            </div>
+    <div class="footer-right-third">
+        <div class="grow">
+            <p><b>@Localizer["Catalog database"]: </b>@Startup.CatalogConfig.CatalogDatabase</p>
+            <p><b>@Localizer["Server"]: </b>@Startup.CatalogConfig.CatalogServer.Split('.')[0]</p>
+            <p><b>@Localizer["Location"]: </b>@Startup.CatalogConfig.CatalogLocation</p>
         </div>
+        <div class="tutorial-link">
+            <a href=@Startup.DatabaseConfig.LearnHowFooterUrl target="_blank">@Localizer["Learn how to build a SaaS app on SQL database"]</a>
+        </div>        
+    </div>    
 </footer>
 
 

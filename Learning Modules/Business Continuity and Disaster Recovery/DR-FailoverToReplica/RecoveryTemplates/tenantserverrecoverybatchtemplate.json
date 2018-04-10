@@ -1,0 +1,31 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ServerConfigurationObjects": {"type": "array"}  
+  },
+  "resources": [ 
+  { 
+    "apiVersion": "2015-01-01", 
+    "name": "[concat('ServerReplication-',parameters('ServerConfigurationObjects')[copyIndex()].ServerName)]",
+    "type": "Microsoft.Resources/deployments",
+    "copy": { 
+      "name": "replicatingservers",
+      "count": "[length(parameters('ServerConfigurationObjects'))]"
+    }, 
+    "properties": { 
+      "mode": "Incremental", 
+      "templateLink": {
+        "uri": "https://wingtipsaas.blob.core.windows.net/templates-dpt/tenantserverrecoverytemplate.json",
+        "contentVersion": "1.0.0.0"
+      }, 
+      "parameters": {
+        "serverName": {"value": "[parameters('ServerConfigurationObjects')[copyIndex()].ServerName]" },
+        "location": {"value": "[parameters('ServerConfigurationObjects')[copyIndex()].Location]" },        
+        "adminLogin": {"value": "[parameters('ServerConfigurationObjects')[copyIndex()].AdminLogin]" },
+        "adminPassword": {"value": "[parameters('ServerConfigurationObjects')[copyIndex()].AdminPassword]"}
+        }
+    }
+  } 
+  ]
+}

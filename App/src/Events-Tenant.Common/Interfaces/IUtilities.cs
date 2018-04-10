@@ -8,5 +8,8 @@ namespace Events_Tenant.Common.Interfaces
 
         byte[] ConvertIntKeyToBytesArray(int key);
 
+        string GetTenantStatus(int TenantId);
+
+        void ResolveMappingDifferences(int TenantId, bool UseGlobalShardMap = false);
     }
 }

@@ -1,0 +1,45 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+      "serverName": {
+          "type": "String"
+      },
+      "originServerName": {
+          "type": "String"
+      },
+      "databaseName": {
+          "type": "String"
+      },
+      "failovergroupName": {
+          "type": "String"
+      },
+      "recoveryResourceGroupName": {
+          "type": "String"
+      }     
+  },
+  "resources": [
+    {
+      "name": "[concat(parameters('originServerName'), '/', parameters('FailovergroupName'))]",
+      "type": "Microsoft.Sql/servers/failoverGroups",
+      "apiVersion": "2015-05-01-preview",       
+      "properties": {
+        "serverName": "[parameters('originServerName')]",
+        "partnerServers": [
+            {
+              "id": "[resourceId(parameters('recoveryResourceGroupName'), 'Microsoft.Sql/servers/', parameters('serverName'))]"
+            }
+        ],
+        "readWriteEndpoint": { 
+            "failoverPolicy": "Manual"
+        },
+        "readOnlyEndpoint": {
+            "failoverPolicy": "Disabled"
+        },
+        "databases": [
+            "[resourceId('Microsoft.Sql/servers/databases', parameters('originServerName'), parameters('databaseName'))]"
+        ]
+      }       
+    }
+  ]
+}

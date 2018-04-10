@@ -16,7 +16,7 @@
     },
     "elasticPoolName": {
       "type": "string"
-    }
+    }    
   },
   "resources": [
     {
@@ -29,6 +29,6 @@
         "elasticPoolName": "[parameters('elasticPoolName')]"
       },
       "type": "Microsoft.Sql/servers/databases"
-    }
+    }   
   ]
 }

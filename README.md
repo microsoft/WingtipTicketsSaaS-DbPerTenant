@@ -13,17 +13,11 @@ The Wingtip Tickets app is a simple event listing and ticketing SaaS app, where 
 
 This project showcases the database per tenant model. This model is effective for service providers that are concerned with tenant isolation and want to run a centralized service that allows cost-efficient use of shared resources. A database is created for each venue, or tenant, and all the databases are centrally managed. They can be hosted in elastic pools to provide cost-efficient and easy performance management, which leverages the unpredictable usage patterns of the tenants. A catalog database holds the mapping between tenants and their databases. This mapping is managed using the shard map management features of the Elastic Database Client Library, which also provides efficient connection management to the application.
 
-## Get started
+## Get started - Deploy sample app
+
+>**NOTE:** If you install the application, you will be charged for the Azure resources created.  Actual costs incurred are based on your subscription offer type but are nominal if the application is not scaled up unreasonably and is deleted promptly after you have finished exploring the tutorials.
 
 The basic application, which includes three sample databases for three venues, installs in your Azure subscription under a single ARM resource group.  To uninstall the application, delete the resource group from the Azure Portal.
-
-Sample management scripts let you to explore several management scenarios, including provisioning tenants and monitoring performance, managing database schema, analytics and more.
-
-NOTE: if you install the application you are charged for the Azure resources created.  Actual costs incurred are based on your subscription offer type but are nominal if the application is not scaled up unreasonably and is deleted promptly after you have finished exploring the tutorials.
-
-More information about the sample app can be found in the [associated tutorials](https://docs.microsoft.com/en-us/azure/sql-database/saas-dbpertenant-wingtip-app-overview).
-
-Also available in the Documentation folder in this repo is an **overview presentation** that provides background, explores alternative database models, and walks through several of the SaaS patterns at a high level. There is also a demo script you can use with the presentation to give others a guided tour of the app and several of the patterns.
 
 To deploy the app to Azure, click the link below.  Deploy the app in a new resource group, and provide a short *user* value that is appended to resource names to make them globally unique.  Your initials and a number is a good pattern to use.
 
@@ -32,14 +26,20 @@ To deploy the app to Azure, click the link below.  Deploy the app in a new resou
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
-After deployment completes, launch the app by browsing to ```http://events.wingtip-dpt.USER.trafficmanager.net```, substituting *USER* with the value you set during deployment.
+After deployment completes, launch the app by browsing to ```http://events.wingtip-dpt.USER.trafficmanager.net``` in a web browser, substituting *USER* with the value you set during deployment.
 
-**IMPORTANT:** If you download and extract the repo or [Learning Modules](https://github.com/Microsoft/WingtipSaaS/tree/master/Learning%20Modules) from a zip file, make sure you unblock the .zip file before extracting. Executable contents (scripts, dlls) may be blocked by Windows when zip files are downloaded from an external source and extracted.
+## Get started - Run management scripts and tutorials
 
-To avoid scripts from being blocked by Windows:
+>**IMPORTANT:** If you download and extract the repo or [Learning Modules](https://github.com/Microsoft/WingtipSaaS/tree/master/Learning%20Modules) from a zip file, make sure you unblock the .zip file before extracting. Executable contents (scripts, dlls) may be blocked by Windows when zip files are downloaded from an external source and extracted.
 
-1. Right click the zip file and select **Properties**.
-1. On the **General** tab, select **Unblock** and select **OK**.
+>To avoid scripts from being blocked by Windows:
+
+>1. Right click the zip file and select **Properties**.
+>2. On the **General** tab, select **Unblock** and select **OK**.
+
+You will find management scripts in the repo that allow you to explore many SaaS management scenarios, including provisioning tenants and monitoring performance, managing database schema, analytics, and more. You can find the tutorials associated with these scripts in [Azure SQL database documentation](https://docs.microsoft.com/en-us/azure/sql-database/saas-dbpertenant-wingtip-app-overview).
+
+Also available in the Documentation folder in this repo is an **overview presentation** that provides background, explores alternative database models, and walks through several of the SaaS patterns at a high level. There is also a demo script you can use with the presentation to give others a guided tour of the app and several of the patterns.
 
 
 ## License

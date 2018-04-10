@@ -53,6 +53,7 @@ $tenantAdminPassword = $config.TenantAdminPassword
 
 # Get the catalog 
 $catalog = Get-Catalog -ResourceGroupName $WtpResourceGroupName -WtpUser $WtpUser 
+$catalogResourceGroupName = $catalog.Database.ResourceGroupName
 
 # Burst durations are randomized, the following set the min and max duration in seconds
 $burstMinDuration = 25 
@@ -83,8 +84,6 @@ $intenseLoadFactor = 15.00
 # impacts interval between bursts [interval = interval + (interval * densityLoadFactor * pool.dbcount)]
 # 0 removes the effect, 0.1 will double the typical interval for 10 dbs  
 $densityLoadFactor = 0.1
-
-$CatalogServerName = $config.CatalogServerNameStem + $WtpUser
 
 $jobs = @{}
 
@@ -121,7 +120,8 @@ while (1 -eq 1)
     $ServerNames = @()
     foreach ($shard in $Shards)
     {
-        $serverName = $shard.Location.Server.split(".",2)[0]
+        $fullyQualifiedServerName = $shard.Location.Server
+        $serverName = $fullyQualifiedServerName.split('.')[0]
         $ServerNames += $serverName
     }
 
@@ -132,7 +132,7 @@ while (1 -eq 1)
 
     foreach($serverName in $serverNames)
     {
-        [array]$serverPools = (Get-AzureRmSqlElasticPool -ResourceGroupName $WtpResourceGroupName -ServerName $serverName).ElasticPoolName
+        [array]$serverPools = (Get-AzureRmSqlElasticPool -ResourceGroupName $catalogResourceGroupName -ServerName $serverName).ElasticPoolName
         $poolNumber = 1
 
         foreach($elasticPool in $serverPools)
@@ -158,7 +158,7 @@ while (1 -eq 1)
                 $loadFactor = 1.0
             }
                
-            $elasticDbs = (Get-AzureRmSqlElasticPoolDatabase -ResourceGroupName $WtpResourceGroupName -ServerName $serverName -ElasticPoolName $elasticPool).DatabaseName
+            $elasticDbs = (Get-AzureRmSqlElasticPoolDatabase -ResourceGroupName $catalogResourceGroupName -ServerName $serverName -ElasticPoolName $elasticPool).DatabaseName
 
             Foreach($elasticDb in $elasticDbs)
             {          
@@ -180,7 +180,7 @@ while (1 -eq 1)
 
         # Get standalone dbs and add to $allDbs
 
-        $StandaloneDbs = (Get-AzureRmSqlDatabase -ResourceGroupName $WtpResourceGroupName -ServerName $serverName |  where {$_.CurrentServiceObjectiveName -ne "ElasticPool"} | where {$_.DatabaseName -ne "master"} ).DatabaseName 
+        $StandaloneDbs = (Get-AzureRmSqlDatabase -ResourceGroupName $catalogResourceGroupName -ServerName $serverName |  where {$_.CurrentServiceObjectiveName -ne "ElasticPool"} | where {$_.DatabaseName -ne "master"} ).DatabaseName 
         Foreach ($standaloneDb in $StandaloneDbs)
         {
                 $burstLevel = Get-Random -Minimum $burstMinFactor -Maximum $burstMaxFactor # randomizes the intensity of each database

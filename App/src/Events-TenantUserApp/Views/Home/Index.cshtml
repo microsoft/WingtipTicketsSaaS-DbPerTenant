@@ -21,14 +21,12 @@
 <div class="container">
 
     <div class="col-xs-12">
-
-        <h2 style="margin-left: 20px; margin-bottom: 10px; margin-top:10px">@Localizer["WELCOME"]</h2>
-        <div class="col-xs-11 welcome-text">
-            <hr class="body-hr" />
-
-            <p style="margin-left: 15px">
-                @Localizer["<b>Welcome to the Wingtip Tickets Platform!</b> Explore what's on at the venues below and enjoy secure ticket purchasing in the cloud. Powered by Microsoft Azure, using SaaS technology built on SQL Database."]
-            </p>
+        <p style="font-size:3rem;font-family:'Segoe UI';font-weight:bold">@Localizer["Welcome to the Wingtip Tickets Platform!"]</p>
+        <hr class="body-hr">
+        <div class="col-xs-11 welcome-text" style="padding:0">
+            <p>
+                @Localizer["Explore what's on at the venues below and enjoy secure ticket purchasing in the cloud. Powered by Microsoft Azure, using SaaS technology built on SQL Database"]
+            </p>           
         </div>
     </div>
 
@@ -38,7 +36,7 @@
         <!-- Tenant List -->
         <!-- ------------------------------------------------------------------------------------------------------------------- -->
 
-        <div class="col-xs-10 table-body" style="margin-left: 26px; width: 100%;">
+        <div class="col-xs-10 table-body" style="margin-left: 10px; width: 100%;">
             <table id="table_id" class="table table-bordered responsive-utilities" width="84.5%" style="margin-left: 0%">
                 <thead>
                     <tr>
@@ -57,14 +55,29 @@
                         {
                             foreach (var tenant in Model)
                             {
-                                <tr>
-                                    <th style="display: none;">
-                                        <a href="@Url.Action("Index", "Events", new {tenant = tenant.TenantName})" target="_blank">@tenant.VenueName </a>
-                                    </th>
-                                    <th>
-                                        <a href="@Url.Action("Index", "Events", new {tenant = tenant.TenantName})" target="_blank">@tenant.VenueName </a>
-                                    </th>
-                                </tr>
+                                if (tenant.VenueName != null)
+                                {
+                                    <tr>
+                                        <th style="display: none;">
+                                            <a href="@Url.Action("Index", "Events", new { tenant = tenant.TenantName })" target="_blank">@tenant.VenueName </a>
+                                        </th>
+                                        <th>
+                                            <a href="@Url.Action("Index", "Events", new { tenant = tenant.TenantName })" target="_blank">@tenant.VenueName </a>
+                                        </th>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <th style="display: none;">
+                                            <a href="" target="_blank">@tenant.TenantName </a>
+                                        </th>
+                                        <th style="pointer-events: none; cursor: default">
+                                            <a href="" target="_blank">@tenant.TenantName (offline)</a>
+                                        </th>
+                                    </tr>
+
+                                }
                             }
                         }
                     }

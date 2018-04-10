@@ -56,6 +56,7 @@ Initialize-Subscription -NoEcho:$NoEcho.IsPresent
 
 # Get the catalog
 $catalog = Get-Catalog -ResourceGroupName $WtpResourceGroupName -WtpUser $WtpUser
+$catalogResourceGroup = $catalog.Database.ResourceGroupName
 
 # Compute the key value for the tenant to be restored
 $tenantKey = Get-TenantKey $TenantName
@@ -86,7 +87,7 @@ if ($restoreSourceDatabase.DeletionDate -and $restoreSourceDatabase.ElasticPoolN
   $restoredTenantDatabase = Restore-AzureRmSqlDatabase -FromDeletedDatabaseBackup `
                               -DeletionDate $deletionDate `
                               -PointInTime $RestorePoint `
-                              -ResourceGroupName $WtpResourceGroupName `
+                              -ResourceGroupName $catalogResourceGroup `
                               -ServerName $restoreSourceDatabase.ServerName `
                               -TargetDatabaseName $restoreDestinationName `
                               -ResourceId $restoreSourceDatabase.ResourceID `
@@ -99,7 +100,7 @@ elseif (($restoreSourceDatabase.DeletionDate) -and (!$restoreSourceDatabase.Elas
   $restoredTenantDatabase = Restore-AzureRmSqlDatabase -FromDeletedDatabaseBackup `
                               -DeletionDate $deletionDate `
                               -PointInTime $RestorePoint `
-                              -ResourceGroupName $WtpResourceGroupName `
+                              -ResourceGroupName $catalogResourceGroup `
                               -ServerName $restoreSourceDatabase.ServerName `
                               -TargetDatabaseName $restoreDestinationName `
                               -ResourceId $restoreSourceDatabase.ResourceID `
@@ -111,7 +112,7 @@ elseif ((!$restoreSourceDatabase.DeletionDate) -and ($restoreSourceDatabase.Elas
 { 
   $restoredTenantDatabase = Restore-AzureRmSqlDatabase -FromPointInTimeBackup `
                               -PointInTime $RestorePoint `
-                              -ResourceGroupName $WtpResourceGroupName `
+                              -ResourceGroupName $catalogResourceGroup `
                               -ServerName $restoreSourceDatabase.ServerName `
                               -TargetDatabaseName $restoreDestinationName `
                               -ResourceId $restoreSourceDatabase.ResourceID `
@@ -122,7 +123,7 @@ elseif ((!$restoreSourceDatabase.DeletionDate) -and (!$restoreSourceDatabase.Ela
 {
   $restoredTenantDatabase = Restore-AzureRmSqlDatabase -FromPointInTimeBackup `
                               -PointInTime $RestorePoint `
-                              -ResourceGroupName $WtpResourceGroupName `
+                              -ResourceGroupName $catalogResourceGroup `
                               -ServerName $restoreSourceDatabase.ServerName `
                               -TargetDatabaseName $restoreDestinationName `
                               -ResourceId $restoreSourceDatabase.ResourceID `

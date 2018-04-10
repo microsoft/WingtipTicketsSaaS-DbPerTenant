@@ -12,7 +12,7 @@ Import-Module sqlserver -ErrorAction SilentlyContinue
 
 # Stop execution on error
 $ErrorActionPreference = "Stop"
-
+Set-StrictMode -Version Latest
 
 <#
 .SYNOPSIS
@@ -28,7 +28,10 @@ function Add-ExtendedTenantMetaDataToCatalog
         [int32]$TenantKey,
 
         [parameter(Mandatory=$true)]
-        [string]$TenantName
+        [string]$TenantName,
+
+        [parameter(Mandatory=$false)]
+        [string]$TenantServicePlan = 'standard'
     )
 
     $config = Get-Configuration
@@ -41,27 +44,32 @@ function Add-ExtendedTenantMetaDataToCatalog
     # Add the tenant name into the Tenants table
     $commandText = "
         MERGE INTO Tenants as [target]
-        USING (VALUES ($rawkeyHexString, '$TenantName')) AS source
-            (TenantId, TenantName)
+        USING (VALUES ($rawkeyHexString, '$TenantName', '$TenantServicePlan', CURRENT_TIMESTAMP)) AS source
+            (TenantId, TenantName, ServicePlan, LastUpdated)
         ON target.TenantId = source.TenantId
         WHEN MATCHED THEN
-            UPDATE SET TenantName = source.TenantName
+            UPDATE SET 
+                TenantName = source.TenantName, 
+                ServicePlan = source.ServicePlan,
+                LastUpdated = source.LastUpdated
         WHEN NOT MATCHED THEN
-            INSERT (TenantId, TenantName)
-            VALUES (source.TenantId, source.TenantName);"
+            INSERT (TenantId, TenantName, ServicePlan, RecoveryState, LastUpdated)
+            VALUES (source.TenantId, source.TenantName, source.ServicePlan, 'n/a', CURRENT_TIMESTAMP);"
 
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
         -Username $config.TenantAdminuserName `
         -Password $config.TenantAdminPassword `
         -Database $Catalog.Database.DatabaseName `
-        -Query $commandText 
+        -Query $commandText `
+        -ConnectionTimeout 30 `
+        -QueryTimeout 30 `
 }
 
 
 <#
 .SYNOPSIS
-    Registers a tenant database in the catalog, including adding the tenant name as extended tenant meta data.
+    Registers the tenant database in the catalog. Additionally, the tenant name is stored as extended tenant meta data.
 #>
 function Add-TenantDatabaseToCatalog
 {
@@ -76,21 +84,27 @@ function Add-TenantDatabaseToCatalog
         [int32]$TenantKey,
 
         [parameter(Mandatory=$true)]
-        [object]$TenantDatabase
+        [object]$TenantDatabase,
+
+        [parameter(Mandatory=$true)]
+        [string]$TenantServerName,
+
+        [parameter(Mandatory=$false)]
+        [string]$TenantServicePlan = 'standard'
     )
 
-    $tenantServerFullyQualifiedName = $TenantDatabase.ServerName + ".database.windows.net"
-
+    $fullyQualifiedTenantServerName = $TenantServerName + ".database.windows.net"
+    
     # Add the database to the catalog shard map (idempotent)
     Add-Shard -ShardMap $Catalog.ShardMap `
-        -SqlServerName $tenantServerFullyQualifiedName `
+        -SqlServerName $fullyQualifiedTenantServerName `
         -SqlDatabaseName $TenantDatabase.DatabaseName
 
     # Add the tenant-to-database mapping to the catalog (idempotent)
     Add-ListMapping `
         -KeyType $([int]) `
         -ListShardMap $Catalog.ShardMap `
-        -SqlServerName $tenantServerFullyQualifiedName `
+        -SqlServerName $fullyQualifiedTenantServerName `
         -SqlDatabaseName $TenantDatabase.DatabaseName `
         -ListPoint $TenantKey
 
@@ -98,9 +112,158 @@ function Add-TenantDatabaseToCatalog
     Add-ExtendedTenantMetaDataToCatalog `
         -Catalog $Catalog `
         -TenantKey $TenantKey `
-        -TenantName $TenantName
+        -TenantName $TenantName `
+        -TenantServicePlan $TenantServicePlan
+
+    # Add server details to catalog as extended meta data (idempotent)
+    Set-ExtendedServer -Catalog $Catalog -Server $TenantDatabase
+
+    # Add database details to catalog as extended meta data (idempotent)
+    Set-ExtendedDatabase -Catalog $Catalog -Database $TenantDatabase
+
+    # Add elastic pool details to catalog as extended meta data (idempotent)
+    if ($TenantDatabase.ElasticPoolName)
+    {
+        $tenantElasticPool = Get-AzureRmSqlElasticPool `
+                                -ResourceGroupName $TenantDatabase.ResourceGroupName `
+                                -ServerName $TenantDatabase.ServerName `
+                                -ElasticPoolName $TenantDatabase.ElasticPoolName
+
+        Set-ExtendedElasticPool -Catalog $Catalog -ElasticPool $tenantElasticPool    
+    }
+    
 }
 
+<#
+.SYNOPSIS
+    Disable change tracking on a tenant database. 
+#>
+function Disable-ChangeTrackingForTenant
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$true)]
+        [string] $TenantName
+    )
+
+    $config = Get-Configuration
+    $adminUserName = $config.TenantAdminUserName
+    $adminPassword = $config.TenantAdminPassword
+   
+    $tenantObject = Get-Tenant -Catalog $Catalog -TenantName $TenantName
+    $fullyQualifiedServerName = $tenantObject.Database.ServerName + ".database.windows.net"
+
+    $queryText = "
+            SELECT      schm.name AS schemaName, 
+                        tbl.name AS tableName
+            FROM        sys.tables tbl
+            JOIN        sys.schemas schm ON (schm.schema_id = tbl.schema_id)
+            JOIN        sys.change_tracking_tables ctt ON (tbl.object_id = ctt.object_id)
+            "
+
+    # Get database tables that do have change tracking enabled 
+    $trackedTables = Invoke-SqlAzureWithRetry `
+        -Username $adminUserName `
+        -Password $adminPassword `
+        -ServerInstance $fullyQualifiedServerName `
+        -Database $tenantObject.Database.DatabaseName `
+        -ConnectionTimeout 45 `
+        -Query $queryText `
+
+    $queryText = ""
+    foreach ($table in $trackedTables)
+    {
+        queryText += "ALTER TABLE [$($table.schemaName)].[$($table.tableName)] DISABLE CHANGE_TRACKING `n"
+    }
+    queryText += "ALTER DATABASE $($tenantObject.Database.DatabaseName) SET CHANGE_TRACKING = OFF"
+
+    # Disable change tracking on tenant database
+    $commandOutput = Invoke-SqlAzureWithRetry `
+        -Username $adminUserName `
+        -Password $adminPassword `
+        -ServerInstance $fullyQualifiedServerName `
+        -Database $tenantObject.Database.DatabaseName `
+        -ConnectionTimeout 45 `
+        -Query $queryText `
+}
+
+<#
+.SYNOPSIS
+    Enables change tracking on a tenant database. This is particularly useful in a recovery scenario to track tenant data that needs to be repatriated
+#>
+function Enable-ChangeTrackingForTenant
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$true)]
+        [string] $TenantServerName,
+
+        [parameter(Mandatory=$true)]
+        [string] $TenantDatabaseName,       
+
+        [parameter(Mandatory=$false)]
+        [int32] $RetentionPeriod = 10
+    )
+
+    $config = Get-Configuration
+    $adminUserName = $config.TenantAdminUserName
+    $adminPassword = $config.TenantAdminPassword
+   
+    $fullyQualifiedTenantServerName = $TenantServerName + ".database.windows.net"
+
+    # Enable change tracking if not enabled on tenant database
+    $queryText = "
+        IF NOT EXISTS (SELECT * FROM sys.change_tracking_databases)
+        ALTER DATABASE $TenantDatabaseName SET CHANGE_TRACKING = ON (CHANGE_RETENTION = $RetentionPeriod DAYS, AUTO_CLEANUP = ON);`n           
+        "
+    $changeTrackingEnabled = Invoke-SqlAzureWithRetry `
+                                -UserName $adminUserName `
+                                -Password $adminPassword `
+                                -ServerInstance $fullyQualifiedTenantServerName `
+                                -Database $TenantDatabaseName `
+                                -ConnectionTimeout 45 `
+                                -Query $queryText
+
+    # Get database tables that do not have change tracking enabled
+    $queryText = "
+            SELECT      schm.name AS schemaName, 
+                        tbl.name AS tableName
+            FROM        sys.tables tbl
+            JOIN        sys.schemas schm ON (schm.schema_id = tbl.schema_id)
+            LEFT JOIN   sys.change_tracking_tables ctt ON (tbl.object_id = ctt.object_id)
+            WHERE       (schm.schema_id = 1 AND ctt.object_id IS NULL);
+            "     
+    $untrackedTables = Invoke-SqlAzureWithRetry `
+        -Username $adminUserName `
+        -Password $adminPassword `
+        -ServerInstance $fullyQualifiedTenantServerName `
+        -Database $TenantDatabaseName `
+        -ConnectionTimeout 45 `
+        -Query $queryText `
+
+    # Enable change tracking on untracked tables 
+    if ($untrackedTables)
+    {
+        $queryText = ""
+        foreach ($table in $untrackedTables)
+        {
+            $queryText += "ALTER TABLE [$($table.schemaName)].[$($table.tableName)] ENABLE Change_tracking WITH (TRACK_COLUMNS_UPDATED = ON) `n"
+        }
+        
+        # Enable change tracking on tenant database
+        $commandOutput = Invoke-SqlAzureWithRetry `
+            -Username $adminUserName `
+            -Password $adminPassword `
+            -ServerInstance $fullyQualifiedTenantServerName `
+            -Database $TenantDatabaseName `
+            -ConnectionTimeout 45 `
+            -Query $queryText `
+    }
+}
 
 <#
 .SYNOPSIS
@@ -138,12 +301,13 @@ function Find-TenantNames
 
 <#
 .SYNOPSIS
-    Initializes and returns a catalog object based on the catalog database created during deployment of the
-    WTP application.  The catalog contains the initialized shard map manager and shard map, which can be used to access
+    Initializes and returns a catalog object based on the active catalog database. 
+    The returned catalog object contains the initialized shard map manager and shard map, which can be used to access
     the associated databases (shards) and tenant key mappings.
 #>
 function Get-Catalog
 {
+    [cmdletbinding()]
     param (
         [parameter(Mandatory=$true)]
         [string]$ResourceGroupName,
@@ -152,50 +316,78 @@ function Get-Catalog
         [string]$WtpUser
     )
     $config = Get-Configuration
+    $retries = 0
+    $retryLimit = 2
+    $sleepInterval = 5
 
-    $catalogServerName = $config.CatalogServerNameStem + $WtpUser
-    $catalogServerFullyQualifiedName = $catalogServerName + ".database.windows.net"
-
-    # Check catalog database exists
-    $catalogDatabase = Get-AzureRmSqlDatabase `
-        -ResourceGroupName $ResourceGroupName `
-        -ServerName $catalogServerName `
-        -DatabaseName $config.CatalogDatabaseName `
-        -ErrorAction Stop
-
-    # Initialize shard map manager from catalog database
-    [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMapManager]$shardMapManager = Get-ShardMapManager `
-        -SqlServerName $catalogServerFullyQualifiedName `
-        -UserName $config.CatalogAdminUserName `
-        -Password $config.CatalogAdminPassword `
-        -SqlDatabaseName $config.CatalogDatabaseName
-
-    if (!$shardmapManager)
+    # Resolve DNS alias to get current catalog server
+    do
     {
-        throw "Failed to initialize shard map manager from '$($config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
-    }
+        try
+        {
+            $catalogAlias = $config.ActiveCatalogAliasStem + $WtpUser + ".database.windows.net"
+            $catalogServerName = Get-ServerNameFromAlias $catalogAlias
 
-    # Initialize shard map
-    [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMap]$shardMap = Get-ListShardMap `
-        -KeyType $([int]) `
-        -ShardMapManager $shardMapManager `
-        -ListShardMapName $config.CatalogShardMapName
+            # Find catalog server in Azure 
+            $catalogServer = Find-AzureRmResource -ResourceNameEquals $catalogServerName -ResourceType "Microsoft.Sql/servers"
+            $fullyQualifiedServerName = $catalogServer.Name + ".database.windows.net"
 
-    If (!$shardMap)
-    {
-        throw "Failed to load shard map '$($config.CatalogShardMapName)' from '$($config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
-    }
-    else
-    {
-        $catalog = New-Object PSObject -Property @{
-            ShardMapManager=$shardMapManager
-            ShardMap=$shardMap
-            FullyQualifiedServerName = $catalogServerFullyQualifiedName
-            Database = $catalogDatabase
+            # Check catalog database exists
+            $catalogDatabase = Get-AzureRmSqlDatabase `
+                -ResourceGroupName $catalogServer.ResourceGroupName `
+                -ServerName $catalogServer.Name `
+                -DatabaseName $config.CatalogDatabaseName `
+                -ErrorAction Stop
+
+            # Initialize shard map manager from catalog database
+            [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMapManager]$shardMapManager = Get-ShardMapManager `
+                -SqlServerName $fullyQualifiedServerName `
+                -UserName $config.CatalogAdminUserName `
+                -Password $config.CatalogAdminPassword `
+                -SqlDatabaseName $config.CatalogDatabaseName
+
+            if (!$shardmapManager)
+            {
+                throw "Failed to initialize shard map manager from '$($config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
             }
 
-        return $catalog
-    }
+            # Initialize shard map
+            [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardMap]$shardMap = Get-ListShardMap `
+                -KeyType $([int]) `
+                -ShardMapManager $shardMapManager `
+                -ListShardMapName $config.CatalogShardMapName
+
+            If (!$shardMap)
+            {
+                throw "Failed to load shard map '$($config.CatalogShardMapName)' from '$($config.CatalogDatabaseName)' database. Ensure catalog is initialized by opening the Events app and try again."
+            }
+            else
+            {
+                $catalog = New-Object PSObject -Property @{
+                    ShardMapManager=$shardMapManager
+                    ShardMap=$shardMap
+                    CatalogAlias = $catalogAlias
+                    FullyQualifiedServerName = $fullyQualifiedServerName
+                    Database = $catalogDatabase
+                }
+
+                return $catalog
+            }
+        }
+        catch
+        {
+            if ($retries -gt $retryLimit)
+            {
+                throw $_.Exception.Message
+            }
+            else
+            {
+                $retries+=1
+                Start-Sleep $sleepInterval
+            }
+        }
+    } while ($true)   
+    
 }
 
 
@@ -217,20 +409,25 @@ function Get-DatabasesForTenant
     $tenantDatabaseList = @()
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($tenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = ($tenantMapping.Shard.Location.Server).Split('.')[0]
+    $fullyQualifiedTenantServerName = $tenantMapping.Shard.Location.Server
+    $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0]
+
+    # Find tenant server in Azure 
+    $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
 
     # Get active tenant database 
     $activeTenantDatabase = Get-AzureRmSqlDatabase `
-                                -ResourceGroupName $Catalog.database.ResourceGroupName `
+                                -ResourceGroupName $tenantServer.ResourceGroupName `
                                 -ServerName $tenantServerName `
                                 -DatabaseName $tenantDatabaseName `
                                 -ErrorAction SilentlyContinue
 
     # Get restored tenant database 
+    $restoredTenantDatabaseName = $tenantDatabaseName + "-old"
     $restoredTenantDatabase = Get-AzureRmSqlDatabase `
-                                -ResourceGroupName $Catalog.database.ResourceGroupName `
+                                -ResourceGroupName $tenantServer.ResourceGroupName `
                                 -ServerName $tenantServerName `
-                                -DatabaseName $tenantDatabaseName + "_old" `
+                                -DatabaseName $restoredTenantDatabaseName `
                                 -ErrorAction SilentlyContinue
 
     if ($activeTenantDatabase)
@@ -268,7 +465,7 @@ function Get-ExtendedDatabase{
 
     $config = Get-Configuration
 
-    $commandText = "SELECT DatabaseName, ServiceObjective, ElasticPoolName, State FROM [dbo].[Databases]"        
+    $commandText = "SELECT DatabaseName, ServerName, ServiceObjective, ElasticPoolName, State, RecoveryState, RecoveryChecksum, LastUpdated FROM [dbo].[Databases]"        
 
     # Qualify query if ServerName is specified
     if($ServerName)
@@ -293,7 +490,9 @@ function Get-ExtendedDatabase{
                     -Database $Catalog.Database.DatabaseName `
                     -Query $commandText `
                     -UserName $config.CatalogAdminUserName `
-                    -Password $config.CatalogAdminPassword   
+                    -Password $config.CatalogAdminPassword `
+                    -ConnectionTimeout 30 `
+                    -QueryTimeout 15 `   
     
     return $extendedDatabases
 }
@@ -321,7 +520,7 @@ function Get-ExtendedElasticPool{
     $config = Get-Configuration
 
     $commandText = "
-        SELECT ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, DatabasesMax, BufferDatabases, State 
+        SELECT ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, State, RecoveryState 
         FROM [dbo].[ElasticPools]" 
 
     # Qualify query if ServerName is specified
@@ -347,7 +546,9 @@ function Get-ExtendedElasticPool{
                     -Database $Catalog.Database.DatabaseName `
                     -Query $commandText `
                     -UserName $config.CatalogAdminUserName `
-                    -Password $config.CatalogAdminPassword  
+                    -Password $config.CatalogAdminPassword `
+                    -ConnectionTimeout 30 `
+                    -QueryTimeout 15 
     
     return $extendedElasticPools
 }
@@ -367,7 +568,7 @@ function Get-ExtendedServer{
 
     $config = Get-Configuration
 
-    $commandText = "SELECT ServerName, State FROM [dbo].[Servers]" 
+    $commandText = "SELECT ServerName, State, RecoveryState FROM [dbo].[Servers]" 
     
     if($ServerName)
     {
@@ -384,11 +585,66 @@ function Get-ExtendedServer{
                     -Database $Catalog.Database.DatabaseName `
                     -Query $commandText `
                     -UserName $config.CatalogAdminUserName `
-                    -Password $config.CatalogAdminPassword      
-    
+                    -Password $config.CatalogAdminPassword `
+                    -ConnectionTimeout 30 `
+                    -QueryTimeout 15
+
     return $extendedServers
 }
 
+<#
+.SYNOPSIS
+    Gets extended tenant meta data from the catalog. If the 'SortTenants' parameter is selected, tenants are returned in priority order from highest priority to lowest priority
+#>
+function Get-ExtendedTenant 
+{
+    param (
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$false)]
+        [int32]$TenantKey,
+
+        [parameter(Mandatory=$false)]
+        [switch]$SortTenants
+    )
+
+    $config = Get-Configuration
+
+    $commandText = "SELECT TenantId, TenantName, TenantStatus, ServicePlan, ServerName, DatabaseName, TenantRecoveryState, Location, LastUpdated FROM [dbo].[TenantsExtended]" 
+    
+    if($TenantKey)
+    {
+        $tenantHexId = (Get-TenantRawKey -TenantKey $TenantKey).RawKeyHexString
+        $commandText += " WHERE TenantId = $tenantHexId;"
+    }
+    
+    $extendedTenants = @()
+    $extendedTenants += Invoke-SqlAzureWithRetry `
+                            -ServerInstance $Catalog.FullyQualifiedServerName `
+                            -Database $Catalog.Database.DatabaseName `
+                            -Query $commandText `
+                            -UserName $config.CatalogAdminUserName `
+                            -Password $config.CatalogAdminPassword `
+                            -ConnectionTimeout 30 `
+                            -QueryTimeout 15 `
+
+    # Sort tenant list by tenant priority 
+    if($SortTenants)
+    {
+        $tenantPriorityOrder = "Premium", "Standard", "Free"
+
+        $tenantSort = {
+            $rank = $tenantPriorityOrder.IndexOf($($_.ServicePlan.ToLower()))
+            if ($rank -ne -1) { $rank }
+            else { [System.Double]::PositiveInfinity }
+        }
+
+        $extendedTenants =  $extendedTenants | sort $tenantSort
+    }      
+    
+    return $extendedTenants
+}
 
 <#
 .SYNOPSIS
@@ -430,14 +686,14 @@ function Get-Tenant
         throw "Tenant '$TenantName' not found in catalog."
     }
 
-    $tenantServerName = $tenantShard.Shard.Location.Server.Split('.',2)[0]
+    $tenantServerName = $tenantShard.Shard.Location.Server
     $tenantDatabaseName = $tenantShard.Shard.Location.Database
 
-    # requires tenant resource group is same as catalog resource group
-    $TenantResourceGroupName = $Catalog.Database.ResourceGroupName
-     
+    # Find tenant server in Azure 
+    $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
+
     $tenantDatabase = Get-AzureRmSqlDatabase `
-        -ResourceGroupName $TenantResourceGroupName `
+        -ResourceGroupName $tenantServer.ResourceGroupName `
         -ServerName $tenantServerName `
         -DatabaseName $tenantDatabaseName 
 
@@ -450,6 +706,77 @@ function Get-Tenant
     return $tenant            
 }
 
+<#
+.SYNOPSIS
+    Returns an array of all tenants registered in the catalog.
+    The returned array contains the TenantName, TenantKey, and ServicePlan of all registered tenants
+#>
+function Get-Tenants
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [object]$Catalog
+    )
+
+    $config = Get-Configuration
+
+    $commandText = "SELECT TenantId, TenantName, ServicePlan FROM [dbo].[Tenants]"    
+    $tenantList = Invoke-SqlAzureWithRetry `
+                    -ServerInstance $Catalog.FullyQualifiedServerName `
+                    -Database $Catalog.Database.DatabaseName `
+                    -Query $commandText `
+                    -UserName $config.CatalogAdminUserName `
+                    -Password $config.CatalogAdminPassword `
+                    -ConnectionTimeout 30 `
+                    -QueryTimeout 15 `
+
+    $registeredTenants = @()
+    foreach ($extendedTenant in $tenantList)
+    {
+        $tenantKey = Get-TenantKey $extendedTenant.TenantName
+        $tenant = New-Object PSObject -Property @{
+            Name = $extendedTenant.TenantName
+            Key = $tenantKey
+            ServicePlan = $extendedTenant.ServicePlan
+        }
+
+        # store tenant object in array
+        $registeredTenants+= $tenant
+    }
+    return $registeredTenants            
+}
+
+<#
+.SYNOPSIS
+    Returns the service plan of a given tenant
+#>
+function Get-TenantServicePlan
+{
+    param (
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$false)]
+        [string]$TenantName
+    )
+
+    $config = Get-Configuration
+
+    $tenantKey = Get-TenantKey $TenantName
+    $tenantHexId = (Get-TenantRawKey -TenantKey $TenantKey).RawKeyHexString
+    $commandText = "SELECT ServicePlan FROM [dbo].[TenantsExtended] WHERE TenantId = $tenantHexId" 
+    
+    $tenantServicePlan = Invoke-SqlAzureWithRetry `
+                            -ServerInstance $Catalog.FullyQualifiedServerName `
+                            -Database $Catalog.Database.DatabaseName `
+                            -Query $commandText `
+                            -UserName $config.CatalogAdminUserName `
+                            -Password $config.CatalogAdminPassword `
+                            -ConnectionTimeout 30 `
+                            -QueryTimeout 15 `
+
+    return $tenantServicePlan
+}
 
 <#
 .SYNOPSIS
@@ -472,11 +799,15 @@ function Get-TenantDatabaseForRestorePoint
     $restorePointDatabase = $null 
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($tenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = ($tenantMapping.Shard.Location.Server).Split('.')[0]
+    $fullyQualifiedTenantServerName = $tenantMapping.Shard.Location.Server
+    $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0]
+
+    # Find tenant server in Azure 
+    $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
     
     # Get active database for tenant 
     $tenantDatabase = Get-AzureRmSqlDatabase `
-                        -ResourceGroupName $Catalog.Database.ResourceGroupName `
+                        -ResourceGroupName $tenantServer.ResourceGroupName `
                         -ServerName $tenantServerName `
                         -DatabaseName $tenantDatabaseName `
                         -ErrorAction SilentlyContinue
@@ -499,9 +830,13 @@ function Get-TenantDatabaseForRestorePoint
     foreach ($database in $tenantDatabaseList)
     {
         # Databases are available for restore 10 minutes after they are created 
+        $latestRestorePoint = $null
         $oldestRestorePoint = ($database.CreationDate).AddMinutes(10)
-        $latestRestorePoint = $database.DeletionDate
-
+        if ("DeletionDate" -In $database.PSObject.Properties.Name)
+        {
+            $latestRestorePoint = $database.DeletionDate
+        }
+       
         # Use current active tenant database if the time period matches
         if (($oldestRestorePoint -lt $RestorePoint) -and (!$latestRestorePoint))
         {
@@ -596,7 +931,9 @@ function Get-TenantNameFromTenantDatabase
         -Username $config.TenantAdminuserName `
         -Password $config.TenantAdminPassword `
         -Database $TenantDatabaseName `
-        -Query $commandText 
+        -Query $commandText `
+        -ConnectionTimeout 30 `
+        -QueryTimeout 30 `
 }
 
 
@@ -623,13 +960,31 @@ function Get-TenantRawKey
     $rawValueString = "0x" + $rawValueString.Replace("-", "")
 
     $tenantRawKey = New-Object PSObject -Property @{
-        RawKeyBytes = $shardKeyRawValueBytes
+        RawKeyBytes = $rawValueBytes
         RawKeyHexString = $rawValueString
     }
 
     return $tenantRawKey
 }
 
+<#
+.SYNOPSIS
+    Returns the active tenant server for an input alias. Throws an error if the input alias does not exist
+#>
+function Get-ServerNameFromAlias
+{
+    [cmdletbinding()]
+    param
+    (
+        [parameter(Mandatory=$true)]
+        [string]$fullyQualifiedTenantAlias
+    )
+
+    # Lookup DNS Alias and return the Azure SQL Server to which it's pointing 
+    $fullyQualifiedServerName = (Resolve-DnsName $fullyQualifiedTenantAlias -Type CNAME -DnsOnly).NameHost    
+    $serverName = $fullyQualifiedServerName.split('.')[0]
+    return $serverName
+}
 
 <#
 .SYNOPSIS
@@ -670,7 +1025,7 @@ function Initialize-TenantFromBufferDatabase
     $tenantKey = Get-TenantKey -TenantName $TenantName 
 
     # check if a tenant with this key is aleady registered in the catalog
-    if (Test-TenantKeyInCatalog -Catalog $catalog -TenantKey $tenantKey)
+    if (Test-TenantKeyInCatalog -Catalog $Catalog -TenantKey $tenantKey)
     {
         throw "A tenant with name '$TenantName' is already registered in the catalog."    
     }
@@ -696,10 +1051,11 @@ function Initialize-TenantFromBufferDatabase
 
     # register the tenant and database in the catalog
     Add-TenantDatabaseToCatalog `
-        -Catalog $catalog `
+        -Catalog $Catalog `
         -TenantName $TenantName `
         -TenantKey $tenantKey `
         -TenantDatabase $tenantDatabase `
+        -TenantServerName $serverName
 
     return $tenantKey
 }
@@ -798,12 +1154,15 @@ function Invoke-SqlAzure{
         [int] $ConnectionTimeout = 30,
         
         [Parameter(Mandatory=$false)]
-        [int] $QueryTimeout = 60
+        [int] $QueryTimeout = 60,
+
+        [Parameter(Mandatory=$false)]
+        [string] $ApplicationName = 'PowerShell'
       )
     $Query = $Query.Trim()
 
     $connectionString = `
-        "Data Source=$ServerInstance;Initial Catalog=$DatabaseName;Connection Timeout=$ConnectionTimeOut;User ID=$UserName;Password=$Password;Encrypt=true;"
+        "Data Source=$ServerInstance;Initial Catalog=$DatabaseName;Connection Timeout=$ConnectionTimeOut;User ID=$UserName;Password=$Password;Encrypt=true;Application Name=$ApplicationName"
 
     $connection = new-object system.data.SqlClient.SQLConnection($connectionString)
     $command = new-object system.data.sqlclient.sqlcommand($Query,$connection)
@@ -857,7 +1216,9 @@ function Invoke-SqlAzureWithRetry{
 
         [string]$ConnectionTimeout = 30,
 
-        [int]$QueryTimeout = 30
+        [int]$QueryTimeout = 30,
+
+        [string]$ApplicationName = 'PowerShell'
     )
 
     $tries = 1
@@ -875,6 +1236,7 @@ function Invoke-SqlAzureWithRetry{
                         -Password $Password `
                         -ConnectionTimeout $ConnectionTimeout `
                         -QueryTimeout $QueryTimeout `
+                        -ApplicationName $ApplicationName
         }
         catch
         {
@@ -951,13 +1313,13 @@ function Invoke-SqlCmdWithRetry{
 
 <#
 .SYNOPSIS
-  Provisions a new Wingtip Tickets tenant and registers it in the catalog   
+  Provisions a new Wingtip Tickets Platform (WTP) tenant and registers it in the catalog   
 
 .DESCRIPTION
-  Creates a new database and initializes venue information.  
-  The tenant database is then registered as a shard in the catalog database.  
-  The tenant name is used as the basis of the database name and to generate 
-  the tenant key used in the catalog.
+  Creates a new database, imports the WTP tenant bacpac using an ARM template, and initializes 
+  venue information.  The tenant database is then in the catalog database.  The tenant
+  name is used as the basis of the database name and to generate the tenant key
+  used in the catalog.
 
 .PARAMETER WtpResourceGroupName
   The resource group name used during the deployment of the WTP app (case sensitive)
@@ -990,7 +1352,10 @@ function New-Tenant
         [string]$VenueType,
 
         [Parameter(Mandatory=$false)]
-        [string]$PostalCode = "98052"
+        [string]$PostalCode = "98052",
+
+        [Parameter(Mandatory=$false)]
+        [string]$ServicePlan = 'standard'
 
     )
 
@@ -1027,9 +1392,11 @@ function New-Tenant
 
     # Register the tenant and database in the catalog
     Add-TenantDatabaseToCatalog -Catalog $catalog `
-        -TenantKey $tenantKey `
         -TenantName $TenantName `
+        -TenantKey $tenantKey `
         -TenantDatabase $tenantDatabase `
+        -TenantServerName $ServerName `
+        -TenantServicePlan $ServicePlan
 
     return $tenantKey
 }
@@ -1037,7 +1404,7 @@ function New-Tenant
 
 <#
 .SYNOPSIS
-    Creates a tenant database and adds the venue information.
+    Creates a tenant database using an ARM template and adds the Venue information.
 #>
 function New-TenantDatabase
 {
@@ -1106,7 +1473,9 @@ function New-TenantDatabase
         # Construct the resource id for the 'golden' tenant database 
         $AzureContext = Get-AzureRmContext
         $subscriptionId = Get-SubscriptionId
-        $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$ResourceGroupName/providers/Microsoft.Sql/servers/$($config.CatalogServerNameStem)$WtpUser/databases/$($config.GoldenTenantDatabaseName)"
+        $catalogAliasName = $config.ActiveCatalogAliasStem + $WtpUser + ".database.windows.net"
+        $catalogServerName = Get-ServerNameFromAlias $catalogAliasName
+        $SourceDatabaseId = "/subscriptions/$($subscriptionId)/resourcegroups/$ResourceGroupName/providers/Microsoft.Sql/servers/$catalogServerName/databases/$($config.GoldenTenantDatabaseName)"
 
         # Use an ARM template to create the tenant database by copying the 'golden' database
         $deployment = New-AzureRmResourceGroupDeployment `
@@ -1241,6 +1610,7 @@ function Remove-ExtendedDatabase
         [string]$DatabaseName
     )
 
+    $config = Get-Configuration
     $commandText = "
         DELETE FROM Databases 
         WHERE ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';"
@@ -1299,6 +1669,7 @@ function Remove-ExtendedServer
         [string]$ServerName
     )
 
+    $config = Get-Configuration
     # Delete the database data from the Tenants table
     $commandText = "
         DELETE FROM [dbo].[Servers] 
@@ -1315,7 +1686,7 @@ function Remove-ExtendedServer
 
 <#
 .SYNOPSIS
-    Removes extended tenant entry from catalog  
+    Removes extended tenant entry from catalog. Additionally removes tenant database entry from databases table  
 #>
 function Remove-ExtendedTenant
 {
@@ -1351,6 +1722,18 @@ function Remove-ExtendedTenant
         -Password $config.CatalogAdminPassword `
         -Database $Catalog.Database.DatabaseName `
         -Query $commandText `
+
+    # Delete the tenant database entry from the Databases table
+    $commandText = "
+        DELETE FROM Databases 
+        WHERE ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';"
+
+    Invoke-SqlAzureWithRetry `
+        -ServerInstance $Catalog.FullyQualifiedServerName `
+        -Username $config.CatalogAdminuserName `
+        -Password $config.CatalogAdminPassword `
+        -Database $Catalog.Database.DatabaseName `
+        -Query $commandText `
 }
 
 
@@ -1367,14 +1750,24 @@ function Remove-Tenant
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [int32]$TenantKey
+        [int32]$TenantKey,
+
+        [parameter(Mandatory=$false)]
+        [switch]$KeepTenantDatabase
     )
+
+    $config = Get-Configuration
 
     # Take tenant offline
     Set-TenantOffline -Catalog $Catalog -TenantKey $TenantKey
 
     $tenantMapping = $Catalog.ShardMap.GetMappingForKey($TenantKey)
     $tenantShardLocation = $tenantMapping.Shard.Location
+    $fullyQualifiedTenantServerName = $tenantShardLocation.Server
+    $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0]
+
+    # Find tenant server in Azure 
+    $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
 
     # Delete catalog mapping for tenant
     try 
@@ -1397,19 +1790,23 @@ function Remove-Tenant
         # Do nothing if shard is already deleted 
     }    
 
-    # Delete tenant database, ignore error if alread deleted
-    Remove-AzureRmSqlDatabase -ResourceGroupName $Catalog.Database.ResourceGroupName `
-        -ServerName ($tenantShard.Location.Server).Split('.')[0] `
-        -DatabaseName $tenantShard.Location.Database `
-        -ErrorAction Continue `
-        >$null
+    # Delete tenant database, ignore error if already deleted
+    if (!$KeepTenantDatabase)
+    {
+        Remove-AzureRmSqlDatabase `
+            -ResourceGroupName $tenantServer.ResourceGroupName `
+            -ServerName $tenantServerName `
+            -DatabaseName $tenantShard.Location.Database `
+            -ErrorAction Continue `
+            >$null  
+    }   
 
     # Remove Tenant entry from Tenants table and corresponding database entry from Databases table
     Remove-ExtendedTenant `
         -Catalog $Catalog `
         -TenantKey $TenantKey `
-        -ServerName ($tenantShard.Location.Server).Split('.')[0] `
-        -DatabaseName $tenantShard.Location.Database 
+        -ServerName $fullyQualifiedTenantServerName `
+        -DatabaseName $tenantShard.Location.Database    
 }
 
 
@@ -1433,10 +1830,14 @@ function Remove-TenantDatabaseForRestore
     $deletedTenantDatabase = $null
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = ($tenantMapping.Shard.Location.Server).Split('.')[0]
+    $fullyQualifiedTenantServerName = $tenantMapping.Shard.Location.Server
+    $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0] 
+
+    # Find tenant server in Azure 
+    $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
 
     $activeTenantDatabase = Get-AzureRmSqlDatabase `
-                                -ResourceGroupName $Catalog.Database.ResourceGroupName `
+                                -ResourceGroupName $tenantServer.ResourceGroupName `
                                 -ServerName $tenantServerName `
                                 -DatabaseName $tenantDatabaseName `
                                 -ErrorAction SilentlyContinue
@@ -1445,7 +1846,7 @@ function Remove-TenantDatabaseForRestore
     if ($activeTenantDatabase)
     {
         $deletedTenantDatabase = Remove-AzureRmSqlDatabase `
-                                    -ResourceGroupName $Catalog.Database.ResourceGroupName `
+                                    -ResourceGroupName $tenantServer.ResourceGroupName `
                                     -ServerName $tenantServerName `
                                     -DatabaseName $tenantDatabaseName `
                                     >$null
@@ -1536,13 +1937,17 @@ function Rename-TenantDatabase
     # Get active tenant database location
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $tenantDatabaseName = $tenantMapping.Shard.Location.Database
-    $tenantServerName = ($tenantMapping.Shard.Location.Server).Split('.')[0]
+    $fullyQualifiedTenantServerName = $tenantMapping.Shard.Location.Server
+    $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0]
+
+    # Find tenant server in Azure 
+    $tenantServer = Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers"
 
     # Choose active tenant database as database to rename if no database specified 
     if (!$TenantDatabaseObject)
     {
         $TenantDatabaseObject = Get-AzureRmSqlDatabase `
-                                -ResourceGroupName $Catalog.Database.ResourceGroupName `
+                                -ResourceGroupName $tenantServer.ResourceGroupName `
                                 -ServerName $tenantServerName `
                                 -DatabaseName $tenantDatabaseName
     }
@@ -1558,6 +1963,95 @@ function Rename-TenantDatabase
 
 <#
 .SYNOPSIS
+    Creates a DNS alias for an input ServerName. If the 'PollDnsUpdate' switch is specified, the function does not return until the DNS entry has been updated or created 
+#>
+function Set-DnsAlias
+{
+    param (
+        [parameter(Mandatory=$true)]
+        [string]$ResourceGroupName,
+
+        [parameter(Mandatory=$true)]
+        [string]$ServerName,
+
+        [parameter(Mandatory=$true)]
+        [string]$ServerDNSAlias,
+
+        [parameter(Mandatory=$false)]
+        [string]$OldServerName,
+
+        [parameter(Mandatory=$false)]
+        [string]$OldResourceGroupName,
+
+        [parameter(Mandatory=$false)]
+        [switch]$PollDnsUpdate
+    )
+
+    $fullyQualifiedDNSAlias = $ServerDNSAlias + ".database.windows.net"
+
+    # Check if input alias exists
+    $aliasExists = Test-IfDnsAlias $fullyQualifiedDNSAlias 
+
+    # Update alias if it exists already 
+    if ($aliasExists)
+    {
+        $subscriptionId = Get-SubscriptionId
+        Set-AzureRmSqlServerDNSAlias `
+            -DnsAliasName $ServerDNSAlias `
+            -ResourceGroupName $ResourceGroupName `
+            -TargetServerName $ServerName `
+            -SourceServerResourceGroupName $OldResourceGroupName `
+            -SourceServerName $OldServerName `
+            -SourceServerSubscriptionId $subscriptionId
+    }
+    else
+    {
+        New-AzureRmSqlServerDNSAlias `
+            -ResourceGroupName $ResourceGroupName `
+            -ServerName $ServerName `
+            -DnsAliasName $ServerDNSAlias `
+            >$null
+    }
+
+    # Poll DNS for changes if requested 
+    if ($PollDnsUpdate)
+    {
+        $requestedServerName = $ServerName 
+        $currentServerName = $null
+        $elapsedTime = 0
+        $timeInterval = 2
+        $timeLimit = 150        #Poll for no more than 150 seconds
+
+        while ($currentServerName -ne $requestedServerName)
+        {
+            try
+            {
+                $currentServerName = Get-ServerNameFromAlias $fullyQualifiedDNSAlias -ErrorAction SilentlyContinue 2>$null
+            
+                if (($currentServerName -ne $requestedServerName) -and ($elapsedTime -lt $timeLimit))
+                {
+                    Write-Verbose "Alias '$ServerDNSAlias' was created but has not fully propagated in DNS. Checking again in $timeInterval seconds..."
+                    Start-Sleep $timeInterval
+                    $elapsedTime += $timeInterval
+                }
+                elseif ($elapsedTime -gt $timeLimit)
+                {
+                    Write-Verbose "Alias '$ServerDNSAlias' was created but has not completed DNS propagation. Exiting..."
+                    break
+                }   
+            }
+            catch
+            {
+                Write-Verbose "Alias '$ServerDNSAlias' was created but has not fully propagated in DNS. Checking again in $timeInterval seconds..."
+                Start-Sleep $timeInterval
+                $elapsedTime += $timeInterval       
+            }           
+        }
+    }  
+}
+
+<#
+.SYNOPSIS
     Adds or updates an extended database entry in the catalog
 #>
 function Set-ExtendedDatabase {
@@ -1566,8 +2060,13 @@ function Set-ExtendedDatabase {
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [object]$Database    
+        [object]$Database,
+
+        [parameter(Mandatory=$false)]
+        [String]$RecoveryState='n/a'    
     )
+    $config = Get-Configuration
+
    
     $commandText = "
         MERGE INTO [dbo].[Databases] AS [target]
@@ -1580,11 +2079,10 @@ function Set-ExtendedDatabase {
             UPDATE SET
                 ServiceObjective = source.ServiceObjective,
                 ElasticPoolName = source.ElasticPoolName,
-                State = 'updated',
                 LastUpdated = source.LastUpdated
         WHEN NOT MATCHED THEN
-            INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, LastUpdated)
-            VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created',LastUpdated);"
+            INSERT (ServerName, DatabaseName, ServiceObjective, ElasticPoolName, State, RecoveryState, LastUpdated)
+            VALUES (ServerName, DatabaseName, ServiceObjective, ElasticPoolName,'created', '$RecoveryState', LastUpdated);"    
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -1608,12 +2106,11 @@ function Set-ExtendedElasticPool{
     [parameter(Mandatory=$true)]
     [object]$ElasticPool,
 
-    [parameter(Mandatory=$true)]
-    [int]$BufferDatabases
-
+    [parameter(Mandatory=$false)]
+    [String]$RecoveryState='n/a' 
     )
 
-    $provisionConfig = Get-ProvisionConfiguration
+    $config = Get-Configuration
 
     $commandText = "
         MERGE INTO [dbo].[ElasticPools] AS [target]
@@ -1625,10 +2122,9 @@ function Set-ExtendedElasticPool{
              $($ElasticPool.DatabaseDtuMax),
              $($ElasticPool.DatabaseDtuMin),
              $($ElasticPool.StorageMB),
-             $($BufferDatabases),
              CURRENT_TIMESTAMP))
         AS [source]
-            (ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, BufferDatabases, LastUpdated)
+            (ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, LastUpdated)
         ON target.ServerName = source.ServerName AND target.ElasticPoolName = source.ElasticPoolName 
         WHEN MATCHED THEN
             UPDATE SET
@@ -1636,13 +2132,11 @@ function Set-ExtendedElasticPool{
                 Dtu = source.Dtu,
                 DatabaseDtuMax = source.DatabaseDtuMax,
                 DatabaseDtuMin = source.DatabaseDtuMin,
-                StorageMB = source.StorageMB,
-                BufferDatabases = source.BufferDatabases,            
-                State = 'updated',
+                StorageMB = source.StorageMB,                   
                 LastUpdated = source.LastUpdated
         WHEN NOT MATCHED THEN
-            INSERT (ServerName, ElasticPoolName, DatabasesMax, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, BufferDatabases, ProvisioningState, State, LastUpdated)
-            VALUES (ServerName, ElasticPoolName, $($provisionConfig.ElasticPoolDatabasesMax), Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, BufferDatabases,'normal','created', LastUpdated);"
+            INSERT (ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, State, RecoveryState, LastUpdated)
+            VALUES (ServerName, ElasticPoolName, Edition, Dtu, DatabaseDtuMax, DatabaseDtuMin, StorageMB, 'created', '$RecoveryState', LastUpdated);"
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -1663,11 +2157,14 @@ function Set-ExtendedServer {
         [object]$Catalog,
 
         [parameter(Mandatory=$true)]
-        [object]$Server
-    )
+        [object]$Server,
 
-    $provisionConfig = Get-ProvisionConfiguration
-   
+        [parameter(Mandatory=$false)]
+        [String]$RecoveryState='n/a'
+    )
+ 
+    $config = Get-Configuration
+
     $commandText = "
         MERGE INTO [dbo].[Servers] AS [target]
         USING (VALUES
@@ -1676,8 +2173,8 @@ function Set-ExtendedServer {
             (ServerName, Location, LastUpdated)
         ON target.ServerName = source.ServerName 
         WHEN NOT MATCHED THEN
-            INSERT (ServerName, ElasticPoolsMax, ProvisioningState, State, Location, LastUpdated)
-            VALUES (ServerName, $($provisionConfig.ServerElasticPoolsMax),'normal', 'created', Location, LastUpdated);"
+            INSERT (ServerName, State, RecoveryState, Location, LastUpdated)
+            VALUES (ServerName, 'created', '$RecoveryState', Location, LastUpdated);"
     
     Invoke-SqlAzureWithRetry `
         -ServerInstance $Catalog.FullyQualifiedServerName `
@@ -1685,6 +2182,100 @@ function Set-ExtendedServer {
         -Query $commandText `
         -UserName $config.CatalogAdminUserName `
         -Password $config.CatalogAdminPassword
+}
+
+<#
+.SYNOPSIS
+    Adds or updates the recovery checksum of a tenant database
+#>
+function Set-TenantDatabaseRecoveryChecksum
+{
+    param(
+    [parameter(Mandatory=$true)]
+    [object]$Catalog,
+
+    [parameter(Mandatory=$true)]
+    [String]$ServerName,
+
+    [parameter(Mandatory=$true)]
+    [String]$DatabaseName       
+    )
+
+    $config = Get-Configuration
+    $commandText = "
+    WITH RowVersionSums AS
+    (
+        SELECT SUM(CAST(Rowversion AS bigint)) AS RowVersionSum from dbo.Customers
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Events
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Venue
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Sections
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.EventSections
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.TicketPurchases
+    )
+    SELECT SUM(RowVersionSum) AS RecoveryChecksum FROM RowVersionSums;"
+    $result =  Invoke-SqlAzureWithRetry `
+                    -ServerInstance "$ServerName.database.windows.net" `
+                    -Database $DatabaseName `
+                    -Query $commandText `
+                    -UserName $config.TenantAdminUserName `
+                    -Password $config.TenantAdminPassword 
+    $recoveryChecksum = $result.RecoveryChecksum     
+    
+    $commandText = "
+    UPDATE [dbo].[Databases]
+    SET    RecoveryChecksum = $recoveryChecksum
+    WHERE  ServerName = '$ServerName' AND DatabaseName = '$DatabaseName';
+    "
+    $commandOutput = Invoke-SqlAzureWithRetry `
+                        -ServerInstance $Catalog.FullyQualifiedServerName `
+                        -Database $Catalog.Database.DatabaseName `
+                        -Query $commandText `
+                        -Username $config.CatalogAdminUserName `
+                        -Password $config.CatalogAdminPassword
+}
+
+<#
+.SYNOPSIS
+    Creates a unique DNS alias that points to the server a tenant's data is stored in
+#>
+function Set-TenantAlias
+{
+    param
+    (
+        [parameter(Mandatory=$true)]
+        [string]$ResourceGroupName,
+
+        [Parameter(Mandatory=$true)]
+        [string]$WtpUser,
+
+        [parameter(Mandatory=$true)]
+        [string]$TenantName,
+
+        [parameter(Mandatory=$true)]
+        [string]$TenantServerName       
+    )
+
+    $requestedTenantAlias = $null
+    $requestedTenantAlias = (Get-NormalizedTenantName $TenantName) + "-" + $WtpUser
+    $fullyQualifiedTenantAlias = $requestedTenantAlias + ".database.windows.net"
+
+    # Check if input alias exists
+    $aliasExists = Test-IfDnsAlias $fullyQualifiedTenantAlias    
+    if ($aliasExists)
+    {
+        Write-Verbose "An alias already exists for tenant '$TenantName'."
+    }    
+    else
+    {
+        # Create new alias if input alias does not exist 
+        Set-DnsAlias -ResourceGroupName $ResourceGroupName -ServerName $TenantServerName -ServerDNSAlias $requestedTenantAlias -PollDnsUpdate        
+    }    
+    return $requestedTenantAlias
 }
 
 
@@ -1702,12 +2293,45 @@ function Set-TenantOffline
         [int32]$TenantKey
     )
 
+    $config = Get-Configuration
+
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
+    $recoveryManager = ($Catalog.ShardMapManager).getRecoveryManager()
+
+    # Detect any differences between local and global shard map -accomodates case where database has been restored while offline
+    try
+    {
+        $shardMapMismatches = $recoveryManager.DetectMappingDifferences($tenantMapping.Shard.Location, $Catalog.ShardMap.Name)
+
+        # Resolve any differences between local and global shard map. Use global shard map as a source of truth if there's a conflict
+        foreach ($mismatch in $shardMapMismatches)
+        {
+            $recoveryManager.ResolveMappingDifferences($mismatch, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapMapping)
+        }
+    }
+    catch
+    {
+        # Continue if the local shards and their shardmap is not available (e.g. for disaster recovery)
+    }
 
     # Mark tenant offline if its mapping status is online, and suppress output
     if ($tenantMapping.Status -eq "Online")
     {
         ($Catalog.ShardMap).MarkMappingOffline($tenantMapping) >$null
+
+        # Update timestamp in catalog
+        $tenantHexId = (Get-TenantRawKey -TenantKey $TenantKey).RawKeyHexString
+        $commandText = "
+            UPDATE [dbo].[Tenants] 
+            SET LastUpdated = CURRENT_TIMESTAMP
+            WHERE TenantId = $tenantHexId"
+    
+        Invoke-SqlAzureWithRetry `
+            -ServerInstance $Catalog.FullyQualifiedServerName `
+            -Database $Catalog.Database.DatabaseName `
+            -Query $commandText `
+            -UserName $config.CatalogAdminUserName `
+            -Password $config.CatalogAdminPassword
     }
 }
 
@@ -1726,6 +2350,7 @@ function Set-TenantOnline
         [int32]$TenantKey
     )
 
+    $config = Get-Configuration
     $tenantMapping = ($Catalog.ShardMap).GetMappingForKey($TenantKey)
     $recoveryManager = ($Catalog.ShardMapManager).getRecoveryManager()
 
@@ -1742,7 +2367,169 @@ function Set-TenantOnline
     if ($tenantMapping.Status -eq "Offline")
     {
        ($Catalog.ShardMap).MarkMappingOnline($tenantMapping) >$null
+
+       # Update timestamp in catalog
+        $tenantHexId = (Get-TenantRawKey -TenantKey $TenantKey).RawKeyHexString
+        $commandText = "
+            UPDATE [dbo].[Tenants] 
+            SET LastUpdated = CURRENT_TIMESTAMP
+            WHERE TenantId = $tenantHexId"
+    
+        Invoke-SqlAzureWithRetry `
+            -ServerInstance $Catalog.FullyQualifiedServerName `
+            -Database $Catalog.Database.DatabaseName `
+            -Query $commandText `
+            -UserName $config.CatalogAdminUserName `
+            -Password $config.CatalogAdminPassword
     }
+}
+
+<#
+.SYNOPSIS
+    Cancels an ongoing or queued restore operation to recover a tenant into the recovery region. 
+    If a tenant name is not specified, all ongoing or queued restore operations will be cancelled.
+#>
+function Stop-TenantRestoreOperations
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$false)]
+        [string]$TenantName
+    )
+
+    $config = Get-Configuration
+    $wtpUser = Get-UserConfig
+
+    # Cancel restore operations for single tenant
+    if ($TenantName)
+    {
+        try
+        {
+            $tenantKey = Get-TenantKey $TenantName
+            $tenantShard = $Catalog.ShardMap.GetMappingForKey($tenantKey)
+            $fullyQualifiedTenantServerName = $tenantShard.Shard.Location.Server
+            $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0]
+            $tenantDatabaseName = $tenantShard.Shard.Location.Database
+
+            # Cancel tenant database restore operations
+            $dbState = Update-TenantResourceRecoveryState -Catalog $Catalog -UpdateAction "cancelAndReset" -ServerName $tenantServerName -DatabaseName $tenantDatabaseName
+
+            # Update tenant recovery state
+            $tenantState = Update-TenantRecoveryState -Catalog $Catalog -UpdateAction "startReset" -TenantKey $tenantKey
+        }
+        catch
+        {
+            throw "Tenant '$TenantName' not found in catalog."
+        }
+    }
+    # Cancel restore operations for all tenants
+    else
+    {
+        # Construct state transition dictionary for resetting state 
+        $resourceRecoveryStates = @{'cancelAndReset' = @{"beginState" = ('restoring', 'n/a'); "endState" = ('resetting')} }  
+        $requestedState = $resourceRecoveryStates['cancelAndReset'].endState
+        $validInitialStates = $resourceRecoveryStates['cancelAndReset'].beginState
+        $validInitialStates = "'$($validInitialStates -join "','")'"
+        $tenantServerName = $config.TenantServerNameStem + $wtpUser.Name
+
+        $serverNameStem = ($tenantServerName -split "$($config.RecoveryRoleSuffix)")[0]
+        $validServerNames = "'$serverNameStem'"
+
+        $cancelRestoreOperationsQuery = "
+        UPDATE  [dbo].[Servers] SET
+                RecoveryState = '$requestedState',
+                LastUpdated = CURRENT_TIMESTAMP
+        WHERE   RecoveryState IN ($validInitialStates) AND ServerName IN ($validServerNames);
+
+        UPDATE  [dbo].[ElasticPools] SET
+                RecoveryState = '$requestedState',
+                LastUpdated = CURRENT_TIMESTAMP
+        WHERE   RecoveryState IN ($validInitialStates) AND ServerName IN ($validServerNames);
+
+        UPDATE  [dbo].[Databases] SET
+                RecoveryState = '$requestedState',
+                LastUpdated = CURRENT_TIMESTAMP
+        WHERE   RecoveryState IN ($validInitialStates) AND ServerName IN ($validServerNames);
+        " 
+   
+        $commandOutput = Invoke-SqlAzureWithRetry `
+                            -ServerInstance $Catalog.FullyQualifiedServerName `
+                            -Database $Catalog.Database.DatabaseName `
+                            -Query $cancelRestoreOperationsQuery `
+                            -UserName $config.CatalogAdminUserName `
+                            -Password $config.CatalogAdminPassword            
+    } 
+}
+
+<#
+.SYNOPSIS
+    Checks if the tenant data has been updated. 
+    It is primarily used to check if a tenant database should be repatriated back to the primary region during the course of a recovery operation
+#>
+function Test-IfTenantDataChanged
+{
+    [cmdletbinding()]
+    param(
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$true)]
+        [string]$TenantName              
+    )
+
+    $config = Get-Configuration
+    $tenantProperties = Get-ExtendedTenant -Catalog $Catalog -TenantKey (Get-TenantKey $TenantName)
+
+    if (!$tenantProperties.ServerName)
+    {
+        return $false
+    }
+
+    $tenantServerName = $tenantProperties.ServerName.split('.')[0]
+    $tenantDatabaseProperties = Get-ExtendedDatabase -Catalog $Catalog -ServerName $tenantServerName -DatabaseName $tenantProperties.DatabaseName
+    $recoveryChecksum = $tenantDatabaseProperties.RecoveryChecksum
+
+    # Return false if tenant database has not been recovered
+    if ($recoveryChecksum.GetType().Name -eq 'DBNull')
+    {
+        return $false
+    }
+
+    # Retrieve current tenant database rowversion
+    $commandText = "
+    WITH RowVersionSums AS
+    (
+        SELECT SUM(CAST(Rowversion AS bigint)) AS RowVersionSum from dbo.Customers
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Events
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Venue
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.Sections
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.EventSections
+        UNION ALL
+        SELECT SUM(CAST(Rowversion AS bigint)) from dbo.TicketPurchases
+    )
+    SELECT SUM(RowVersionSum) AS RecoveryChecksum FROM RowVersionSums;"
+    $result =  Invoke-SqlAzureWithRetry `
+                            -ServerInstance $tenantProperties.ServerName `
+                            -Database $tenantProperties.DatabaseName `
+                            -Query $commandText `
+                            -UserName $config.TenantAdminUserName `
+                            -Password $config.TenantAdminPassword
+    $currChecksum = $result.RecoveryChecksum
+    
+    if ($currChecksum -eq $recoveryChecksum)
+    {
+        return $false
+    }
+    else
+    {
+        return $true
+    }   
 }
 
 
@@ -1881,4 +2668,384 @@ function Test-ValidVenueType
     }
 
     return $true
+}
+
+<#
+.SYNOPSIS
+    Validates that an input DNS alias exists. Returns true if the alias exists, false otherwise
+#>
+function Test-IfDnsAlias
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [string]$fullyQualifiedAliasName
+    )
+
+    # Retrieve the servername for input alias if it exists
+    try
+    {
+        $tenantServer = Get-ServerNameFromAlias $fullyQualifiedAliasName
+        return $true
+    }
+    catch
+    {
+        return $false
+    } 
+}
+
+<#
+.SYNOPSIS
+    Update service plan of a tenant
+#>
+function Update-TenantServicePlan
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$true)]
+        [string]$TenantName,
+       
+        [parameter(Mandatory=$true)]
+        [string]$RequestedTenantServicePlan        
+    )
+
+    $config = Get-Configuration
+    $tenantObject = Get-Tenant -Catalog $Catalog -TenantName $TenantName    
+    $tenantHexId = (Get-TenantRawKey -TenantKey $tenantObject.Key).RawKeyHexString        
+    $commandText = "
+        UPDATE [dbo].[Tenants] 
+        SET ServicePlan = '$RequestedTenantServicePlan', LastUpdated = CURRENT_TIMESTAMP
+        WHERE TenantId = $tenantHexId"
+    
+    $result = Invoke-SqlAzureWithRetry `
+                -ServerInstance $Catalog.FullyQualifiedServerName `
+                -Database $Catalog.Database.DatabaseName `
+                -Query $commandText `
+                -UserName $config.CatalogAdminUserName `
+                -Password $config.CatalogAdminPassword
+
+    return $result    
+}
+
+<#
+.SYNOPSIS
+    Update servername and/or databasename stored in the catalog for a tenant. 
+    This is particularly useful after disaster recovery when the identity of a tenant database has changed to a recovery instance.
+#>
+function Update-TenantShardInfo
+{
+    param(
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$true)]
+        [string]$TenantName,
+
+        [parameter(Mandatory=$true)]
+        [string]$FullyQualifiedTenantServerName,
+
+        [parameter(Mandatory=$true)]
+        [string]$TenantDatabaseName        
+    )
+
+    $config = Get-Configuration
+    $tenantKey = Get-TenantKey $TenantName
+    $recoveryManager = ($Catalog.ShardMapManager).getRecoveryManager()
+
+    if ($recoveryManager)
+    {
+        try
+        {
+            $tenantMapping = $Catalog.ShardMap.GetMappingForKey($tenantKey)
+            $tenantShard = $tenantMapping.Shard
+            $tenantShardLocation = $tenantShard.Location
+            $tenantServer = $tenantShardLocation.Server
+
+            if (($tenantServer -ne $FullyQualifiedTenantServerName) -or ($tenantShardLocation.Database -ne $TenantDatabaseName))
+            {
+                $recoveryShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($FullyQualifiedTenantServerName, $TenantDatabaseName, 'tcp', '1433')
+                if ($recoveryShardLocation)
+                {
+                    $recoveryManager.DetachShard($tenantShardLocation)
+                    $recoveryManager.AttachShard($recoveryShardLocation)
+
+                    $mappingDifferences = $recoveryManager.DetectMappingDifferences($recoveryShardLocation)
+                    foreach ($diff in $mappingDifferences)
+                    {
+                        $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
+                    }
+                }               
+            }    
+        }
+        catch [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementException]
+        {
+            # Tenant mapping does not exist in global shard map
+            $mappingErrorMessage = "Mapping containing the given key value could not be located in the shard map"
+            if ($_.Exception.Message -match $mappingErrorMessage)
+            {
+                $recoveryShardLocation = New-Object Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardLocation($FullyQualifiedTenantServerName, $TenantDatabaseName, 'tcp', '1433')
+                if ($recoveryShardLocation)
+                {
+                    if ($recoveryManager)
+                    {
+                        $recoveryManager.AttachShard($recoveryShardLocation)  
+                    }
+                    else
+                    {
+                        $recoveryManager = ($Catalog.ShardMapManager).getRecoveryManager()
+                        $recoveryManager.AttachShard($recoveryShardLocation)  
+                    }
+
+                    $mappingDifferences = $recoveryManager.DetectMappingDifferences($recoveryShardLocation)
+                    foreach ($diff in $mappingDifferences)
+                    {
+                        $recoveryManager.ResolveMappingDifferences($diff, [Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.Recovery.MappingDifferenceResolution]::KeepShardMapping)
+                    }
+                }               
+            }
+            else
+            {
+                throw $_.Exception.Message    
+            }
+            
+        }    
+        catch
+        {
+            throw $_.Exception.Message
+        }
+        return $true
+    }
+    else
+    {
+        return $false       
+    }   
+}
+
+<#
+.SYNOPSIS
+    Updates the recovery state of an input tenant. This function returns the previous recovery state, and the updated recovery state if the update was successful
+#>
+function Update-TenantRecoveryState
+{
+    param (
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$true)]
+        [validateset('startRecovery', 'endRecovery', 'startShardUpdateToRecovery', 'endShardUpdateToRecovery', 'startReset', 'endReset', 'startRepatriation', 'endRepatriation', 'startShardUpdateToOrigin', 'endShardUpdateToOrigin')]
+        [string]$UpdateAction,
+
+        [parameter(Mandatory=$true)]
+        [int32]$TenantKey
+    )
+ 
+    $config = Get-Configuration
+    $tenantHexId = (Get-TenantRawKey -TenantKey $TenantKey).RawKeyHexString
+
+    <# Recovery states for tenants
+
+        Initial State                   |   End State                       |   TransitionName
+        =================================================================================================
+        n/a                             |   RestoringTenantData             |   startRecovery               (start recovery operations for tenant resources)
+        OnlineInOrigin                  |   RestoringTenantData             |   startRecovery               (start recovery operations for tenant resources)
+        -------------------------------------------------------------------------------------------------
+        RestoringTenantData             |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
+        RestoredTenantData              |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
+        UpdatingTenantShardToRecovery   |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
+        OnlineInRecovery                |   ResettingTenantToOrigin         |   startReset                  (reset tenant resources back to origin)
+        ResettingTenantToOrigin         |   OnlineInOrigin                  |   endReset                    (tenant resources successfully reset back to origin)
+        --------------------------------------------------------------------------------------------------
+        n/a                             |   RestoredTenantData              |   endRecovery                 (tenant resources successfully restored in recovery region)
+        RestoringTenantData             |   RestoredTenantData              |   endRecovery                 (tenant resources successfully restored in recovery region)
+        RestoredTenantData              |   UpdatingTenantShardToRecovery   |   startShardUpdateToRecovery  (update tenant shard details to bring tenant online in recovery region)
+        UpdatingTenantShardToRecovery   |   OnlineInRecovery                |   endShardUpdateToRecovery    (tenant shard update successful and tenant is online in recovery region)
+        --------------------------------------------------------------------------------------------------
+        n/a                             |   RepatriatingTenantData          |   startRepatriation           (tenant resources in the process of migrating back to origin)       
+        OnlineInRecovery                |   RepatriatingTenantData          |   startRepatriation           (tenant resources in the process of migrating back to origin)
+        RepatriatingTenantData          |   RepatriatedTenantData           |   endRepatriation             (tenant resources successfully migrated back to origin)
+        --------------------------------------------------------------------------------------------------
+        RepatriatedTenantData           |   UpdatingTenantShardToOrigin     |   startShardUpdateToOrigin    (update tenant shard details to bring tenant online in origin region)
+        UpdatingTenantShardToOrigin     |   OnlineInOrigin                  |   endShardUpdateToOrigin      (tenant shard update successful and tenant is back online in origin region)
+    #>
+    
+    # Construct state transition dictionary for tenant object 
+    $tenantRecoveryStates = @{
+        'startRecovery' = @{ "beginState" = ('n/a', 'OnlineInOrigin'); "endState" = ('RestoringTenantData') };
+        'startReset' = @{ "beginState" = ('RestoringTenantData', 'RestoredTenantData', 'UpdatingTenantShardToRecovery', 'OnlineInRecovery'); "endState" = ('ResettingTenantToOrigin') };
+        'endReset' = @{ "beginState" = ('ResettingTenantToOrigin'); "endState" = ('OnlineInOrigin') };
+        'endRecovery' = @{ "beginState" = ('RestoringTenantData', 'n/a'); "endState" = ('RestoredTenantData') };
+        'startShardUpdateToRecovery' = @{ "beginState" = ('RestoredTenantData'); "endState" = ('UpdatingTenantShardToRecovery')};
+        'endShardUpdateToRecovery' = @{ "beginState" = ('UpdatingTenantShardToRecovery'); "endState" = "OnlineInRecovery"};
+        'startRepatriation' = @{ "beginState" = ('OnlineInRecovery', 'n/a'); "endState" = ('RepatriatingTenantData') };        
+        'endRepatriation' = @{ "beginState" = ('RepatriatingTenantData'); "endState" = ('RepatriatedTenantData') };
+        'startShardUpdateToOrigin' = @{ "beginState" = ('RepatriatedTenantData'); "endState" = ('UpdatingTenantShardToOrigin')};
+        'endShardUpdateToOrigin' = @{ "beginState" = ('UpdatingTenantShardToOrigin'); "endState" = ('OnlineInOrigin')};
+    }    
+
+    $requestedState = $tenantRecoveryStates[$UpdateAction].endState
+    $validInitialStates = $tenantRecoveryStates[$UpdateAction].beginState
+    $validInitialStates = "'$($validInitialStates -join "','")'"
+
+    $commandText = "
+        UPDATE  [dbo].[Tenants] SET
+                RecoveryState = '$requestedState',
+                LastUpdated = CURRENT_TIMESTAMP
+        OUTPUT 
+                inserted.RecoveryState AS recoveryState,
+                deleted.RecoveryState AS oldRecoveryState,
+                inserted.LastUpdated AS updateTime
+        WHERE   TenantId = $tenantHexId AND RecoveryState IN ($validInitialStates)
+        "
+
+    $commandOutput = Invoke-SqlAzureWithRetry `
+                        -ServerInstance $Catalog.FullyQualifiedServerName `
+                        -Database $Catalog.Database.DatabaseName `
+                        -Query $commandText `
+                        -UserName $config.CatalogAdminUserName `
+                        -Password $config.CatalogAdminPassword
+
+    return $commandOutput
+}
+
+<#
+.SYNOPSIS
+    Updates the recovery state of a tenant's server, database, or elastic pool. This function returns the previous recovery state, and the updated recovery state if the update was successful
+#>
+function Update-TenantResourceRecoveryState
+{
+    param (
+        [parameter(Mandatory=$true)]
+        [object]$Catalog,
+
+        [parameter(Mandatory=$true)]
+        [validateset('startRecovery', 'startFailover', 'endFailover', 'cancelAndReset', 'endRecovery', 'startReset', 'endReset', 'startReplication', 'endReplication', 'startFailback', 'conclude', 'markError')]
+        [string]$UpdateAction,
+
+        [parameter(Mandatory=$true)]
+        [string]$ServerName, 
+
+        [parameter(Mandatory=$false)]
+        [string]$ElasticPoolName, 
+
+        [parameter(Mandatory=$false)]
+        [string]$DatabaseName 
+    )
+
+    <# Recovery states for databases, elastic pools, and servers
+
+        Initial State           |   End State           |   TransitionName
+        ==========================================================================
+        n/a                     |   restoring           |   startRecovery      (start recovery operations) 
+        n/a                     |   failingOver         |   startFailover      (start failover operations)
+        complete                |   restoring           |   startRecovery      (start recovery operations)
+        complete                |   failingOver         |   startFailover      (start failover operations)
+        errorState              |   restoring           |   startRecovery      (restart recovery operations)
+        errorState              |   failingOver         |   startFailover      (restart failover operations)
+        --------------------------------------------------------------------------
+        restoring               |   resetting           |   cancelAndReset     (reset back to origin if region comes back online during recovery operations)
+        n/a                     |   resetting           |   cancelAndReset     (reset back to origin if region comes back online during recovery operations)       
+        n/a                     |   resetting           |   startReset         (reset back to origin if data in recovery region is identical to origin region)                
+        restored                |   resetting           |   startReset         (reset back to origin if data in recovery region is identical to origin region)        
+        errorState              |   resetting           |   startReset         (reset back to origin if data in recovery region is identical to origin region)
+        resetting               |   complete            |   endReset           (reset operations successfully completed)
+        resetting               |   errorState          |   markError          (reset operations failed)
+        --------------------------------------------------------------------------
+        restoring               |   restored            |   endRecovery        (recovery operations successfully completed)
+        complete                |   restored            |   endRecovery        (recovery operations successfully completed)
+        failingOver             |   failedOver          |   endFailover        (failover operations successfully completed)
+        restoring               |   errorState          |   markError          (recovery operations failed)
+        failingOver             |   errorState          |   markError          (failover operations failed)
+        --------------------------------------------------------------------------
+        n/a                     |   replicating         |   startReplication   (replicate changed data to origin)
+        restored                |   replicating         |   startReplication   (replicate changed data to origin)
+        errorState              |   replicating         |   startReplication   (replicate changed data to origin)
+        replicating             |   replicated          |   endReplication     (replication to origin successfully completed)
+        replicating             |   errorState          |   markError          (replication to origin failed)
+        --------------------------------------------------------------------------
+        n/a                     |   repatriating        |   startFailback      (failback to origin)
+        replicated              |   repatriating        |   startFailback      (failback to origin)
+        failedOver              |   repatriating        |   startFailback      (failback to origin)
+        markError               |   repatriating        |   startFailback      (failback to origin)
+        repatriating            |   complete            |   conclude           (failback to origin successfully completed)
+        repatriating            |   errorState          |   markError          (failback to origin failed)
+    #>
+
+
+    $config = Get-Configuration
+   
+    # Construct state transition dictionary for tenant object 
+    $resourceRecoveryStates = @{
+        'startRecovery' = @{ "beginState" = ('n/a', 'complete', 'errorState'); "endState" = ('restoring') };
+        'startFailover' = @{ "beginState" = ('n/a', 'complete', 'errorState'); "endState" = ('failingOver') };
+        'cancelAndReset' = @{ "beginState" = ('restoring', 'n/a'); "endState" = ('resetting') };
+        'startReset' = @{ "beginState" = ('n/a','restored', 'errorState'); "endState" = ('resetting') };
+        'endReset' = @{ "beginState" = ('resetting'); "endState" = ('complete') };
+        'markError' = @{ "beginState" = ('n/a','restoring', 'resetting', 'failingOver', 'replicating', 'repatriating'); "endState" = ('errorState')};
+        'endRecovery' = @{ "beginState" = ('restoring','complete'); "endState" = ('restored') };
+        'endFailover' = @{ "beginState" = ('failingOver'); "endState" = ('failedOver') };        
+        'startReplication' = @{ "beginState" = ('restored', 'errorState', 'n/a'); "endState" = ('replicating') };
+        'endReplication' = @{ "beginState" = ('replicating'); "endState" = ('replicated') };
+        'startFailback' = @{ "beginState" = ('n/a','replicated', 'failedOver', 'errorState'); "endState" = ('repatriating') };
+        'conclude' = @{ "beginState" = ('repatriating'); "endState" = ('complete') };
+    }    
+
+    $requestedState = $resourceRecoveryStates[$UpdateAction].endState
+    $validInitialStates = $resourceRecoveryStates[$UpdateAction].beginState
+    $validInitialStates = "'$($validInitialStates -join "','")'"
+
+    # Update recovery states of both origin and recovery instances of tenant resources if applicable
+    $serverNameStem = ($ServerName -split "$($config.RecoveryRoleSuffix)")[0]
+    $validServerNames = "'$serverNameStem','$serverNameStem$($config.RecoveryRoleSuffix)'"
+
+    if ($DatabaseName)
+    {
+        $commandText = "
+        UPDATE  [dbo].[Databases] SET
+                RecoveryState = '$requestedState',
+                LastUpdated = CURRENT_TIMESTAMP
+        OUTPUT 
+                inserted.RecoveryState AS recoveryState,
+                deleted.RecoveryState AS oldRecoveryState,
+                inserted.LastUpdated AS updateTime
+        WHERE   ServerName IN ($validServerNames) AND DatabaseName = '$DatabaseName' AND RecoveryState IN ($validInitialStates)
+        "
+    }
+    # Elastic pools cannot be failed over
+    elseif ($ElasticPoolName -and ($UpdateAction -ne 'startFailover'))
+    {
+        $commandText = "
+        UPDATE  [dbo].[ElasticPools] SET
+                RecoveryState = '$requestedState',
+                LastUpdated = CURRENT_TIMESTAMP
+        OUTPUT 
+                inserted.RecoveryState AS recoveryState,
+                deleted.RecoveryState AS oldRecoveryState,
+                inserted.LastUpdated AS updateTime
+        WHERE   ServerName IN ($validServerNames) AND ElasticPoolName = '$ElasticPoolName' AND RecoveryState IN ($validInitialStates)
+        "
+    }
+    # Servers cannot be failed over
+    elseif ($ServerName -and ($UpdateAction -ne 'startFailover'))
+    {
+        $commandText = "
+        UPDATE  [dbo].[Servers] SET
+                RecoveryState = '$requestedState',
+                LastUpdated = CURRENT_TIMESTAMP
+        OUTPUT 
+                inserted.RecoveryState AS recoveryState,
+                deleted.RecoveryState AS oldRecoveryState,
+                inserted.LastUpdated AS updateTime
+        WHERE   ServerName IN ($validServerNames) AND RecoveryState IN ($validInitialStates)
+        "
+    }
+    
+    $commandOutput = Invoke-SqlAzureWithRetry `
+                        -ServerInstance $Catalog.FullyQualifiedServerName `
+                        -Database $Catalog.Database.DatabaseName `
+                        -Query $commandText `
+                        -UserName $config.CatalogAdminUserName `
+                        -Password $config.CatalogAdminPassword
+
+    return $commandOutput
 }

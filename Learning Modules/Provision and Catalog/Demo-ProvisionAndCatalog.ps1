@@ -35,8 +35,10 @@ $config = Get-Configuration
 ### Provision a single tenant
 if ($DemoScenario -eq 1)
 {
-    # set up the server and pool names in which the tenant will be provisioned
-    $serverName = $config.TenantServerNameStem + $wtpUser.Name
+    # Set up the server and pool names in which the tenant will be provisioned
+    # The server name is retrieved from an alias used to switch between normal and recovery regions 
+    $newTenantAlias = $config.NewTenantAliasStem + $wtpUser.Name + ".database.windows.net"
+    $serverName = Get-ServerNameFromAlias $newTenantAlias
     $poolName = $config.TenantPoolNameStem + "1"
     try
     {
@@ -85,7 +87,6 @@ if ($DemoScenario -eq 3)
     $tenantNames = $config.TenantNameBatch
 
     & $PSScriptRoot\New-TenantBatch.ps1 `
-        -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name `
         -NewTenants $tenantNames 
 

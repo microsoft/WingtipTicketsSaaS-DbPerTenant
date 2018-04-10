@@ -22,7 +22,7 @@ $ErrorActionPreference = "Stop"
 # Determine where the Elastic DB Client Library should be
 $ScriptDir = Split-Path -parent $MyInvocation.MyCommand.Path
 $edclFile = 'Microsoft.Azure.SqlDatabase.ElasticScale.Client.dll'
-$edclPath = "$ScriptDir\$edclFile"
+$edclPath = "$ScriptDir\Lib\$edclFile"
 
 if (-not $(Test-Path $edclPath))
 {

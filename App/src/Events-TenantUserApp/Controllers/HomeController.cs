@@ -4,6 +4,7 @@ using Events_Tenant.Common.Interfaces;
 using Events_Tenant.Common.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System.Data.SqlClient;
 
 namespace Events_TenantUserApp.Controllers
 {
@@ -14,6 +15,7 @@ namespace Events_TenantUserApp.Controllers
         private readonly ICatalogRepository _catalogRepository;
         private readonly ITenantRepository _tenantRepository;
         private readonly ILogger _logger;
+        private readonly IUtilities _utilities;
 
         #endregion
 
@@ -25,11 +27,13 @@ namespace Events_TenantUserApp.Controllers
         /// <param name="catalogRepository">The tenants repository.</param>
         /// <param name="tenantRepository">The venues repository.</param>
         /// <param name="logger">The logger.</param>
-        public HomeController(ICatalogRepository catalogRepository, ITenantRepository tenantRepository, ILogger<HomeController> logger)
+        /// <param name="utilities">The utilities class.</param>
+        public HomeController(ICatalogRepository catalogRepository, ITenantRepository tenantRepository, ILogger<HomeController> logger, IUtilities utilities)
         {
             _catalogRepository = catalogRepository;
             _tenantRepository = tenantRepository;
             _logger = logger;
+            _utilities = utilities;
         }
 
         #endregion
@@ -50,24 +54,53 @@ namespace Events_TenantUserApp.Controllers
                     //get the venue name for each tenant
                     foreach (var tenant in tenantsModel)
                     {
-                        VenueModel venue = await _tenantRepository.GetVenueDetails(tenant.TenantId);
+                        VenueModel venue = null;
+                        String tenantStatus = _utilities.GetTenantStatus(tenant.TenantId);
 
-                        if (venue != null)
+                        if (tenantStatus == "Online")
                         {
-                            tenant.VenueName = venue.VenueName;
-                            tenant.TenantName = venue.DatabaseName;
-                        }
-                    }
+                            try
+                            {
+                                venue = await _tenantRepository.GetVenueDetails(tenant.TenantId);
+                            }
+                            catch (Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementException ex)
+                            {
+                                if (ex.ErrorCode == Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementErrorCode.MappingDoesNotExist)
+                                {
+                                    //Fix mapping irregularities - trust local shard map
+                                    _utilities.ResolveMappingDifferences(tenant.TenantId);
 
+                                    //Get venue details if tenant is online
+                                    String updatedTenantStatus = _utilities.GetTenantStatus(tenant.TenantId);
+                                    if (updatedTenantStatus == "Online")
+                                    {
+                                        venue = await _tenantRepository.GetVenueDetails(tenant.TenantId);
+                                    }
+                                }                                
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(0, ex, "Error in getting all tenants in Events Hub");
+                                return View("Error", ex.Message);
+                            }
+                          }
+                                                                                                   
+                          if (venue != null)
+                          {
+                             tenant.VenueName = venue.VenueName;
+                             tenant.TenantName = venue.DatabaseName;
+                          }
+                    }
                     return View(tenantsModel);
                 }
-            }
+            }            
             catch (Exception ex)
             {
                 _logger.LogError(0, ex, "Error in getting all tenants in Events Hub");
+                return View("Error", ex.Message);              
             }
+            return View("Error");  
 
-            return View("Error");
         }
 
         public IActionResult Error()

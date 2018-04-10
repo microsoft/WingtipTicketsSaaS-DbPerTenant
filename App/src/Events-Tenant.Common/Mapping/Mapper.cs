@@ -20,7 +20,9 @@ namespace Events_Tenant.Common.Mapping
                 ServicePlan = tenantEntity.ServicePlan,
                 TenantId = ConvertByteKeyIntoInt(tenantEntity.TenantId),
                 TenantName = tenantEntity.TenantName,
-                TenantIdInString = tenantIdInString
+                TenantIdInString = tenantIdInString,
+                RecoveryState = tenantEntity.RecoveryState,
+                LastUpdated = tenantEntity.LastUpdated
             };
         }
 

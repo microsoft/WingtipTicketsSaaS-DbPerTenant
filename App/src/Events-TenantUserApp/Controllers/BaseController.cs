@@ -19,14 +19,16 @@ namespace Events_TenantUserApp.Controllers
         private readonly IStringLocalizer<BaseController> _localizer;
         private readonly ITenantRepository _tenantRepository;
         private readonly IConfiguration _configuration;
+        private readonly DnsClient.ILookupClient _client;
         #endregion
 
         #region Constructors
-        public BaseController(IStringLocalizer<BaseController> localizer, ITenantRepository tenantRepository, IConfiguration configuration)
+        public BaseController(IStringLocalizer<BaseController> localizer, ITenantRepository tenantRepository, IConfiguration configuration, DnsClient.ILookupClient client)
         {
             _localizer = localizer;
             _tenantRepository = tenantRepository;
             _configuration = configuration;
+            _client = client;
         }
 
         #endregion
@@ -145,9 +147,9 @@ namespace Events_TenantUserApp.Controllers
 
                 //get the venue details and populate in config settings
                 var venueDetails = (_tenantRepository.GetVenueDetails(tenantId)).Result;
-                var venueTypeDetails =
-                    (_tenantRepository.GetVenueType(venueDetails.VenueType, tenantId)).Result;
-                var countries = (_tenantRepository.GetAllCountries(tenantId)).Result;
+                var venueTypeDetails = (_tenantRepository.GetVenueType(venueDetails.VenueType, tenantId)).Result;
+                var countries = (_tenantRepository.GetAllCountries(tenantId)).Result;                           
+                var tenantServerName = venueDetails.DatabaseServerName;
 
                 //get country language from db 
                 var country = (_tenantRepository.GetCountry(venueDetails.CountryCode, tenantId)).Result;
@@ -156,7 +158,7 @@ namespace Events_TenantUserApp.Controllers
                 return new TenantConfig
                 {
                     DatabaseName = venueDetails.DatabaseName,
-                    DatabaseServerName = venueDetails.DatabaseServerName,
+                    DatabaseServerName = tenantServerName,
                     VenueName = venueDetails.VenueName,
                     BlobImagePath = blobPath + venueTypeDetails.VenueType + "-user.jpg",
                     EventTypeNamePlural = venueTypeDetails.EventTypeShortNamePlural.ToUpper(),

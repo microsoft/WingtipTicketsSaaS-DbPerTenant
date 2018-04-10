@@ -8,9 +8,6 @@
   are initialized with venue information and registered in the catalog and mapped to a tenant key generated from the 
   tenant name.
 
-.PARAMETER WtpResourceGroupName
-  The resource group name used during the deployment of the WTP app (case sensitive)
-
 .PARAMETER WtpUser
   The 'User' value that was entered during the deployment of the WTP app
 
@@ -19,9 +16,6 @@
 #>
 
 Param(
-    [Parameter(Mandatory=$true)]
-    [string]$WtpResourceGroupName,
-    
     [Parameter(Mandatory=$true)]
     [string]$WtpUser,
 
@@ -36,7 +30,8 @@ Import-Module $PSScriptRoot\..\Common\CatalogAndDatabaseManagement -Force
 Import-Module $PSScriptRoot\..\WtpConfig -Force
 
 $config = Get-Configuration
-$serverName = $config.TenantServerNameStem + $WtpUser 
+$newTenantServerAlias = $config.NewTenantAliasStem + $WtpUser + ".database.windows.net"
+$serverName = Get-ServerNameFromAlias $newTenantServerAlias
 $fullyQualifiedServerName = $serverName + ".database.windows.net"
 $elasticPoolName = $config.TenantPoolNameStem + "1"
 
@@ -45,13 +40,18 @@ $elasticPoolName = $config.TenantPoolNameStem + "1"
 # Ensure logged in to Azure
 Initialize-Subscription
 
-# Check the tenant server exists
-$Server = Get-AzureRmSqlServer -ResourceGroupName $WtpResourceGroupName -ServerName $serverName 
-
-if (!$Server)
+# Find tenant server in Azure 
+$queryResult = Find-AzureRmResource -ResourceNameEquals $serverName -ResourceType "Microsoft.Sql/servers"
+if ($queryResult)
 {
-    throw "Could not find tenant server '$serverName'."
+    $WtpResourceGroupName = $queryResult.ResourceGroupName
+    $Server = Get-AzureRmSqlServer -ResourceGroupName $WtpResourceGroupName -ServerName $serverName 
 }
+else
+{
+    throw "Could not find tenant server for provisioning: '$serverName'."
+}
+
 
 # Get the catalog 
 $catalog = Get-Catalog -ResourceGroupName $WtpResourceGroupName -WtpUser $WtpUser
@@ -89,7 +89,7 @@ foreach ($newTenant in $NewTenants)
 
     $allNewTenants += $newTenantObj
 
-    $tenantKey = Get-TenantKey -TenantName $newTenantName
+    $tenantKey = Get-TenantKey -TenantName $normalizedNewTenantName
     
     # Check if a tenant with this key is aleady registered in the catalog
     if (Test-TenantKeyInCatalog -Catalog $catalog -TenantKey $tenantKey)
@@ -138,12 +138,14 @@ if ($batchDatabaseNames.Count -gt 0)
             -ServerNames $batchServerNames `
             -DatabaseNames $batchDatabaseNames `
             -ElasticPoolNames $batchElasticPoolNames `
+            -WingtipDeploymentUser $WtpUser `
             -ErrorAction Stop `
             -Verbose                 
     }
     catch
     {
         Write-Error "An error occurred during template deployment. One or more databases in the batch may not have deployed and databases are not yet initialized. Rerun the script to complete processing of the batch."
+        Write-Error $_.Exception.Message
         throw
     }
 }
@@ -174,10 +176,13 @@ foreach($tenant in $allNewTenants)
         -PostalCode $tenant.PostalCode
 
     # Register the tenant to database mapping in the catalog
+    $tenantServicePlan = Get-Random -InputObject @('premium','standard','free')
     Add-TenantDatabaseToCatalog -Catalog $catalog `
         -TenantName $tenant.Name `
         -TenantKey $tenantKey `
-        -TenantDatabase $tenantDatabase
+        -TenantDatabase $tenantDatabase `
+        -TenantServerName $serverName `
+        -TenantServicePlan $tenantServicePlan
 
     Write-Output "Tenant '$($tenant.Name)' initialized and registered in the catalog."
 } 

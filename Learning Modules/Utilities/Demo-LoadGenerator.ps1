@@ -10,9 +10,10 @@ $SingleTenantDatabaseName = "contosoconcerthall"
 # If $true, generator will run once. If $false will keep looking for additional tenants and apply load to them 
 $OneTime = $false
 
-$DemoScenario = 1
-<# Select the scenario to run 
-   Scenario
+$DemoScenario = 0
+<# Select the demo scenario to run 
+    Demo    Scenario
+      0       None
       1       Start a normal intensity load (approx 30 DTU) 
       2       Start a load with longer bursts per database
       3       Start a load with higher DTU bursts per database (approx 70 DTU)  

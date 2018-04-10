@@ -21,17 +21,19 @@ namespace Events_TenantUserApp.Controllers
         private readonly ICatalogRepository _catalogRepository;
         private readonly IStringLocalizer<FindSeatsController> _localizer;
         private readonly ILogger _logger;
+        private readonly DnsClient.ILookupClient _client;
 
         #endregion
 
         #region Constructor
 
-        public FindSeatsController(ITenantRepository tenantRepository, ICatalogRepository catalogRepository, IStringLocalizer<FindSeatsController> localizer, IStringLocalizer<BaseController> baseLocalizer, ILogger<FindSeatsController> logger, IConfiguration configuration) : base(baseLocalizer, tenantRepository, configuration)
+        public FindSeatsController(ITenantRepository tenantRepository, ICatalogRepository catalogRepository, IStringLocalizer<FindSeatsController> localizer, IStringLocalizer<BaseController> baseLocalizer, ILogger<FindSeatsController> logger, IConfiguration configuration, DnsClient.ILookupClient client) : base(baseLocalizer, tenantRepository, configuration, client)
         {
             _tenantRepository = tenantRepository;
             _catalogRepository = catalogRepository;
             _localizer = localizer;
             _logger = logger;
+            _client = client;
         }
 
         #endregion

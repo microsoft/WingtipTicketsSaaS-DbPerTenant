@@ -1,0 +1,33 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "DatabaseConfigurationObjects": { "type": "array" }    
+  },
+  "resources": [ 
+  { 
+    "apiVersion": "2015-01-01", 
+    "name": "[concat('DatabaseRecovery-',parameters('DatabaseConfigurationObjects')[copyIndex()].DatabaseName)]",
+    "type": "Microsoft.Resources/deployments",
+    "copy": { 
+      "name": "recoverydatabases",
+      "count": "[length(parameters('DatabaseConfigurationObjects'))]"
+    }, 
+    "properties": { 
+      "mode": "Incremental", 
+      "templateLink": {
+        "uri": "https://wingtipsaas.blob.core.windows.net/templates-dpt/tenantdatabaserecoverytemplate.json",
+        "contentVersion": "1.0.0.0"
+      }, 
+      "parameters": {
+        "serverName": {"value": "[parameters('DatabaseConfigurationObjects')[copyIndex()].ServerName]" },
+        "location": {"value": "[parameters('DatabaseConfigurationObjects')[copyIndex()].Location]" },        
+        "DatabaseName": {"value": "[parameters('DatabaseConfigurationObjects')[copyIndex()].DatabaseName]" },
+        "sourceDatabaseId": {"value": "[parameters('DatabaseConfigurationObjects')[copyIndex()].SourceDatabaseId]"},
+        "serviceObjectiveName": {"value": "[parameters('DatabaseConfigurationObjects')[copyIndex()].ServiceObjective]"},
+        "elasticPoolName": {"value": "[parameters('DatabaseConfigurationObjects')[copyIndex()].ElasticPoolName]"}
+        }
+    }
+  } 
+  ]
+}

@@ -49,10 +49,26 @@ namespace Events_Tenant.Common.Utilities
                     if (resetEventDate)
                     {
                         #region EF6
-                        //use EF6 since execution of Stored Procedure in EF Core for anonymous return type is not supported yet
-                        using (var context = new TenantContext(Sharding.ShardMap, tenantId, connectionString.ConnectionString))
+                        try
                         {
-                            context.Database.ExecuteSqlCommand("sp_ResetEventDates");
+                            //use EF6 since execution of Stored Procedure in EF Core for anonymous return type is not supported yet
+                            using (var context = new TenantContext(Sharding.ShardMap, tenantId, connectionString.ConnectionString))
+                            {
+                                context.Database.ExecuteSqlCommand("sp_ResetEventDates");
+                            }
+                        }
+                        catch (Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementException ex)
+                        {
+                            string errorText;
+                            if (ex.ErrorCode == Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement.ShardManagementErrorCode.MappingIsOffline)
+                                errorText = "Tenant '" + tenant + "' is offline. Could not reset event dates:" + ex.ToString();
+                            else
+                                errorText = ex.ToString();
+                            Console.WriteLine(errorText);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.ToString());
                         }
                         #endregion
 
@@ -81,6 +97,37 @@ namespace Events_Tenant.Common.Utilities
             normalized[0] ^= 0x80;
 
             return normalized;
+        }
+
+        /// <summary>
+        /// Gets the status of the tenant mapping in the catalog.
+        /// </summary>
+        /// <param name="TenantId">The tenant identifier.</param>
+        public String GetTenantStatus(int TenantId)
+        {
+            try
+            {
+                int mappingStatus = (int)Sharding.ShardMap.GetMappingForKey(TenantId).Status;
+
+                if (mappingStatus > 0)
+                    return "Online";
+                else
+                    return "Offline";
+            }
+            catch
+            {
+               throw;
+            }
+        }
+
+        /// <summary>
+        /// Resolves any mapping differences between the global shard map in the catalog and the local shard map located a tenant database
+        /// </summary>
+        /// <param name="tenantId">The tenant identifier.</param>
+        /// <param name="UseGlobalShardMap">Specifies if the global shard map or the local shard map should be used as the source of truth for resolution.</param>
+        public void ResolveMappingDifferences(int TenantId, bool UseGlobalShardMap = false)
+        {
+            Sharding.ResolveMappingDifferences(TenantId, UseGlobalShardMap);
         }
 
         #endregion

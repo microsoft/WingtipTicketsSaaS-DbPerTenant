@@ -56,6 +56,7 @@ Initialize-Subscription -NoEcho:$NoEcho.IsPresent
 
 # Get catalog database that contains metadata about all Wingtip tenant databases
 $catalog = Get-Catalog -ResourceGroupName $WtpResourceGroupName -WtpUser $WtpUser
+$catalogResourceGroup = $catalog.Database.ResourceGroupName
 
 # Compute the key value for the tenant to be restored
 $tenantKey = Get-TenantKey -TenantName $TenantName
@@ -89,7 +90,7 @@ if ($restoreSourceDatabase.DeletionDate -and $restoreSourceDatabase.ElasticPoolN
   $restoredTenantDatabase = Restore-AzureRmSqlDatabase -FromDeletedDatabaseBackup `
                               -DeletionDate $deletionDate `
                               -PointInTime $RestorePoint `
-                              -ResourceGroupName $WtpResourceGroupName `
+                              -ResourceGroupName $catalogResourceGroup `
                               -ServerName $restoreSourceDatabase.ServerName `
                               -TargetDatabaseName $restoredTenantName `
                               -ResourceId $restoreSourceDatabase.ResourceID `
@@ -102,7 +103,7 @@ elseif (($restoreSourceDatabase.DeletionDate) -and (!$restoreSourceDatabase.Elas
   $restoredTenantDatabase = Restore-AzureRmSqlDatabase -FromDeletedDatabaseBackup `
                               -DeletionDate $deletionDate `
                               -PointInTime $RestorePoint `
-                              -ResourceGroupName $WtpResourceGroupName `
+                              -ResourceGroupName $catalogResourceGroup `
                               -ServerName $restoreSourceDatabase.ServerName `
                               -TargetDatabaseName $restoredTenantName `
                               -ResourceId $restoreSourceDatabase.ResourceID `
@@ -114,7 +115,7 @@ elseif ((!$restoreSourceDatabase.DeletionDate) -and ($restoreSourceDatabase.Elas
 { 
   $restoredTenantDatabase = Restore-AzureRmSqlDatabase -FromPointInTimeBackup `
                               -PointInTime $RestorePoint `
-                              -ResourceGroupName $WtpResourceGroupName `
+                              -ResourceGroupName $catalogResourceGroup `
                               -ServerName $restoreSourceDatabase.ServerName `
                               -TargetDatabaseName $restoredTenantName `
                               -ResourceId $restoreSourceDatabase.ResourceID `
@@ -125,7 +126,7 @@ elseif ((!$restoreSourceDatabase.DeletionDate) -and (!$restoreSourceDatabase.Ela
 {
   $restoredTenantDatabase = Restore-AzureRmSqlDatabase -FromPointInTimeBackup `
                               -PointInTime $RestorePoint `
-                              -ResourceGroupName $WtpResourceGroupName `
+                              -ResourceGroupName $catalogResourceGroup `
                               -ServerName $restoreSourceDatabase.ServerName `
                               -TargetDatabaseName $restoredTenantName `
                               -ResourceId $restoreSourceDatabase.ResourceID `
@@ -136,10 +137,19 @@ elseif ((!$restoreSourceDatabase.DeletionDate) -and (!$restoreSourceDatabase.Ela
 # Remove old catalog references in the restored tenant database 
 Remove-CatalogInfoFromTenantDatabase -TenantKey $restoredTenantKey -TenantDatabase $restoredTenantDatabase -ErrorAction Continue
 
+# Create alias for restored tenant
+$tenantAliasName = $TenantName + "-old"
+$restoredTenantAlias = Set-TenantAlias `
+                          -ResourceGroupName $catalogResourceGroup `
+                          -WtpUser $WtpUser `
+                          -TenantName $tenantAliasName `
+                          -TenantServerName $restoredTenantDatabase.ServerName 
+
 # Add the restored tenant database to the catalog with <tenantname>_old
 Add-TenantDatabaseToCatalog -Catalog $catalog `
-    -TenantName ($TenantName + "_old")`
+    -TenantName $restoredTenantName `
     -TenantKey $restoredTenantKey `
-    -TenantDatabase $restoredTenantDatabase
+    -TenantDatabase $restoredTenantDatabase `
+    -TenantAlias $restoredTenantAlias
 
 Write-Output "Restored tenant '$restoredTenantName' is available for use."

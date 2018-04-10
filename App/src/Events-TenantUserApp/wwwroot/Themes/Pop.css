@@ -15,7 +15,7 @@ html {
 }
 
 header {
-    background-color: #E6E6E6;
+    background-color: initial;
 }
 
 th a {
@@ -85,7 +85,7 @@ h2 {
 
 .logo-heading {
     color: #FFFFFF;
-    background-color: #626262;
+    background-color: #E77A39;
     font-weight: normal;
 }
 
@@ -98,6 +98,10 @@ h2 {
 .sub-heading {
     color: #FFFFFF;
     background-color: #626262;
+}
+
+.body-content {
+    margin-top: 6px;
 }
 
 /* ========================================================================================== */
@@ -128,9 +132,10 @@ h2 {
 /* PAGE */
 /* ========================================================================================== */
 
-.page-heading {
+/*.page-heading {
     background: #626262;
 }
+*/
 
 /* ========================================================================================== */
 /* FORM */
@@ -151,6 +156,10 @@ h2 {
 
 .banner-splitter {
     border-right-color: #ffffff;
+}
+
+.paging_end {
+    margin-bottom:3px;
 }
 
 /* ========================================================================================== */
@@ -373,3 +382,4 @@ h2 {
 .row-underline-light {
     border-bottom-color: #999999;
 }
+

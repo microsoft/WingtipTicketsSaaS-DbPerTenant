@@ -1,0 +1,35 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "PoolConfigurationObjects": { "type": "array" }    
+  },
+  "resources": [ 
+  { 
+    "apiVersion": "2015-01-01", 
+    "name": "[concat('PoolRecovery-',parameters('PoolConfigurationObjects')[copyIndex()].ServerName,'-',parameters('PoolConfigurationObjects')[copyIndex()].ElasticPoolName)]",
+    "type": "Microsoft.Resources/deployments",
+    "copy": { 
+      "name": "recoverypools",
+      "count": "[length(parameters('PoolConfigurationObjects'))]"
+    }, 
+    "properties": { 
+      "mode": "Incremental", 
+      "templateLink": {
+        "uri": "https://wingtipsaas.blob.core.windows.net/templates-dpt/tenantelasticpoolrecoverytemplate.json",
+        "contentVersion": "1.0.0.0"
+      }, 
+      "parameters": {
+        "serverName": {"value": "[parameters('PoolConfigurationObjects')[copyIndex()].ServerName]" },
+        "location": {"value": "[parameters('PoolConfigurationObjects')[copyIndex()].Location]" },        
+        "elasticPoolName": {"value": "[parameters('PoolConfigurationObjects')[copyIndex()].ElasticPoolName]" },
+        "edition": {"value": "[parameters('PoolConfigurationObjects')[copyIndex()].Edition]"},
+        "dtu": {"value": "[parameters('PoolConfigurationObjects')[copyIndex()].Dtu]"},
+        "databaseDtuMax": {"value": "[parameters('PoolConfigurationObjects')[copyIndex()].DatabaseDtuMax]"},
+        "databaseDtuMin": {"value": "[parameters('PoolConfigurationObjects')[copyIndex()].DatabaseDtuMin]"},
+        "storageMB": {"value": "[parameters('PoolConfigurationObjects')[copyIndex()].StorageMB]"}
+        }
+    }
+  } 
+  ]
+}

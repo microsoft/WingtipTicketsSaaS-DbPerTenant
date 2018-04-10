@@ -25,6 +25,7 @@ namespace Events_Tenant.Common.Utilities
         public string CatalogServer { get; set; }
         public string CatalogDatabase { get; set; }
         public string ServicePlan { get; set; }
+        public string CatalogLocation { get; set; }
     }
 
     /// <summary>
@@ -33,7 +34,7 @@ namespace Events_Tenant.Common.Utilities
     public class TenantServerConfig
     {
         public string TenantServer { get; set; }
-
+        
         /// <summary>
         /// Boolean value to specify if the events dates need to be reset
         /// This can be set to false when in Development mode
@@ -42,6 +43,7 @@ namespace Events_Tenant.Common.Utilities
         ///   <c>true</c> if [reset event dates]; otherwise, <c>false</c>.
         /// </value>
         public bool ResetEventDates { get; set; }
+
     }
 
     /// <summary>

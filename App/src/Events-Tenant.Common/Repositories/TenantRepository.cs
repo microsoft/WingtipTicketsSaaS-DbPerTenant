@@ -9,6 +9,7 @@ using Events_Tenant.Common.Models;
 using Events_Tenant.Common.Utilities;
 using Events_TenantUserApp.EF.TenantsDB;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Azure.SqlDatabase.ElasticScale.ShardManagement;
 
 namespace Events_Tenant.Common.Repositories
 {
@@ -197,20 +198,25 @@ namespace Events_Tenant.Common.Repositories
             {
                 //get database name
                 string databaseName, databaseServerName;
-                using (SqlConnection sqlConn = Sharding.ShardMap.OpenConnectionForKey(tenantId, _connectionString))
-                {
-                    databaseName = sqlConn.Database;
-                    databaseServerName = sqlConn.DataSource.Split(':').Last().Split(',').First();
-                }
+                PointMapping<int> mapping;
 
-                var venue = await context.Venue.FirstOrDefaultAsync();
-
-                if (venue != null)
+                if (Sharding.ShardMap.TryGetMappingForKey(tenantId, out mapping))
                 {
-                    var venueModel = venue.ToVenueModel();
-                    venueModel.DatabaseName = databaseName;
-                    venueModel.DatabaseServerName = databaseServerName;
-                    return venueModel;
+                    using (SqlConnection sqlConn = Sharding.ShardMap.OpenConnectionForKey(tenantId, _connectionString))
+                    {
+                        databaseName = sqlConn.Database;
+                        databaseServerName = sqlConn.DataSource.Split(':').Last().Split(',').First();
+                    }
+
+                    var venue = await context.Venue.FirstOrDefaultAsync();
+
+                    if (venue != null)
+                    {
+                        var venueModel = venue.ToVenueModel();
+                        venueModel.DatabaseName = databaseName;
+                        venueModel.DatabaseServerName = databaseServerName;
+                        return venueModel;
+                    }
                 }
                 return null;
             }

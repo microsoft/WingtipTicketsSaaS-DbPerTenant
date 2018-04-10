@@ -1,0 +1,40 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+      "serverName": {
+          "type": "String"
+      },
+      "location": {
+          "type": "String"
+      },
+      "databaseName": {
+          "type": "String"
+      },
+      "sourceDatabaseId": {
+          "type": "String"
+      },
+      "serviceObjectiveName": {
+          "type": "String",
+          "defaultValue": " "
+      },
+      "elasticPoolName": {
+          "type": "String"
+      }
+  },
+  "resources": [
+      {
+          "type": "Microsoft.Sql/servers/databases",
+          "name": "[concat(parameters('serverName'), '/', parameters('databaseName'))]",
+          "apiVersion": "2014-04-01-preview",
+          "location": "[parameters('location')]",
+          "tags": {},
+          "properties": {
+              "createMode": "recovery",
+              "sourceDatabaseId": "[parameters('sourceDatabaseId')]",
+              "requestedServiceObjectiveName": "[parameters('serviceObjectiveName')]",
+              "elasticPoolName": "[parameters('elasticPoolName')]"
+          }
+      }
+  ]
+}
