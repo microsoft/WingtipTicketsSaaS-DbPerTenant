@@ -16,7 +16,7 @@
     "properties": { 
       "mode": "Incremental", 
       "templateLink": {
-        "uri": "https://ayoframeworktestry2hdl.blob.core.windows.net/wingtipbacpacs/tenantdatabasereplicationtemplate.json",
+        "uri": "https://wingtipsaas.blob.core.windows.net/templates-dpt/tenantdatabasereplicationtemplate.json",
         "contentVersion": "1.0.0.0"
       }, 
       "parameters": {
