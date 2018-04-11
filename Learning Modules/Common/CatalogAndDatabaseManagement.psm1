@@ -686,7 +686,8 @@ function Get-Tenant
         throw "Tenant '$TenantName' not found in catalog."
     }
 
-    $tenantServerName = $tenantShard.Shard.Location.Server
+    $fullyQualifiedTenantServerName = $tenantShard.Shard.Location.Server
+    $tenantServerName = $fullyQualifiedTenantServerName.split('.')[0]
     $tenantDatabaseName = $tenantShard.Shard.Location.Database
 
     # Find tenant server in Azure 
