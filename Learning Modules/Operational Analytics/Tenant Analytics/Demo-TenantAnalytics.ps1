@@ -78,11 +78,11 @@ if ($DemoScenario -eq 5)
     & $PSScriptRoot\Start-TicketDataExtractJob.ps1 `
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name `
-        -JobExecutionCredentialName $config.JobAccountCredentialName `
+        -JobExecutionCredentialName $config.JobAgentCredentialName `
         -TargetGroupName "TenantGroup" `
         -OutputServer $outputServer `
         -OutputDatabase $config.TenantAnalyticsDatabaseName `
-        -OutputServerCredentialName $config.JobAccountCredentialName `
+        -OutputServerCredentialName $config.JobAgentCredentialName `
         -JobName "Extract all tenants ticket purchases to database"
     exit
 }
@@ -94,11 +94,11 @@ if ($DemoScenario -eq 6)
     & $PSScriptRoot\Start-TicketDataExtractJob.ps1 `
         -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name `
-        -JobExecutionCredentialName $config.JobAccountCredentialName `
+        -JobExecutionCredentialName $config.JobAgentCredentialName `
         -TargetGroupName "TenantGroup-CS" `
         -OutputServer $outputServer `
         -OutputDatabase $config.TenantAnalyticsCSDatabaseName `
-        -OutputServerCredentialName $config.JobAccountCredentialName `
+        -OutputServerCredentialName $config.JobAgentCredentialName `
         -JobName "Extract all tenants ticket purchases to columnstore database"
     exit
 }

@@ -42,7 +42,7 @@
       "trafficManagerRecoveryEndpointName": "[concat('events-wingtip-', variables('databasePerTenantSuffix'), '-', variables('recoveryLocation'), '-', variables('lowerCaseUser'))]",      
       "recoveryWebAppSku": "Standard",
       "wtpEventsRecoveryApp": "[concat('events-wingtip-', variables('databasePerTenantSuffix'), '-', variables('recoveryLocation'), '-', variables('lowerCaseUser'))]",
-      "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage-v6.zip"
+      "wtpEventsAppPackageUri": "https://wingtipsaas.blob.core.windows.net/packages-dpt/eventsAppPackage.zip"
   },
   "resources": [
     {

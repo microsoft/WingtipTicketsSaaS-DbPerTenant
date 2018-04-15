@@ -9,7 +9,7 @@ SET @WtpUser = '<user>';
 EXEC [jobs].sp_add_target_group @target_group_name = 'DemoServerGroup'
 
 -- Add a server target member, includes all databases in tenant server
-SET @server1 = 'tenants1-' + @WtpUser + '.database.windows.net'
+SET @server1 = 'tenants1-dpt-' + @WtpUser + '.database.windows.net'
 
 EXEC [jobs].sp_add_target_group_member
 @target_group_name =  'DemoServerGroup',
@@ -19,7 +19,7 @@ EXEC [jobs].sp_add_target_group_member
 @server_name=@server1
 
 -- Add the database target member of the 'golden' database and analysis database
-SET @server2 = 'catalog-' + @WtpUser + '.database.windows.net'
+SET @server2 = 'catalog-dpt-' + @WtpUser + '.database.windows.net'
 
 EXEC [jobs].sp_add_target_group_member
 @target_group_name =  'DemoServerGroup',
@@ -33,7 +33,7 @@ EXEC [jobs].sp_add_target_group_member
 @membership_type = 'Include',
 @target_type = 'SqlDatabase',
 @server_name=@server2,
-@database_name='adhocanalytics'
+@database_name='adhocreporting'
 
 -- Add a job to deploy new reference data
 EXEC jobs.sp_add_job

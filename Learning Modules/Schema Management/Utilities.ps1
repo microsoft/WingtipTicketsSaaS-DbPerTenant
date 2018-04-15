@@ -15,21 +15,21 @@ $resourceGroupName = $wtpUser.ResourceGroupName
 <#
 Remove-AzureRmSqlJobAccount `
 -ServerName $serverName `
--JobAccountName $($config.JobAccount) `
+-JobAccountName $($config.JobAgent) `
 -ResourceGroupName $resourceGroupName
 #>
 
 <#
 Get-AzureRmSqlJobAccount `
 -ServerName $serverName `
--JobAccountName $($config.JobAccount) `
+-JobAccountName $($config.JobAgent) `
 -ResourceGroupName $resourceGroupName 
 #>
 
 <#
 New-AzureRmSqlJobAccount `
 -ServerName $serverName `
--JobAccountName $($config.JobAccount) `
+-JobAccountName $($config.JobAgent) `
 -ResourceGroupName $resourceGroupName `
--DatabaseName $($config.JobAccountDatabaseName)
+-DatabaseName $($config.JobAgentDatabaseName)
 #>

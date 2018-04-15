@@ -291,7 +291,7 @@ while ($true)
   
 
   # Exit recovery if all tenant databases have been recovered 
-  if (($databaseRecoveryJob.State -eq "Completed") -and ($poolRecoveryJob.State -eq "Completed") -and ($serverRecoveryJob.State -eq "Completed") -and ($newTenantProvisioningJob.State -eq "Completed") -and ($tenantRecoveryJob.State -eq "Completed"))
+  if (($appRecoveryJob.State -eq "Completed") -and ($databaseRecoveryJob.State -eq "Completed") -and ($poolRecoveryJob.State -eq "Completed") -and ($serverRecoveryJob.State -eq "Completed") -and ($newTenantProvisioningJob.State -eq "Completed") -and ($tenantRecoveryJob.State -eq "Completed"))
   {
     Remove-Item -Path "$env:TEMP\profile.json" -ErrorAction SilentlyContinue   
     break

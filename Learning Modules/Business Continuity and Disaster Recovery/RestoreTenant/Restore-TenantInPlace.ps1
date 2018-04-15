@@ -71,6 +71,7 @@ if (!(Test-TenantKeyInCatalog -Catalog $catalog -TenantKey $tenantKey))
 Write-Output "Setting tenant '$TenantName' offline in the catalog."
 
 Set-TenantOffline -Catalog $catalog -TenantKey $tenantKey
+$catalog = Get-Catalog -ResourceGroupName $WtpResourceGroupName -WtpUser $WtpUser
 
 # Get tenant database that was active during the restore point period 
 $restoreSourceDatabase = Get-TenantDatabaseForRestorePoint -Catalog $catalog -TenantKey $tenantKey -RestorePoint $RestorePoint

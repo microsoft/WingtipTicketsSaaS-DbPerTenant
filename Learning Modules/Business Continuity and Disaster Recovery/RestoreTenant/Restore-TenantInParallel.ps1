@@ -137,19 +137,11 @@ elseif ((!$restoreSourceDatabase.DeletionDate) -and (!$restoreSourceDatabase.Ela
 # Remove old catalog references in the restored tenant database 
 Remove-CatalogInfoFromTenantDatabase -TenantKey $restoredTenantKey -TenantDatabase $restoredTenantDatabase -ErrorAction Continue
 
-# Create alias for restored tenant
-$tenantAliasName = $TenantName + "-old"
-$restoredTenantAlias = Set-TenantAlias `
-                          -ResourceGroupName $catalogResourceGroup `
-                          -WtpUser $WtpUser `
-                          -TenantName $tenantAliasName `
-                          -TenantServerName $restoredTenantDatabase.ServerName 
-
 # Add the restored tenant database to the catalog with <tenantname>_old
 Add-TenantDatabaseToCatalog -Catalog $catalog `
     -TenantName $restoredTenantName `
     -TenantKey $restoredTenantKey `
-    -TenantDatabase $restoredTenantDatabase `
-    -TenantAlias $restoredTenantAlias
+    -TenantServerName $restoredTenantDatabase.ServerName `
+    -TenantDatabase $restoredTenantDatabase
 
 Write-Output "Restored tenant '$restoredTenantName' is available for use."
