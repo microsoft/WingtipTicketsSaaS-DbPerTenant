@@ -56,7 +56,7 @@ function Get-Configuration
         StorageAccountADF = "stagingwingtip"
         TableNamesStorageLocation = "eastus"
         TableNamesContainerName = "configfile"
-        DataFactoryDeploymentTemplate = "arm_template-polybase2.json"
+        DataFactoryDeploymentTemplate = "adf_arm_template.json"
         DataFactoryName = "dbtodwcopy"
         DataFactoryLocation = "westeurope"
         AdhocReportingDatabaseName = "adhocreporting"
