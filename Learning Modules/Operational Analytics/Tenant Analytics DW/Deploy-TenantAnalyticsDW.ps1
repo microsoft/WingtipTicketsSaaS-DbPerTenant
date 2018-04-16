@@ -450,7 +450,7 @@ SELECT DISTINCT t.TicketPurchaseId,
 		v.SK_VenueId,
 		d.SK_DateId,
 		t.PurchaseTotal,
-		DaysToGo =  DATEDIFF(d, CAST(t.PurchaseDate AS DATE), CAST(e.EventDate AS DATE)),
+		SaleDay = 60 - DATEDIFF(d, CAST(t.PurchaseDate AS DATE), CAST(e.EventDate AS DATE)),
 		t.RowNumber,
 		t.SeatNumber
 FROM [dbo].[raw_Tickets] AS t
