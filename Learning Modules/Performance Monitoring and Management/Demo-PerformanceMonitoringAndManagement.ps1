@@ -7,15 +7,15 @@ $DurationMinutes = 120
 $SingleTenantDatabaseName = "contosoconcerthall"
 
 $DemoScenario = 0
-<# Select the demo scenario to run 
-    Demo    Scenario
-      0       None
-      1       Provision a batch of tenants (do this before any of the load generation scenarios)
-      2       Generate normal intensity load (approx 30 DTU) 
-      3       Generate load with longer and more frequent bursts per database
-      4       Generate load with higher DTU bursts per database (approx 70 DTU)  
-      5       Generate a normal load plus a high load on a single tenant (approx 95 DTU) 
-      6       Generate unbalanced load across multiple pools  
+<# Select the scenario to run 
+   Scenario
+      0     None
+      1     Provision a batch of tenants (do this before any of the load generation scenarios)
+      2     Generate normal intensity load (approx 30 DTU) 
+      3     Generate load with longer and more frequent bursts per database
+      4     Generate load with higher DTU bursts per database (approx 70 DTU)  
+      5     Generate a normal load plus a high load on a single tenant (approx 95 DTU) 
+      6     Generate unbalanced load across multiple pools  
 #>
 
 ## --------------------------------------------------------------------------------------
@@ -45,7 +45,6 @@ if ($DemoScenario -eq 1)
     $tenantNames = $config.TenantNameBatch
 
     & "$PSScriptRoot\..\Provision And Catalog\New-TenantBatch.ps1" `
-        -WtpResourceGroupName $wtpUser.ResourceGroupName `
         -WtpUser $wtpUser.Name `
         -NewTenants $tenantNames
           
