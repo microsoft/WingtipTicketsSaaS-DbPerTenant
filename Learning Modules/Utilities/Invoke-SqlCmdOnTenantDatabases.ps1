@@ -35,7 +35,8 @@ $catalog = Get-Catalog `
     -WtpUser $WtpUser
     
 # Get all the databases in the catalog shard map
-$shards = Get-Shards -ShardMap $catalog.ShardMap
+$shards = @()
+$shards += Get-Shards -ShardMap $catalog.ShardMap
 
 foreach ($shard in $Shards)
 {

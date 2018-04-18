@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-  Creates an Operational Analytics DW database for tenant query data
+  Creates an Analytics data warehouse for tenant query data
 
 .DESCRIPTION
-  Creates the operational tenant analytics DW database for result sets queries from Elastic jobs. Database is created in the resource group
-  created when the WTP application was deployed.
+  Creates the tenant analytics data warehouse in the resource group
+  created when the Wingtip Tickets application was deployed.
 
 #>
 param(
@@ -25,35 +25,35 @@ Import-Module $PSScriptRoot\..\..\WtpConfig -Force
 $config = Get-Configuration
 
 $catalogServerName = $($config.CatalogServerNameStem) + $WtpUser
-$databaseName = $config.TenantAnalyticsDWDatabaseName
+$dataWarehouseName = $config.TenantAnalyticsDWDatabaseName
 
 # Check if Analytics DW database has already been created 
-$TenantAnalyticsDWDatabaseName = Get-AzureRmSqlDatabase `
+$TenantAnalyticsDWDatabase = Get-AzureRmSqlDatabase `
                 -ResourceGroupName $WtpResourceGroupName `
                 -ServerName $catalogServerName `
-                -DatabaseName $databaseName `
+                -DatabaseName $dataWarehouseName `
                 -ErrorAction SilentlyContinue
 
-if($TenantAnalyticsDWDatabaseName)
+if($TenantAnalyticsDWDatabase)
 {
-    Write-Output "Tenant Analytics DW database '$databaseName' already exists."
+    Write-Output "`nData warehouse '$dataWarehouseName' already exists."
     exit
 }
 
-Write-output "Initializing the DW database '$databaseName'..."
+Write-output "`nDeploying data warehouse '$dataWarehouseName'..."
 
 # Create the tenant analytics DW database
 New-AzureRmSqlDatabase `
     -ResourceGroupName $WtpResourceGroupName `
     -ServerName $catalogServerName `
-    -DatabaseName $databaseName `
+    -DatabaseName $dataWarehouseName `
     -RequestedServiceObjectiveName "DW400" `
     > $null
 
 # Creating tables in tenant analytics database
 $commandText = "
 -- Create table for storing raw tickets data. 
--- Tables for raw data contains an indentity column for tracking purposes.
+-- Tables for raw data contain an identity column for tracking purposes.
 IF (OBJECT_ID('raw_Tickets')) IS NOT NULL DROP TABLE raw_Tickets
 CREATE TABLE [dbo].[raw_Tickets](
 	[RawTicketId] int identity(1,1) NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE [dbo].[raw_Customers](
 )
 GO
 
---Create table for storing raw events data. 
+-- Create table for storing raw events data. 
 IF (OBJECT_ID('raw_Events')) IS NOT NULL DROP TABLE raw_Events
 CREATE TABLE [dbo].[raw_Events](
 	[RawEventId] int identity(1,1) NOT NULL,
@@ -91,7 +91,7 @@ CREATE TABLE [dbo].[raw_Events](
 )
 GO
 
---Create table for storing raw venues data. 
+-- Create table for storing raw venues data. 
 IF (OBJECT_ID('raw_Venues')) IS NOT NULL DROP TABLE raw_Venues
 CREATE TABLE [dbo].[raw_Venues](
 	[RawVenueId] int identity(1,1) NOT NULL,
@@ -99,14 +99,14 @@ CREATE TABLE [dbo].[raw_Venues](
 	[VenueName] [nvarchar](50) NULL,
 	[VenueType] [char](30) NULL,
 	[VenuePostalCode] [char](10) NULL,
-        [VenueCountryCode] [char](3) NULL,
+    [VenueCountryCode] [char](3) NULL,
 	[VenueCapacity] [int] NULL
 )
 GO
 
---Create fact and dimension tables for the star-schema
--- Create a dimension table for events in tenantanalytics database.
--- Dimension table contains a surrogate key.
+-- Create fact and dimension tables for the star-schema
+-- Create a dimension table for even in tenantanalytics database.ts
+-- Dimension tables use a surrogate key.
 IF (OBJECT_ID('dim_Events')) IS NOT NULL DROP TABLE dim_Events
 CREATE TABLE [dbo].[dim_Events] 
 	([SK_EventId] int identity(1,1) NOT NULL,
@@ -118,7 +118,7 @@ CREATE TABLE [dbo].[dim_Events]
 )
 GO
 
--- Create a dimension table for venues in tenantanalytics database 
+-- Create a dimension table for venu es 
 IF (OBJECT_ID('dim_Venues')) IS NOT NULL DROP TABLE dim_Venues
 CREATE TABLE [dbo].[dim_Venues] 
 	([SK_VenueId] int identity(1,1) NOT NULL,
@@ -141,10 +141,10 @@ CREATE TABLE [dbo].[dim_Customers]
 )
 GO
 
---Create a dimension table for dates
+-- Create a dimension table for dates
 IF (OBJECT_ID('dim_Dates')) IS NOT NULL DROP TABLE dim_Dates
 CREATE TABLE [dbo].[dim_Dates](
-        [SK_DateId] int identity(1,1) NOT NULL,
+    [SK_DateId] int identity(1,1) NOT NULL,
 	[PurchaseDateID] [int] NULL,
 	[DateValue] [date] NULL,
 	[DateYear] [int] NULL,
@@ -161,14 +161,14 @@ CREATE TABLE [dbo].[dim_Dates](
 )
 GO
 
---Prepopulate Date Dimension table
+-- Prepopulate Date Dimension table
 IF (OBJECT_ID('dim_dates')) IS NOT NULL DROP TABLE dim_dates;
 WITH BaseData AS (SELECT A=0 UNION ALL SELECT A=1 UNION ALL SELECT A=2 UNION ALL SELECT A=3 UNION ALL SELECT A=4 UNION ALL SELECT A=5 UNION ALL SELECT A=6 UNION ALL SELECT A=7 UNION ALL SELECT A=8 UNION ALL SELECT A=9)
 ,DateSeed AS (SELECT RID = ROW_NUMBER() OVER (ORDER BY A.A) FROM BaseData A CROSS APPLY BaseData B CROSS APPLY BaseData C CROSS APPLY BaseData D CROSS APPLY BaseData E)
 ,DateBase AS (SELECT TOP 18628 DateValue = cast(DATEADD(D, RID,'1979-12-31')AS DATE) FROM DateSeed)
 
 SELECT DateID = cast(replace(cast(DateValue as varchar(25)),'-','')as int)
-        ,DateValue = cast(DateValue as date)
+    ,DateValue = cast(DateValue as date)
 	,DateYear = DATEPART(year, DateValue)  
 	,DateMonth = DATEPART(month, DateValue)  
 	,DateDay = DATEPART(day, DateValue)  
@@ -183,7 +183,7 @@ SELECT DateID = cast(replace(cast(DateValue as varchar(25)),'-','')as int)
 INTO dim_Dates
 FROM DateBase
 
--- Create a fact table for tickets in tenantanalytics database 
+-- Create a fact table for tickets in tenantanalytics database.
 IF (OBJECT_ID('fact_Tickets')) IS NOT NULL DROP TABLE fact_Tickets
 CREATE TABLE [dbo].[fact_Tickets] 
 	([TicketPurchaseId] [int] NOT NULL,
@@ -197,7 +197,7 @@ CREATE TABLE [dbo].[fact_Tickets]
 	[SeatNumber] [int] NOT NULL)
 GO
 
--- Create a stored procedure in tenantanalytics-dw that populates the star-scehma tables 
+-- Create a stored procedure in tenantanalytics-dw that populates the star-schema tables. 
 IF (OBJECT_ID('sp_TransformRawData')) IS NOT NULL DROP PROCEDURE sp_TransformRawData
 GO
 
@@ -206,15 +206,17 @@ AS
 BEGIN
 
 -- Get the maximum value from the tracking column and then transform rows < max value.
-DECLARE @StagingVenueLastInsert int = (SELECT MAX(RawVenueId) FROM  [dbo].[raw_Venues]);
+DECLARE @StagingVenueLastInsert int = (SELECT MAX(RawVenueId) FROM [dbo].[raw_Venues]);
 
--- Upsert pattern: Create a table temporarily and insert existing rows that were not changed and 
--- modified rows explicitly inserting the identity column values from the dimension table.
--- As a best practice, avoid using Update statement for SQL Data Warehouse loading. Instead, use a 
--- of temporary table and insert statements.Next, insert into the table all the new rows automatically 
--- generating the surrogate key defined by identity. Next, archive the current dimension table and rename 
--- the temporary table to be the new dimension table. As a best practice, save the archived table till 
--- the next incremental run. 
+-- Upsert pattern: 
+-- As a best practice, avoid using UPDATE statements for SQL Data Warehouse loading. 
+-- Instead, use a temporary table and insert statements.
+-- Create a table temporarily and insert existing rows that were not changed and 
+-- modified rows, explicitly inserting the identity column values from the dimension table.
+-- Next, insert into the table all the new rows automatically generating the surrogate key 
+-- defined by identity. Next, rename the current dimension table as an archive table and 
+-- rename the temporary table to be the dimension table. As a best practice, save the archived 
+-- table until the next incremental run.
 
 -----------------------------------------------------------------
 ----------------Venue DIMENSION----------------------------------
@@ -222,8 +224,8 @@ DECLARE @StagingVenueLastInsert int = (SELECT MAX(RawVenueId) FROM  [dbo].[raw_V
 -- Create a temporary table to hold the existing non-modified rows 
 -- in the dimension table, the modified rows and the new rows.
 CREATE TABLE dim_Venue_temp 
-        ([SK_VenueId] int identity(1,1) NOT NULL,
-        [VenueId] [int] NULL,
+    ([SK_VenueId] int identity(1,1) NOT NULL,
+    [VenueId] [int] NULL,
 	[VenueName] [nvarchar](50) NULL,
 	[VenueType] [char](30) NULL,
 	[VenueCapacity] [int] NULL,
@@ -232,7 +234,7 @@ CREATE TABLE dim_Venue_temp
 )
 
 -- Allow values to be inserted explicitly in the identity column
--- to ensure that all existing rows get the same identity value
+-- to ensure that all existing rows get the same identity value.
 SET IDENTITY_INSERT dim_Venue_temp ON;
 
 --Insert existing and modified rows in the temporary table.
@@ -252,7 +254,7 @@ WHERE c2.VenueId NOT IN
     WHERE   t2.RawVenueId <= @StagingVenueLastInsert
 )
 UNION ALL
--- ALl modified ones
+-- All modified rows
 SELECT DISTINCT c.SK_VenueId,     -- Surrogate key taken from the dimension table
        t.VenueId,
        t.VenueName, 
@@ -264,7 +266,7 @@ FROM [dbo].[dim_Venues] AS c
 INNER JOIN [dbo].[raw_Venues] AS t ON  t.VenueId = c.VenueId
 WHERE   t.RawVenueId <= @StagingVenueLastInsert
 
---Turn off indentity_insert to autmatically generate surrogate keys for the new rows
+--Turn off identity_insert to automatically generate surrogate keys for the new rows
 SET IDENTITY_INSERT dim_Venue_temp OFF;
 
 -- Insert all the new rows in the staging table.
@@ -282,11 +284,11 @@ AND VenueId NOT IN
 	FROM      [dbo].[dim_Venues]
 	) 
 
--- Delete the archived dimension table if it exists
+-- Delete the archived dimension table if it exists.
 IF OBJECT_ID('last_dim_Venues') IS NOT NULL DROP TABLE last_dim_Venues; 
 
---Rename the current dimension table to be the archive table
---and the temporary table to be the new dimension table.
+-- Rename the current dimension table to be the archive table
+-- and the temporary table to be the new dimension table.
 RENAME OBJECT dim_Venues TO last_dim_Venues
 RENAME OBJECT dim_Venue_temp TO dim_Venues
 
@@ -306,8 +308,8 @@ CREATE TABLE dim_Event_temp
 	[EventDate] [datetime] NULL
 )
 
--- Allow values to be inserted explicitly in the inentity column
--- to ensure that all existing rows get the same identity value
+-- Allow values to be inserted explicitly in the identity column
+-- to ensure that all existing rows get the same identity value.
 SET IDENTITY_INSERT dim_Event_temp ON;
 
 --Insert existing and modified rows in the temporary table.
@@ -329,27 +331,27 @@ WHERE CONCAT(c.VenueId, c.EventId) NOT IN
 
 UNION ALL
 
--- All modified ones
+-- All modified rows
 SELECT DISTINCT c.[SK_EventId],
                 t.[VenueId],
-		t.[EventId],
-		t.[EventName],
-		t.[EventSubtitle],
-		t.[EventDate]
+		        t.[EventId],
+		        t.[EventName],
+		        t.[EventSubtitle],
+		        t.[EventDate]
 FROM [dbo].[dim_Events] AS c
 INNER JOIN [dbo].[raw_Events] AS t ON  t.VenueId = c.VenueId AND t.EventId = c.EventId
 WHERE   t.RawEventId <= @StagingEventLastInsert
 
---Turn off indentity_insert to autmatically generate surrogate keys for the new rows
+--Turn off identity_insert to automatically generate surrogate keys for the new rows.
 SET IDENTITY_INSERT dim_Event_temp OFF;
 
--- New rows in staging table 
+-- New rows in staging table. 
 INSERT INTO dim_Event_temp (VenueId, EventId, EventName, EventSubtitle, EventDate)
 SELECT DISTINCT t.[VenueId],
                 t.[EventId],
-		t.[EventName],
-		t.[EventSubtitle],
-		t.[EventDate]
+		        t.[EventName],
+		        t.[EventSubtitle],
+		        t.[EventDate]
 FROM [dbo].[raw_Events] AS t
 WHERE t.RawEventId <= @StagingEventLastInsert
 AND CONCAT(VenueId, EventId) NOT IN
@@ -357,11 +359,11 @@ AND CONCAT(VenueId, EventId) NOT IN
 	FROM      [dbo].[dim_Events]
 	) 
 
--- Delete the archived dimension table if it exists
+-- Delete the archived dimension table if it exists.
 IF OBJECT_ID('last_dim_Events') IS NOT NULL DROP TABLE last_dim_Events; 
 
---Rename the current dimension table to be the archive table
---and the temporary table to be the new dimension table.
+-- Rename the current dimension table to be the archive table
+-- and the temporary table to be the new dimension table.
 RENAME OBJECT dim_Events TO last_dim_Events
 RENAME OBJECT dim_Event_temp TO dim_Events
 
@@ -373,18 +375,18 @@ DECLARE @StagingCustomerLastInsert int = (SELECT MAX(RawCustomerId) FROM  [dbo].
 -- Create a temporary table to hold the existing non-modified rows 
 -- in the dimension table, the modified rows and the new rows.
 CREATE TABLE dim_Customer_temp 
-        ([SK_CustomerId] int identity(1,1) NOT NULL,
+    ([SK_CustomerId] int identity(1,1) NOT NULL,
 	[VenueId] int NOT NULL,
-        [CustomerEmailId] [int] NULL,
+    [CustomerEmailId] [int] NULL,
 	[CustomerPostalCode] [char](10) NULL,
 	[CustomerCountryCode] [char](3) NULL
 )
 
--- Allow values to be inserted explicitly in the inentity column
--- to ensure that all existing rows get the same identity value
+-- Allow values to be inserted explicitly in the identity column
+-- to ensure that all existing rows retain the same surrogate key value
 SET IDENTITY_INSERT dim_Customer_temp ON;
 
---Insert existing and modified rows in the temporary table.
+-- Insert existing and modified rows in the temporary table.
 INSERT INTO dim_Customer_temp (SK_CustomerId , VenueId, CustomerEmailId, CustomerPostalCode, CustomerCountryCode)
 -- Existing rows in the dimension table that are not modified
 SELECT c.SK_CustomerId,
@@ -399,7 +401,7 @@ WHERE CONCAT(c.VenueId, c.CustomerEmailId) NOT IN
     WHERE   t.RawCustomerId <= @StagingCustomerLastInsert
 )
 UNION ALL
--- All modified ones
+-- All modified rows
 SELECT DISTINCT c.SK_CustomerId,     -- Surrogate key taken from the dimension table
        t.VenueId,
        t.CustomerEmailId,
@@ -409,7 +411,7 @@ FROM [dbo].[dim_Customers] AS c
 INNER JOIN [dbo].[raw_Customers] AS t ON  t.CustomerEmailId = c.CustomerEmailId AND t.VenueId = c.VenueId
 WHERE   t.RawCustomerId <= @StagingCustomerLastInsert
 
---Turn off indentity_insert to autmatically generate surrogate keys for the new rows
+-- Turn off indentity_insert to autmatically generate surrogate keys for the new rows
 SET IDENTITY_INSERT dim_Customer_temp OFF;
 
 -- New rows in staging table 
@@ -425,11 +427,11 @@ AND CONCAT(VenueId, CustomerEmailId) NOT IN
 	FROM      [dbo].[dim_Customers]
 	) 
 
--- Delete the archived dimension table if it exists
+-- Delete the archived dimension table if it exists.
 IF OBJECT_ID('last_dim_Customers') IS NOT NULL DROP TABLE last_dim_Customers;
 
---Rename the current dimension table to be the archive table
---and the temporary table to be the new dimension table.
+-- Rename the current dimension table to be the archive table
+-- and the temporary table to be the new dimension table.
 RENAME OBJECT dim_Customers TO last_dim_Customers
 RENAME OBJECT dim_Customer_temp TO dim_Customers
 
@@ -446,13 +448,13 @@ AS
 -- Get new rows
 SELECT DISTINCT t.TicketPurchaseId, 
                 e.SK_EventId,
-		c.SK_CustomerId,
-		v.SK_VenueId,
-		d.SK_DateId,
-		t.PurchaseTotal,
-		SaleDay = 60 - DATEDIFF(d, CAST(t.PurchaseDate AS DATE), CAST(e.EventDate AS DATE)),
-		t.RowNumber,
-		t.SeatNumber
+		        c.SK_CustomerId,
+		        v.SK_VenueId,
+		        d.SK_DateId,
+		        t.PurchaseTotal,
+		        SaleDay = 60 - DATEDIFF(d, CAST(t.PurchaseDate AS DATE), CAST(e.EventDate AS DATE)),
+		        t.RowNumber,
+		        t.SeatNumber
 FROM [dbo].[raw_Tickets] AS t
 INNER JOIN [dbo].[dim_Events] e on t.EventId = e.EventId AND t.VenueId = e.VenueId
 INNER JOIN [dbo].[dim_Venues] v on t.VenueID = v.VenueId
@@ -481,7 +483,7 @@ RENAME OBJECT dbo.[stage_fact_Tickets] TO [fact_Tickets];
 END
 ;
 
--- When all testing is done, uncomment the following delete statements
+-- TODO When all testing is done, uncomment the following delete statements
 -- Delete the rows in the staging table that are already transformed
 -- DELETE FROM raw_Tickets
 -- WHERE RawTicketId <= @StagingTicketLastInsert 
@@ -500,54 +502,65 @@ GO
 $catalogServerName = $config.catalogServerNameStem + $WtpUser
 $fullyQualifiedCatalogServerName = $catalogServerName + ".database.windows.net"
 
-Write-output "Populating the DW database with predefined tables and stored pocedure..."
+Write-output "Deploying the data warehouse schema..."
 
 Invoke-SqlcmdWithRetry `
--ServerInstance $fullyQualifiedCatalogServerName `
--Username $config.CatalogAdminUserName `
--Password $config.CatalogAdminPassword `
--Database $databaseName `
--Query $commandText `
--ConnectionTimeout 30 `
--QueryTimeout 30 `
-> $null  
+    -ServerInstance $fullyQualifiedCatalogServerName `
+    -Username $config.CatalogAdminUserName `
+    -Password $config.CatalogAdminPassword `
+    -Database $dataWarehouseName `
+    -Query $commandText `
+    -ConnectionTimeout 30 `
+    -QueryTimeout 30 `
+    > $null  
 
 $tenantsServerName = $($config.TenantServerNameStem) + $WtpUser 
 $fullyQualifiedTenantServerName = $tenantsServerName + ".database.windows.net"
 
 $databaseName = $config.TenantAnalyticsDWDatabaseName
-$storagelocation = $config.TableNamesStorageLocation
-$containerName = $config.TableNamesContainerName
+$storagelocation = $config.AdfConfigStorageLocation
+$containerName = $config.AdfConfigContainerName
 
-# Creating a storage account for data staging and for saving any additional configuration files required by Azure Data Factory
-Write-Output "Creating storage account..."
+$storageAccountName = $config.AdfStorageAccountNameStem + $WtpUser
 
 # Create a storage account and upload the configuration file in it.
-try {
-    $storageAccount = Get-AzureRmStorageAccount -ResourceGroupName $WtpResourceGroupName -Name $config.storageAccountADF
+
+try 
+{
+    $storageAccount = Get-AzureRmStorageAccount -ResourceGroupName $WtpResourceGroupName -Name $storageAccountName
 }
-catch {
+catch 
+{
+    # Creating a storage account for data staging and for saving any additional configuration files required by Azure Data Factory
+    Write-Output "Deploying storage account '$storageAccountName'..."
+
     $storageAccount = New-AzureRmStorageAccount -ResourceGroupName $WtpResourceGroupName `
-        -Name $config.storageAccountADF `
+        -Name $storageAccountName `
         -Location $storagelocation `
         -SkuName Standard_LRS `
         -Kind Storage
         
     $ctx = $storageAccount.Context
 
-    Write-Output "Creating a container in the storage account..."
+    Write-Output "Deploying the configuration container in the storage account..."
     
-    # Create a container in the blob storage
-    New-AzureStorageContainer -Name $containerName -Context $ctx -Permission blob
+    # Create a container in the storage account
+    New-AzureStorageContainer `
+        -Name $containerName `
+        -Context $ctx `
+        -Permission blob `
+        > $null
 
-    Write-Output "Uploading Table configuration file in the container..."
+    Write-Output "Uploading configuration file to storage..."
 
-    # Upload table config file containing names and structures of source and destination tables, columns names for the source table, 
+    # Upload config file containing names and structures of source and destination tables, columns names for the source table, 
     # source tracker column name and mapping between the source and destination table.
-    Set-AzureStorageBlobContent -File "$PSScriptRoot\TableConfig.json" `
+    Set-AzureStorageBlobContent `
+        -File "$PSScriptRoot\TableConfig.json" `
         -Container $containerName `
         -Blob "TableConfig.json" `
-        -Context $ctx 
+        -Context $ctx `
+        > $null 
 
 }
 
@@ -564,34 +577,36 @@ $secureStringdbconnection = ConvertTo-SecureString $dbconnection -AsPlainText -F
 $secureStringdwconnection = ConvertTo-SecureString $dwconnection -AsPlainText -Force
 $secureStringstorageconnection = ConvertTo-SecureString $storageconnection -AsPlainText -Force
 
+$dataFactoryName = $config.DataFactoryNameStem + $WtpUser
 
-#$secureStringdbconnection =  $dbconnection 
-#$secureStringdwconnection =  $dwconnection 
-#$secureStringstorageconnection =  $storageconnection
+Write-Output "Deploying data factory '$dataFactoryName'..."
 
-Write-Output "Deploying Azure Data Factory..."
+# Deploy a data factory in the same resource group used for the application. If the data factory already exists, a message will appear asking if you want to replace it.
+Set-AzureRmDataFactoryV2 `
+    -ResourceGroupName $WtpResourceGroupName `
+    -Location $config.DataFactoryLocation `
+    -Name $dataFactoryName `
+    > $null
 
-# Deploy a data factory in the resource group. If the data factory already exists, a message will appear asking if you want to replace it.
-$DataFactory = Set-AzureRmDataFactoryV2 -ResourceGroupName $WtpResourceGroupName -Location $config.DataFactoryLocation -Name $config.DataFactoryName
+Write-Output "Deploying data factory objects..."
 
-Write-Output "Deploying the data factory objects..."
-
-# Deploying arm template containing Azure Data Factory objects such as pipelines, linked services, and datasets.
-try {
-    # Use an ARM template to create all data factory objects required for copying data in this sample
+# Deploying ARM template containing Azure Data Factory objects including pipelines, linked services, and datasets.
+try 
+{
     $deployment = New-AzureRmResourceGroupDeployment `
             -TemplateFile ($PSScriptRoot + "\" + $config.DataFactoryDeploymentTemplate) `
             -ResourceGroupName $WtpResourceGroupName `
-            -factoryName $config.DataFactoryName `
+            -factoryName $dataFactoryName `
             -AzureSqlDatabase_connectionString $secureStringdbconnection `
             -AzureSqlDataWarehouse_connectionString $secureStringdwconnection `
             -AzureStorage_connectionString $secureStringstorageconnection `
-            -ErrorAction Stop `
-            -Verbose
+            -ErrorAction Stop 
 }
-catch {
+catch 
+{
         Write-Error $_.Exception.Message
         Write-Error "An error occured deploying the Azure Data Factory objects "
         throw
 }
 
+Write-Output "`nDeployment complete"

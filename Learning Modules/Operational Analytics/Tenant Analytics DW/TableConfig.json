@@ -76,7 +76,7 @@
   },
   {
      "sourceTable": "[dbo].[rawCustomers]",
-     "sourceColumn": "[VenueId] ,[CustomerEmailId] ,[CustomerPostalCode] ,[CustomerCountryCode] ",
+     "sourceColumns": "[VenueId] ,[CustomerEmailId] ,[CustomerPostalCode] ,[CustomerCountryCode] ",
      "trackerKey": "[CustomerRowVersion]",
      "destTableName": "[dbo].[raw_Customers]",
      "tableMap": "VenueId:VenueId, CustomerEmailId:CustomerEmailId, CustomerPostalCode:CustomerPostalCode, CustomerCountryCode:CustomerCountryCode",
@@ -119,7 +119,7 @@
   },
   {
      "sourceTable": "[dbo].[rawEvents]",
-     "sourceColumn": "[VenueId], [EventId] ,[EventName] ,[EventSubtitle] ,[EventDate]",
+     "sourceColumns": "[VenueId], [EventId] ,[EventName] ,[EventSubtitle] ,[EventDate]",
      "trackerKey": "[EventRowVersion]",
      "destTableName": "[dbo].[raw_Events]",
      "tableMap": "VenueId:VenueId, EventId:EventId, EventName:EventName, EventSubtitle:EventSubtitle, EventDate:EventDate",
@@ -170,7 +170,7 @@
   },
   {
      "sourceTable": "[dbo].[rawVenues]",
-     "sourceColumn": "[VenueId] ,[VenueName] ,[VenueType] ,[VenuePostalCode] ,[VenueCountryCode] ,[VenueCapacity] ",
+     "sourceColumns": "[VenueId] ,[VenueName] ,[VenueType] ,[VenuePostalCode] ,[VenueCountryCode] ,[VenueCapacity] ",
      "trackerKey": "[VenueRowVersion]",
      "destTableName": "[dbo].[raw_Venues]",
      "tableMap": "VenueId:VenueId, VenueName:VenueName, VenueType:VenueType, VenuePostalCode:VenuePostalCode, VenueCountryCode:VenueCountryCode, VenueCapacity:VenueCapacity",

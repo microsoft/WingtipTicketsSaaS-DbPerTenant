@@ -16,14 +16,14 @@ CREATE VIEW [dbo].[rawEvents]
 GO
 
 CREATE VIEW [dbo].[rawCustomers]
-AS 	SELECT  (SELECT TOP 1 VenueId FROM Venues) AS VenueId, Convert(int, HASHBYTES(''md5'',c.Email)) AS CustomerEmailId, 
+AS 	SELECT  (SELECT TOP 1 VenueId FROM Venues) AS VenueId, Convert(int, HASHBYTES('md5',c.Email)) AS CustomerEmailId, 
             c.PostalCode AS CustomerPostalCode, c.CountryCode AS CustomerCountryCode,
 	            c.RowVersion AS CustomerRowVersion
 FROM        [dbo].[Customers]  as c
 GO 
 
 CREATE VIEW [dbo].[rawTickets] AS
-    SELECT      v.VenueId, Convert(int, HASHBYTES(''md5'',c.Email)) AS CustomerEmailId,
+    SELECT      v.VenueId, Convert(int, HASHBYTES('md5',c.Email)) AS CustomerEmailId,
 	            tp.TicketPurchaseId, tp.PurchaseDate, tp.PurchaseTotal, tp.RowVersion AS TicketPurchaseRowVersion,
 	            e.EventId, t.RowNumber, t.SeatNumber 
 	FROM        [dbo].[TicketPurchases] AS tp 

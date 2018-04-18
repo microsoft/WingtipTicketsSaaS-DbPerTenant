@@ -8,15 +8,15 @@
 			"defaultValue": "elasticcopywithpolybase"
 		},
 		"AzureSqlDatabase_connectionString": {
-			"type": "String",
+			"type": "securestring",
 			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabase'"
 		},
 		"AzureSqlDataWarehouse_connectionString": {
-			"type": "String",
+			"type": "securestring",
 			"metadata": "Secure string for 'connectionString' of 'AzureSqlDataWarehouse'"
 		},
 		"AzureStorage_connectionString": {
-			"type": "String",
+			"type": "securestring",
 			"metadata": "Secure string for 'connectionString' of 'AzureStorage'"
 		}
 	},
@@ -197,7 +197,7 @@
 												"referenceName": "AzureStorage",
 												"type": "LinkedServiceReference"
 											},
-											"path": "stagingfolder"
+											"path": "staggingfolder"
 										},
 										"cloudDataMovementUnits": 0,
 										"translator": {
@@ -484,7 +484,7 @@
 											"TableName": "@item().sourceTable",
 											"TrackerKey": "@item().trackerKey",
 											"DestTableName": "@item().destTableName",
-											"ColumnList": "@item().sourceColumns",
+											"ColumnList": "@item().sourceColumn",
 											"TableMap": "@item().tableMap",
 											"SourceTableStructure": "@item().sourceStructure",
 											"DestTableStructure": "@item().destStructure"
@@ -586,37 +586,65 @@
 							"firstRowOnly": false
 						}
 					},
-					{
-						"name": "CopyDB",
-						"type": "ForEach",
+          {
+            "name": "CopyDB",
+            "type": "ForEach",
+            "dependsOn": [
+              {
+                "activity": "GetDatabases",
+                "dependencyConditions": [
+                  "Succeeded"
+                ]
+              }
+            ],
+            "typeProperties": {
+              "items": "@activity('GetDatabases').output.value",
+              "isSequential": false,
+              "activities": [
+                {
+                  "name": "ExecuteDBCopy",
+                  "type": "ExecutePipeline",
+                  "dependsOn": [ ],
+                  "typeProperties": {
+                    "pipeline": {
+                      "referenceName": "DBCopy",
+                      "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true,
+                    "parameters": {
+                      "DBName": "@item().DatabaseName"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+						"name": "TransformRawData",
+						"type": "SqlServerStoredProcedure",
 						"dependsOn": [
 							{
-								"activity": "GetDatabases",
+								"activity": "CopyDB",
 								"dependencyConditions": [
-									"Succeeded"
+									"Completed"
 								]
 							}
 						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false
+						},
 						"typeProperties": {
-							"items": "@activity('GetDatabases').output.value",
-							"isSequential": false,
-							"activities": [
-								{
-									"name": "ExecuteDBCopy",
-									"type": "ExecutePipeline",
-									"dependsOn": [],
-									"typeProperties": {
-										"pipeline": {
-											"referenceName": "DBCopy",
-											"type": "PipelineReference"
-										},
-										"waitOnCompletion": true,
-										"parameters": {
-											"DBName": "@item().DatabaseName"
-										}
-									}
-								}
-							]
+							"storedProcedureName": "sp_TransformRawData"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDataWarehouse",
+							"type": "LinkedServiceReference",
+							"parameters": {
+								"DBName": "tenantanalytics-dw"
+							}
 						}
 					}
 				]

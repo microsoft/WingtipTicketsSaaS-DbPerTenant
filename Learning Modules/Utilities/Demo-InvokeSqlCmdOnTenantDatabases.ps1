@@ -1,6 +1,8 @@
 ﻿# Helper script for invoking Apply-SQLCommandToTenantDatabases.
 # Crude way to apply a one-time script against tenant dbs in catalog.  Use Elastic Jobs for any serious work...! 
 
+# Ensure UserConfig.psm1 is initialized correctly before running this.
+
 # SQL script to be applied.  Uses Invoke-SqlCmd so can include batches with GO statements.  
 # Script should be idempotent as will retry on error. No results are returned, check dbs for success.  
 $commandText = " 
