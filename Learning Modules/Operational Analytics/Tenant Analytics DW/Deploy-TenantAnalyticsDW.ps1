@@ -94,13 +94,13 @@ GO
 -- Create table for storing raw venues data. 
 IF (OBJECT_ID('raw_Venues')) IS NOT NULL DROP TABLE raw_Venues
 CREATE TABLE [dbo].[raw_Venues](
-	[RawVenueId] int identity(1,1) NOT NULL,
-	[VenueId] [int] NULL,
-	[VenueName] [nvarchar](50) NULL,
-	[VenueType] [char](30) NULL,
-	[VenuePostalCode] [char](10) NULL,
+    [RawVenueId] int identity(1,1) NOT NULL,
+    [VenueId] [int] NULL,
+    [VenueName] [nvarchar](50) NULL,
+    [VenueType] [char](30) NULL,
+    [VenuePostalCode] [char](10) NULL,
     [VenueCountryCode] [char](3) NULL,
-	[VenueCapacity] [int] NULL
+    [VenueCapacity] [int] NULL
 )
 GO
 
@@ -110,7 +110,7 @@ GO
 IF (OBJECT_ID('dim_Events')) IS NOT NULL DROP TABLE dim_Events
 CREATE TABLE [dbo].[dim_Events] 
 	([SK_EventId] int identity(1,1) NOT NULL,
-        [VenueId] [int] NULL,
+    [VenueId] [int] NULL,
 	[EventId] [int] NULL,
 	[EventName] [nvarchar](50) NULL,
 	[EventSubtitle] [nvarchar](50) NULL,
@@ -122,7 +122,7 @@ GO
 IF (OBJECT_ID('dim_Venues')) IS NOT NULL DROP TABLE dim_Venues
 CREATE TABLE [dbo].[dim_Venues] 
 	([SK_VenueId] int identity(1,1) NOT NULL,
-        [VenueId] [int] NOT NULL,
+    [VenueId] [int] NOT NULL,
 	[VenueName] [nvarchar](50) NOT NULL,
 	[VenueType] [char](30) NOT NULL,
 	[VenueCapacity] [int] NOT NULL,
@@ -135,7 +135,8 @@ GO
 IF (OBJECT_ID('dim_Customers')) IS NOT NULL DROP TABLE dim_Customers
 CREATE TABLE [dbo].[dim_Customers] 
 	([SK_CustomerId] int identity(1,1) NOT NULL,
-        [CustomerEmailId] [int] NULL,
+    [VenueId] [int] NULL,
+    [CustomerEmailId] [int] NULL,
 	[CustomerPostalCode] [char](10) NULL,
 	[CustomerCountryCode] [char](3) NULL
 )
@@ -502,7 +503,7 @@ GO
 $catalogServerName = $config.catalogServerNameStem + $WtpUser
 $fullyQualifiedCatalogServerName = $catalogServerName + ".database.windows.net"
 
-Write-output "Deploying the data warehouse schema..."
+Write-output "Deploying data warehouse schema..."
 
 Invoke-SqlcmdWithRetry `
     -ServerInstance $fullyQualifiedCatalogServerName `
@@ -542,7 +543,7 @@ catch
         
     $ctx = $storageAccount.Context
 
-    Write-Output "Deploying the configuration container in the storage account..."
+    Write-Output "Deploying configuration container in the storage account..."
     
     # Create a container in the storage account
     New-AzureStorageContainer `
