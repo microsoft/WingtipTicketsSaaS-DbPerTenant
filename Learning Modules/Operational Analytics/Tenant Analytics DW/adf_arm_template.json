@@ -484,7 +484,7 @@
 											"TableName": "@item().sourceTable",
 											"TrackerKey": "@item().trackerKey",
 											"DestTableName": "@item().destTableName",
-											"ColumnList": "@item().sourceColumn",
+											"ColumnList": "@item().sourceColumns",
 											"TableMap": "@item().tableMap",
 											"SourceTableStructure": "@item().sourceStructure",
 											"DestTableStructure": "@item().destStructure"
