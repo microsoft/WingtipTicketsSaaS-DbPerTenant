@@ -91,6 +91,12 @@
     <Build Include="dbo\Views\TicketFacts.sql" />
     <Build Include="dbo\Tables\LastExtracted.sql" />
     <Build Include="dbo\Views\EventFacts.sql" />
+    <Build Include="dbo\Views\rawVenues.sql" />
+    <Build Include="dbo\Views\rawEvents.sql" />
+    <Build Include="dbo\Views\rawCustomers.sql" />
+    <Build Include="dbo\Views\rawTickets.sql" />
+    <Build Include="dbo\Tables\CopyTracker.sql" />
+    <Build Include="dbo\StoredProcedures\SaveLastCopiedRowVersion.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="WingtipTenantDB.publish.xml" />
