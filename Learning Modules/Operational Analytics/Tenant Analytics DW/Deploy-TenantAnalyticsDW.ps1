@@ -104,8 +104,8 @@ CREATE TABLE [dbo].[raw_Venues](
 )
 GO
 
--- Create fact and dimension tables for the star-schema
--- Create a dimension table for even in tenantanalytics database.ts
+-- Create fact and dimension tables for the star-schema.
+-- Create a dimension table for even in tenantanalytics database.ts.
 -- Dimension tables use a surrogate key.
 IF (OBJECT_ID('dim_Events')) IS NOT NULL DROP TABLE dim_Events
 CREATE TABLE [dbo].[dim_Events] 
@@ -118,7 +118,7 @@ CREATE TABLE [dbo].[dim_Events]
 )
 GO
 
--- Create a dimension table for venu es 
+-- Create a dimension table for venues.
 IF (OBJECT_ID('dim_Venues')) IS NOT NULL DROP TABLE dim_Venues
 CREATE TABLE [dbo].[dim_Venues] 
 	([SK_VenueId] int identity(1,1) NOT NULL,
@@ -131,7 +131,7 @@ CREATE TABLE [dbo].[dim_Venues]
 )
 GO
 
--- Create a dimension table for customers in tenantanalytics database 
+-- Create a dimension table for customers. 
 IF (OBJECT_ID('dim_Customers')) IS NOT NULL DROP TABLE dim_Customers
 CREATE TABLE [dbo].[dim_Customers] 
 	([SK_CustomerId] int identity(1,1) NOT NULL,
@@ -142,7 +142,7 @@ CREATE TABLE [dbo].[dim_Customers]
 )
 GO
 
--- Create a dimension table for dates
+-- Create a dimension table for dates.
 IF (OBJECT_ID('dim_Dates')) IS NOT NULL DROP TABLE dim_Dates
 CREATE TABLE [dbo].[dim_Dates](
     [SK_DateId] int identity(1,1) NOT NULL,
@@ -162,7 +162,7 @@ CREATE TABLE [dbo].[dim_Dates](
 )
 GO
 
--- Prepopulate Date Dimension table
+-- Prepopulate date dimension table.
 IF (OBJECT_ID('dim_dates')) IS NOT NULL DROP TABLE dim_dates;
 WITH BaseData AS (SELECT A=0 UNION ALL SELECT A=1 UNION ALL SELECT A=2 UNION ALL SELECT A=3 UNION ALL SELECT A=4 UNION ALL SELECT A=5 UNION ALL SELECT A=6 UNION ALL SELECT A=7 UNION ALL SELECT A=8 UNION ALL SELECT A=9)
 ,DateSeed AS (SELECT RID = ROW_NUMBER() OVER (ORDER BY A.A) FROM BaseData A CROSS APPLY BaseData B CROSS APPLY BaseData C CROSS APPLY BaseData D CROSS APPLY BaseData E)
@@ -184,21 +184,21 @@ SELECT DateID = cast(replace(cast(DateValue as varchar(25)),'-','')as int)
 INTO dim_Dates
 FROM DateBase
 
--- Create a fact table for tickets in tenantanalytics database.
+-- Create a tickets fact table in tenantanalytics database 
 IF (OBJECT_ID('fact_Tickets')) IS NOT NULL DROP TABLE fact_Tickets
 CREATE TABLE [dbo].[fact_Tickets] 
-	([TicketPurchaseId] [int] NOT NULL,
-	[EventId] [int] NOT NULL,
-	[CustomerEmailId] [int] NOT NULL,
-	[VenueID] [int] NOT NULL,
-	[PurchaseDateID ] [int] NOT NULL,
-	[PurchaseTotal] [money] NOT NULL,
-	[DaysToGo] [int] NOT NULL,
-	[RowNumber] [int] NOT NULL,
-	[SeatNumber] [int] NOT NULL)
-GO
+                                      ([TicketPurchaseId] [int] NOT NULL,
+                                      [SK_EventId] [int] NOT NULL,
+                                      [SK_CustomerId] [int] NOT NULL,
+                                      [SK_VenueId] [int] NOT NULL,
+                                      [DateID] [int] NOT NULL,
+                                      [PurchaseTotal] [money] NOT NULL,
+                                      [SaleDay] [int] NOT NULL,
+                                      [RowNumber] [int] NOT NULL,
+                                      [SeatNumber] [int] NOT NULL)
+GO 
 
--- Create a stored procedure in tenantanalytics-dw that populates the star-schema tables. 
+-- Create a stored procedure that populates the star-schema tables. 
 IF (OBJECT_ID('sp_TransformRawData')) IS NOT NULL DROP PROCEDURE sp_TransformRawData
 GO
 
@@ -256,7 +256,7 @@ WHERE c2.VenueId NOT IN
 )
 UNION ALL
 -- All modified rows
-SELECT DISTINCT c.SK_VenueId,     -- Surrogate key taken from the dimension table
+SELECT DISTINCT c.SK_VenueId,     -- Surrogate key from the dimension table
        t.VenueId,
        t.VenueName, 
        t.VenueType,
@@ -412,7 +412,7 @@ FROM [dbo].[dim_Customers] AS c
 INNER JOIN [dbo].[raw_Customers] AS t ON  t.CustomerEmailId = c.CustomerEmailId AND t.VenueId = c.VenueId
 WHERE   t.RawCustomerId <= @StagingCustomerLastInsert
 
--- Turn off indentity_insert to autmatically generate surrogate keys for the new rows
+-- Turn off identity_insert to autmatically generate surrogate keys for the new rows
 SET IDENTITY_INSERT dim_Customer_temp OFF;
 
 -- New rows in staging table 
@@ -451,7 +451,7 @@ SELECT DISTINCT t.TicketPurchaseId,
                 e.SK_EventId,
 		        c.SK_CustomerId,
 		        v.SK_VenueId,
-		        d.SK_DateId,
+		        d.DateID,
 		        t.PurchaseTotal,
 		        SaleDay = 60 - DATEDIFF(d, CAST(t.PurchaseDate AS DATE), CAST(e.EventDate AS DATE)),
 		        t.RowNumber,
@@ -464,7 +464,7 @@ INNER JOIN [dbo].[dim_Dates] d on CAST(t.PurchaseDate AS DATE) = d.DateValue
 WHERE RawTicketId <= @StagingTicketLastInsert
 UNION ALL  
 -- Union all with unmodified rows
-SELECT ft.TicketPurchaseId, ft.SK_EventId, ft.SK_CustomerId, ft.SK_VenueID, ft.SK_DateId, ft.PurchaseTotal, ft.DaysToGo, ft.RowNumber, ft.SeatNumber
+SELECT ft.TicketPurchaseId, ft.SK_EventId, ft.SK_CustomerId, ft.SK_VenueID, ft.DateID, ft.PurchaseTotal, ft.SaleDay, ft.RowNumber, ft.SeatNumber
 FROM      [dbo].[fact_Tickets] AS ft
 WHERE CONCAT(TicketPurchaseId, SK_VenueId, SK_EventId) NOT IN
 (   SELECT   CONCAT(TicketPurchaseId, VenueId, EventId)
