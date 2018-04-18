@@ -110,7 +110,7 @@ GO
 IF (OBJECT_ID('dim_Events')) IS NOT NULL DROP TABLE dim_Events
 CREATE TABLE [dbo].[dim_Events] 
 	([SK_EventId] int identity(1,1) NOT NULL,
-    [VenueId] [int] NULL,
+        [VenueId] [int] NULL,
 	[EventId] [int] NULL,
 	[EventName] [nvarchar](50) NULL,
 	[EventSubtitle] [nvarchar](50) NULL,
@@ -122,7 +122,7 @@ GO
 IF (OBJECT_ID('dim_Venues')) IS NOT NULL DROP TABLE dim_Venues
 CREATE TABLE [dbo].[dim_Venues] 
 	([SK_VenueId] int identity(1,1) NOT NULL,
-    [VenueId] [int] NOT NULL,
+        [VenueId] [int] NOT NULL,
 	[VenueName] [nvarchar](50) NOT NULL,
 	[VenueType] [char](30) NOT NULL,
 	[VenueCapacity] [int] NOT NULL,
@@ -135,8 +135,8 @@ GO
 IF (OBJECT_ID('dim_Customers')) IS NOT NULL DROP TABLE dim_Customers
 CREATE TABLE [dbo].[dim_Customers] 
 	([SK_CustomerId] int identity(1,1) NOT NULL,
-    [VenueId] [int] NULL,
-    [CustomerEmailId] [int] NULL,
+        [VenueId] [int] NULL,
+        [CustomerEmailId] [int] NULL,
 	[CustomerPostalCode] [char](10) NULL,
 	[CustomerCountryCode] [char](3) NULL
 )
@@ -145,7 +145,7 @@ GO
 -- Create a dimension table for dates.
 IF (OBJECT_ID('dim_Dates')) IS NOT NULL DROP TABLE dim_Dates
 CREATE TABLE [dbo].[dim_Dates](
-    [SK_DateId] int identity(1,1) NOT NULL,
+        [SK_DateId] int identity(1,1) NOT NULL,
 	[PurchaseDateID] [int] NULL,
 	[DateValue] [date] NULL,
 	[DateYear] [int] NULL,
@@ -225,8 +225,8 @@ DECLARE @StagingVenueLastInsert int = (SELECT MAX(RawVenueId) FROM [dbo].[raw_Ve
 -- Create a temporary table to hold the existing non-modified rows 
 -- in the dimension table, the modified rows and the new rows.
 CREATE TABLE dim_Venue_temp 
-    ([SK_VenueId] int identity(1,1) NOT NULL,
-    [VenueId] [int] NULL,
+        ([SK_VenueId] int identity(1,1) NOT NULL,
+        [VenueId] [int] NULL,
 	[VenueName] [nvarchar](50) NULL,
 	[VenueType] [char](30) NULL,
 	[VenueCapacity] [int] NULL,
@@ -274,10 +274,10 @@ SET IDENTITY_INSERT dim_Venue_temp OFF;
 INSERT INTO dim_Venue_temp (VenueId, VenueName, VenueType, VenueCapacity, VenuepostalCode, VenueCountryCode)
 SELECT DISTINCT t.VenueId,
                        t.VenueName, 
-	                   t.VenueType,
+	               t.VenueType,
                        t.VenueCapacity,
-	                   t.VenuepostalCode,
-	                   t.VenueCountryCode
+	               t.VenuepostalCode,
+	               t.VenueCountryCode
 FROM      [dbo].[raw_Venues] AS t
 WHERE t.RawVenueId <= @StagingVenueLastInsert
 AND VenueId NOT IN
@@ -335,10 +335,10 @@ UNION ALL
 -- All modified rows
 SELECT DISTINCT c.[SK_EventId],
                 t.[VenueId],
-		        t.[EventId],
-		        t.[EventName],
-		        t.[EventSubtitle],
-		        t.[EventDate]
+		t.[EventId],
+		t.[EventName],
+		t.[EventSubtitle],
+		t.[EventDate]
 FROM [dbo].[dim_Events] AS c
 INNER JOIN [dbo].[raw_Events] AS t ON  t.VenueId = c.VenueId AND t.EventId = c.EventId
 WHERE   t.RawEventId <= @StagingEventLastInsert
@@ -350,9 +350,9 @@ SET IDENTITY_INSERT dim_Event_temp OFF;
 INSERT INTO dim_Event_temp (VenueId, EventId, EventName, EventSubtitle, EventDate)
 SELECT DISTINCT t.[VenueId],
                 t.[EventId],
-		        t.[EventName],
-		        t.[EventSubtitle],
-		        t.[EventDate]
+		t.[EventName],
+		t.[EventSubtitle],
+		t.[EventDate]
 FROM [dbo].[raw_Events] AS t
 WHERE t.RawEventId <= @StagingEventLastInsert
 AND CONCAT(VenueId, EventId) NOT IN
@@ -377,10 +377,10 @@ DECLARE @StagingCustomerLastInsert int = (SELECT MAX(RawCustomerId) FROM  [dbo].
 -- in the dimension table, the modified rows and the new rows.
 CREATE TABLE dim_Customer_temp 
     ([SK_CustomerId] int identity(1,1) NOT NULL,
-	[VenueId] int NOT NULL,
+    [VenueId] int NOT NULL,
     [CustomerEmailId] [int] NULL,
-	[CustomerPostalCode] [char](10) NULL,
-	[CustomerCountryCode] [char](3) NULL
+    [CustomerPostalCode] [char](10) NULL,
+    [CustomerCountryCode] [char](3) NULL
 )
 
 -- Allow values to be inserted explicitly in the identity column
@@ -420,7 +420,7 @@ INSERT INTO dim_Customer_temp (VenueId, CustomerEmailId, CustomerPostalCode, Cus
 SELECT DISTINCT t.VenueId,
                 t.CustomerEmailId,
                 t.CustomerPostalCode, 
-	            t.CustomerCountryCode
+	        t.CustomerCountryCode
 FROM      [dbo].[raw_Customers] AS t
 WHERE t.RawCustomerId <= @StagingCustomerLastInsert
 AND CONCAT(VenueId, CustomerEmailId) NOT IN
@@ -449,13 +449,13 @@ AS
 -- Get new rows
 SELECT DISTINCT t.TicketPurchaseId, 
                 e.SK_EventId,
-		        c.SK_CustomerId,
-		        v.SK_VenueId,
-		        d.DateID,
-		        t.PurchaseTotal,
-		        SaleDay = 60 - DATEDIFF(d, CAST(t.PurchaseDate AS DATE), CAST(e.EventDate AS DATE)),
-		        t.RowNumber,
-		        t.SeatNumber
+		c.SK_CustomerId,
+		v.SK_VenueId,
+		d.DateID,
+		t.PurchaseTotal,
+		SaleDay = 60 - DATEDIFF(d, CAST(t.PurchaseDate AS DATE), CAST(e.EventDate AS DATE)),
+		t.RowNumber,
+		t.SeatNumber
 FROM [dbo].[raw_Tickets] AS t
 INNER JOIN [dbo].[dim_Events] e on t.EventId = e.EventId AND t.VenueId = e.VenueId
 INNER JOIN [dbo].[dim_Venues] v on t.VenueID = v.VenueId
