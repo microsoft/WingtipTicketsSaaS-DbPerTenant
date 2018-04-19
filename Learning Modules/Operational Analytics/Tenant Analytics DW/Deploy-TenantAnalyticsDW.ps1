@@ -71,23 +71,23 @@ GO
 -- Create table for storing raw customer data. 
 IF (OBJECT_ID('raw_Customers')) IS NOT NULL DROP TABLE raw_Customers
 CREATE TABLE [dbo].[raw_Customers](
-	[RawCustomerId] int identity(1,1) NOT NULL,
-	[VenueId] [int] NULL,
-	[CustomerEmailId] [int] NULL,
-	[CustomerPostalCode] [char](10) NULL,
-	[CustomerCountryCode] [char](3) NULL
+    [RawCustomerId] int identity(1,1) NOT NULL,
+    [VenueId] [int] NULL,
+    [CustomerEmailId] [int] NULL,
+    [CustomerPostalCode] [char](10) NULL,
+    [CustomerCountryCode] [char](3) NULL
 )
 GO
 
 -- Create table for storing raw events data. 
 IF (OBJECT_ID('raw_Events')) IS NOT NULL DROP TABLE raw_Events
 CREATE TABLE [dbo].[raw_Events](
-	[RawEventId] int identity(1,1) NOT NULL,
-	[VenueId] [int] NULL,
-	[EventId] [int] NULL,
-	[EventName] [nvarchar](50) NULL,
-	[EventSubtitle] [nvarchar](50) NULL,
-	[EventDate] [datetime] NULL
+    [RawEventId] int identity(1,1) NOT NULL,
+    [VenueId] [int] NULL,
+    [EventId] [int] NULL,
+    [EventName] [nvarchar](50) NULL,
+    [EventSubtitle] [nvarchar](50) NULL,
+    [EventDate] [datetime] NULL
 )
 GO
 
@@ -109,56 +109,56 @@ GO
 -- Dimension tables use a surrogate key.
 IF (OBJECT_ID('dim_Events')) IS NOT NULL DROP TABLE dim_Events
 CREATE TABLE [dbo].[dim_Events] 
-	([SK_EventId] int identity(1,1) NOT NULL,
-        [VenueId] [int] NULL,
-	[EventId] [int] NULL,
-	[EventName] [nvarchar](50) NULL,
-	[EventSubtitle] [nvarchar](50) NULL,
-	[EventDate] [datetime] NULL
+    ([SK_EventId] int identity(1,1) NOT NULL,
+    [VenueId] [int] NULL,
+    [EventId] [int] NULL,
+    [EventName] [nvarchar](50) NULL,
+    [EventSubtitle] [nvarchar](50) NULL,
+    [EventDate] [datetime] NULL
 )
 GO
 
 -- Create a dimension table for venues.
 IF (OBJECT_ID('dim_Venues')) IS NOT NULL DROP TABLE dim_Venues
 CREATE TABLE [dbo].[dim_Venues] 
-	([SK_VenueId] int identity(1,1) NOT NULL,
-        [VenueId] [int] NOT NULL,
-	[VenueName] [nvarchar](50) NOT NULL,
-	[VenueType] [char](30) NOT NULL,
-	[VenueCapacity] [int] NOT NULL,
-	[VenuepostalCode] [char](10) NULL,
-	[VenueCountryCode] [char](3) NOT NULL
+    ([SK_VenueId] int identity(1,1) NOT NULL,
+    [VenueId] [int] NOT NULL,
+    [VenueName] [nvarchar](50) NOT NULL,
+    [VenueType] [char](30) NOT NULL,
+    [VenueCapacity] [int] NOT NULL,
+    [VenuepostalCode] [char](10) NULL,
+    [VenueCountryCode] [char](3) NOT NULL
 )
 GO
 
 -- Create a dimension table for customers. 
 IF (OBJECT_ID('dim_Customers')) IS NOT NULL DROP TABLE dim_Customers
 CREATE TABLE [dbo].[dim_Customers] 
-	([SK_CustomerId] int identity(1,1) NOT NULL,
-        [VenueId] [int] NULL,
-        [CustomerEmailId] [int] NULL,
-	[CustomerPostalCode] [char](10) NULL,
-	[CustomerCountryCode] [char](3) NULL
+    ([SK_CustomerId] int identity(1,1) NOT NULL,
+    [VenueId] [int] NULL,
+    [CustomerEmailId] [int] NULL,
+    [CustomerPostalCode] [char](10) NULL,
+    [CustomerCountryCode] [char](3) NULL
 )
 GO
 
 -- Create a dimension table for dates.
 IF (OBJECT_ID('dim_Dates')) IS NOT NULL DROP TABLE dim_Dates
 CREATE TABLE [dbo].[dim_Dates](
-        [SK_DateId] int identity(1,1) NOT NULL,
-	[PurchaseDateID] [int] NULL,
-	[DateValue] [date] NULL,
-	[DateYear] [int] NULL,
-	[DateMonth] [int] NULL,
-	[DateDay] [int] NULL,
-	[DateDayOfYear] [int] NULL,
-	[DateWeekday] [int] NULL,
-	[DateWeek] [int] NULL,
-	[DateQuarter] [int] NULL,
-	[DateMonthName] [nvarchar](30) NULL,
-	[DateQuarterName] [nvarchar](31) NULL,
-	[DateWeekdayName] [nvarchar](30) NULL,
-	[MonthYear] [nvarchar](34) NULL
+    [SK_DateId] int identity(1,1) NOT NULL,
+    [PurchaseDateID] [int] NULL,
+    [DateValue] [date] NULL,
+    [DateYear] [int] NULL,
+    [DateMonth] [int] NULL,
+    [DateDay] [int] NULL,
+    [DateDayOfYear] [int] NULL,
+    [DateWeekday] [int] NULL,
+    [DateWeek] [int] NULL,
+    [DateQuarter] [int] NULL,
+    [DateMonthName] [nvarchar](30) NULL,
+    [DateQuarterName] [nvarchar](31) NULL,
+    [DateWeekdayName] [nvarchar](30) NULL,
+    [MonthYear] [nvarchar](34) NULL
 )
 GO
 
@@ -168,34 +168,34 @@ WITH BaseData AS (SELECT A=0 UNION ALL SELECT A=1 UNION ALL SELECT A=2 UNION ALL
 ,DateSeed AS (SELECT RID = ROW_NUMBER() OVER (ORDER BY A.A) FROM BaseData A CROSS APPLY BaseData B CROSS APPLY BaseData C CROSS APPLY BaseData D CROSS APPLY BaseData E)
 ,DateBase AS (SELECT TOP 18628 DateValue = cast(DATEADD(D, RID,'1979-12-31')AS DATE) FROM DateSeed)
 
-SELECT DateID = cast(replace(cast(DateValue as varchar(25)),'-','')as int)
-    ,DateValue = cast(DateValue as date)
-	,DateYear = DATEPART(year, DateValue)  
-	,DateMonth = DATEPART(month, DateValue)  
-	,DateDay = DATEPART(day, DateValue)  
-	,DateDayOfYear = DATEPART(dayofyear, DateValue)  
-	,DateWeekday = DATEPART(weekday, DateValue)
-	,DateWeek = DATEPART(week, DateValue)
-	,DateQuarter = DATEPART(quarter, DateValue)						
-	,DateMonthName = DATENAME(month, DateValue)						
-	,DateQuarterName = 'Q'+DATENAME(quarter, DateValue)						
-	,DateWeekdayName = DATENAME(weekday, DateValue)
-	,MonthYear = LEFT(DATENAME(month, DateValue),3)+'-'+DATENAME(year, DateValue)  
+SELECT DateID = cast(replace(cast(DateValue as varchar(25)),'-','')as int),
+    DateValue = cast(DateValue as date),
+    DateYear = DATEPART(year, DateValue),
+    DateMonth = DATEPART(month, DateValue),
+    DateDay = DATEPART(day, DateValue),
+    DateDayOfYear = DATEPART(dayofyear, DateValue),
+    DateWeekday = DATEPART(weekday, DateValue),
+    DateWeek = DATEPART(week, DateValue),
+    DateQuarter = DATEPART(quarter, DateValue),
+    DateMonthName = DATENAME(month, DateValue),
+    DateQuarterName = 'Q'+DATENAME(quarter, DateValue),
+    DateWeekdayName = DATENAME(weekday, DateValue),
+    MonthYear = LEFT(DATENAME(month, DateValue),3)+'-'+DATENAME(year, DateValue)  
 INTO dim_Dates
 FROM DateBase
 
 -- Create a tickets fact table in tenantanalytics database 
 IF (OBJECT_ID('fact_Tickets')) IS NOT NULL DROP TABLE fact_Tickets
 CREATE TABLE [dbo].[fact_Tickets] 
-                                      ([TicketPurchaseId] [int] NOT NULL,
-                                      [SK_EventId] [int] NOT NULL,
-                                      [SK_CustomerId] [int] NOT NULL,
-                                      [SK_VenueId] [int] NOT NULL,
-                                      [DateID] [int] NOT NULL,
-                                      [PurchaseTotal] [money] NOT NULL,
-                                      [SaleDay] [int] NOT NULL,
-                                      [RowNumber] [int] NOT NULL,
-                                      [SeatNumber] [int] NOT NULL)
+    ([TicketPurchaseId] [int] NOT NULL,
+    [SK_EventId] [int] NOT NULL,
+    [SK_CustomerId] [int] NOT NULL,
+    [SK_VenueId] [int] NOT NULL,
+    [DateID] [int] NOT NULL,
+    [PurchaseTotal] [money] NOT NULL,
+    [SaleDay] [int] NOT NULL,
+    [RowNumber] [int] NOT NULL,
+    [SeatNumber] [int] NOT NULL)
 GO 
 
 -- Create a stored procedure that populates the star-schema tables. 
@@ -225,13 +225,13 @@ DECLARE @StagingVenueLastInsert int = (SELECT MAX(RawVenueId) FROM [dbo].[raw_Ve
 -- Create a temporary table to hold the existing non-modified rows 
 -- in the dimension table, the modified rows and the new rows.
 CREATE TABLE dim_Venue_temp 
-        ([SK_VenueId] int identity(1,1) NOT NULL,
-        [VenueId] [int] NULL,
-	[VenueName] [nvarchar](50) NULL,
-	[VenueType] [char](30) NULL,
-	[VenueCapacity] [int] NULL,
-	[VenuepostalCode] [char](10) NULL,
-	[VenueCountryCode] [char](3) NULL
+    ([SK_VenueId] int identity(1,1) NOT NULL,
+    [VenueId] [int] NULL,
+    [VenueName] [nvarchar](50) NULL,
+    [VenueType] [char](30) NULL,
+    [VenueCapacity] [int] NULL,
+    [VenuepostalCode] [char](10) NULL,
+    [VenueCountryCode] [char](3) NULL
 )
 
 -- Allow values to be inserted explicitly in the identity column
@@ -257,12 +257,12 @@ WHERE c2.VenueId NOT IN
 UNION ALL
 -- All modified rows
 SELECT DISTINCT c.SK_VenueId,     -- Surrogate key from the dimension table
-       t.VenueId,
-       t.VenueName, 
-       t.VenueType,
-       t.VenueCapacity,
-       t.VenuepostalCode,
-       t.VenueCountryCode
+                t.VenueId,
+                t.VenueName, 
+                t.VenueType,
+                t.VenueCapacity,
+                t.VenuepostalCode,
+                t.VenueCountryCode
 FROM [dbo].[dim_Venues] AS c
 INNER JOIN [dbo].[raw_Venues] AS t ON  t.VenueId = c.VenueId
 WHERE   t.RawVenueId <= @StagingVenueLastInsert
@@ -273,17 +273,17 @@ SET IDENTITY_INSERT dim_Venue_temp OFF;
 -- Insert all the new rows in the staging table.
 INSERT INTO dim_Venue_temp (VenueId, VenueName, VenueType, VenueCapacity, VenuepostalCode, VenueCountryCode)
 SELECT DISTINCT t.VenueId,
-                       t.VenueName, 
-	               t.VenueType,
-                       t.VenueCapacity,
-	               t.VenuepostalCode,
-	               t.VenueCountryCode
+                t.VenueName, 
+                t.VenueType,
+                t.VenueCapacity,
+                t.VenuepostalCode,
+                t.VenueCountryCode
 FROM      [dbo].[raw_Venues] AS t
 WHERE t.RawVenueId <= @StagingVenueLastInsert
 AND VenueId NOT IN
-	(SELECT   VenueId
-	FROM      [dbo].[dim_Venues]
-	) 
+(SELECT VenueId
+ FROM [dbo].[dim_Venues]
+) 
 
 -- Delete the archived dimension table if it exists.
 IF OBJECT_ID('last_dim_Venues') IS NOT NULL DROP TABLE last_dim_Venues; 
@@ -301,12 +301,12 @@ DECLARE @StagingEventLastInsert int = (SELECT MAX(RawEventId) FROM  [dbo].[raw_E
 -- Create a temporary table to hold the existing non-modified rows 
 -- in the dimension table, the modified rows and the new rows.
 CREATE TABLE dim_Event_temp 
-        ([SK_EventId] int identity(1,1) NOT NULL,
-        [VenueId] [int] NULL,
-	[EventId] [int] NULL,
-	[EventName] [nvarchar](50) NULL,
-	[EventSubtitle] [nvarchar](50) NULL,
-	[EventDate] [datetime] NULL
+    ([SK_EventId] int identity(1,1) NOT NULL,
+    [VenueId] [int] NULL,
+    [EventId] [int] NULL,
+    [EventName] [nvarchar](50) NULL,
+    [EventSubtitle] [nvarchar](50) NULL,
+    [EventDate] [datetime] NULL
 )
 
 -- Allow values to be inserted explicitly in the identity column
@@ -325,9 +325,9 @@ SELECT c.[SK_EventId],
        c.[EventDate]
 FROM [dbo].[dim_Events] AS c
 WHERE CONCAT(c.VenueId, c.EventId) NOT IN 
-(   SELECT  CONCAT(t.VenueId, t.EventId)
-    FROM     [dbo].[raw_Events] t
-    WHERE   t.RawEventId <= @StagingEventLastInsert
+(SELECT  CONCAT(t.VenueId, t.EventId)
+ FROM     [dbo].[raw_Events] t
+ WHERE   t.RawEventId <= @StagingEventLastInsert
 )
 
 UNION ALL
@@ -335,10 +335,10 @@ UNION ALL
 -- All modified rows
 SELECT DISTINCT c.[SK_EventId],
                 t.[VenueId],
-		t.[EventId],
-		t.[EventName],
-		t.[EventSubtitle],
-		t.[EventDate]
+                t.[EventId],
+                t.[EventName],
+                t.[EventSubtitle],
+                t.[EventDate]
 FROM [dbo].[dim_Events] AS c
 INNER JOIN [dbo].[raw_Events] AS t ON  t.VenueId = c.VenueId AND t.EventId = c.EventId
 WHERE   t.RawEventId <= @StagingEventLastInsert
@@ -356,9 +356,9 @@ SELECT DISTINCT t.[VenueId],
 FROM [dbo].[raw_Events] AS t
 WHERE t.RawEventId <= @StagingEventLastInsert
 AND CONCAT(VenueId, EventId) NOT IN
-	(SELECT   Concat(VenueId, EventId)
-	FROM      [dbo].[dim_Events]
-	) 
+    (SELECT   Concat(VenueId, EventId)
+     FROM      [dbo].[dim_Events]
+    ) 
 
 -- Delete the archived dimension table if it exists.
 IF OBJECT_ID('last_dim_Events') IS NOT NULL DROP TABLE last_dim_Events; 
@@ -404,10 +404,10 @@ WHERE CONCAT(c.VenueId, c.CustomerEmailId) NOT IN
 UNION ALL
 -- All modified rows
 SELECT DISTINCT c.SK_CustomerId,     -- Surrogate key taken from the dimension table
-       t.VenueId,
-       t.CustomerEmailId,
-       t.CustomerPostalCode, 
-	   t.CustomerCountryCode
+                t.VenueId,
+                t.CustomerEmailId,
+                t.CustomerPostalCode, 
+	        t.CustomerCountryCode
 FROM [dbo].[dim_Customers] AS c
 INNER JOIN [dbo].[raw_Customers] AS t ON  t.CustomerEmailId = c.CustomerEmailId AND t.VenueId = c.VenueId
 WHERE   t.RawCustomerId <= @StagingCustomerLastInsert
@@ -424,8 +424,8 @@ SELECT DISTINCT t.VenueId,
 FROM      [dbo].[raw_Customers] AS t
 WHERE t.RawCustomerId <= @StagingCustomerLastInsert
 AND CONCAT(VenueId, CustomerEmailId) NOT IN
-	(SELECT   CONCAT(VenueId, CustomerEmailId)
-	FROM      [dbo].[dim_Customers]
+	(SELECT CONCAT(VenueId, CustomerEmailId)
+	 FROM   [dbo].[dim_Customers]
 	) 
 
 -- Delete the archived dimension table if it exists.
@@ -469,8 +469,8 @@ FROM      [dbo].[fact_Tickets] AS ft
 WHERE CONCAT(TicketPurchaseId, SK_VenueId, SK_EventId) NOT IN
 (   SELECT   CONCAT(TicketPurchaseId, VenueId, EventId)
     FROM [dbo].[raw_Tickets] t
-	--INNER JOIN [dbo].[raw_Events] ve on t.VenueId = ve.VenueId AND t.EventId = ve.EventId 
-	WHERE RawTicketId <= @StagingTicketLastInsert 
+    --INNER JOIN [dbo].[raw_Events] ve on t.VenueId = ve.VenueId AND t.EventId = ve.EventId 
+    WHERE RawTicketId <= @StagingTicketLastInsert 
 );
 
 -- If the archived fact table exists delete it.
