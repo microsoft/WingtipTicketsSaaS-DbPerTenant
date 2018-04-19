@@ -138,7 +138,7 @@
 												"referenceName": "AzureStorage",
 												"type": "LinkedServiceReference"
 											},
-											"path": "staggingfolder"
+											"path": "stagingfolder"
 										},
 										"cloudDataMovementUnits": 0,
 										"translator": {
