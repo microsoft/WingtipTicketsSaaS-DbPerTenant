@@ -1,0 +1,668 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory Name",
+			"defaultValue": "elasticcopywithpolybase"
+		},
+		"AzureSqlDatabase_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabase'"
+		},
+		"AzureSqlDataWarehouse_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDataWarehouse'"
+		},
+		"AzureStorage_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureStorage'"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]",
+		"leftBracket": "["
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/TableCopy')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2017-09-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "GetCurrentVersion",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false
+						},
+						"typeProperties": {
+							"source": {
+								"type": "SqlSource",
+								"sqlReaderQuery": "SELECT TOP 1 CONVERT(VARCHAR(25), CONVERT(VARBINARY(8), @{pipeline().parameters.TrackerKey}), 1) As EndRowVersion FROM @{pipeline().parameters.TableName} ORDER BY @{pipeline().parameters.TrackerKey} DESC"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlDatabase",
+								"type": "DatasetReference",
+								"parameters": {
+									"DBName": "@pipeline().parameters.DBName",
+									"TableName": "@pipeline().parameters.TableName",
+									"Structure": "@pipeline().parameters.SourceTableStructure"
+								}
+							}
+						}
+					},
+					{
+						"name": "GetSavedVersion",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "GetCurrentVersion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false
+						},
+						"typeProperties": {
+							"source": {
+								"type": "SqlSource",
+								"sqlReaderQuery": "SELECT TOP 1 CONVERT(VARCHAR(25), CONVERT(VARBINARY(8), [LastCopiedValue]), 1) AS StartRowVersion FROM [dbo].[CopyTracker] WHERE TableName = '@{pipeline().parameters.TableName}' ORDER BY [Id] DESC"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlDatabase",
+								"type": "DatasetReference",
+								"parameters": {
+									"DBName": "@pipeline().parameters.DBName",
+									"TableName": "CopyTracker",
+									"Structure": "@pipeline().parameters.GetSavedVersionStructure"
+								}
+							}
+						}
+					},
+					{
+						"name": "IfInitialCopy",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "GetSavedVersion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"typeProperties": {
+							"expression": {
+								"value": "@equals(coalesce(activity('GetSavedVersion').output?.firstrow?.StartRowVersion,'Initial'),'Initial')",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "IncrementalCopy",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false
+									},
+									"typeProperties": {
+										"source": {
+											"type": "SqlSource",
+											"sqlReaderQuery": "SELECT @{pipeline().parameters.ColumnList} FROM @{pipeline().parameters.TableName} WHERE @{pipeline().parameters.TrackerKey} > CONVERT(VARBINARY(8), @{ activity('GetSavedVersion').output.firstrow.StartRowVersion}, 1) AND @{pipeline().parameters.TrackerKey} <= CONVERT(VARBINARY(8), @{activity('GetCurrentVersion').output.firstrow.EndRowVersion}, 1)"
+										},
+										"sink": {
+											"type": "SqlDWSink",
+											"writeBatchSize": 10000,
+											"allowPolyBase": true
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "AzureStorage",
+												"type": "LinkedServiceReference"
+											},
+											"path": "stagingfolder"
+										},
+										"cloudDataMovementUnits": 0,
+										"translator": {
+											"type": "TabularTranslator",
+											"columnMappings": "@pipeline().Parameters.TableMap"
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "AzureSqlDatabase",
+											"type": "DatasetReference",
+											"parameters": {
+												"DBName": "@pipeline().parameters.DBName",
+												"TableName": "@pipeline().parameters.TableName",
+												"Structure": "@pipeline().parameters.SourceTableStructure"
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "AzureSqlDataWarehouse",
+											"type": "DatasetReference",
+											"parameters": {
+												"DBName": "tenantanalytics-dw",
+												"TableName": "@pipeline().parameters.DestTableName",
+												"Structure": "@pipeline().parameters.DestTableStructure"
+											}
+										}
+									]
+								}
+							],
+							"ifTrueActivities": [
+								{
+									"name": "InitialCopy",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false
+									},
+									"typeProperties": {
+										"source": {
+											"type": "SqlSource",
+											"sqlReaderQuery": "SELECT @{pipeline().parameters.ColumnList} FROM @{pipeline().parameters.TableName} WHERE @{pipeline().parameters.TrackerKey} <= CONVERT(VARBINARY(8), @{activity('GetCurrentVersion').output.firstrow.EndRowVersion}, 1)"
+										},
+										"sink": {
+											"type": "SqlDWSink",
+											"writeBatchSize": 10000,
+											"allowPolyBase": true
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "AzureStorage",
+												"type": "LinkedServiceReference"
+											},
+											"path": "staggingfolder"
+										},
+										"cloudDataMovementUnits": 0,
+										"translator": {
+											"type": "TabularTranslator",
+											"columnMappings": "@pipeline().Parameters.TableMap"
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "AzureSqlDatabase",
+											"type": "DatasetReference",
+											"parameters": {
+												"DBName": "@pipeline().parameters.DBName",
+												"TableName": "@pipeline().parameters.TableName",
+												"Structure": "@pipeline().parameters.SourceTableStructure"
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "AzureSqlDataWarehouse",
+											"type": "DatasetReference",
+											"parameters": {
+												"DBName": "tenantanalytics-dw",
+												"TableName": "@pipeline().parameters.DestTableName",
+												"Structure": "@pipeline().parameters.DestTableStructure"
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "SaveLastCopiedVersion",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "IfInitialCopy",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false
+						},
+						"typeProperties": {
+							"storedProcedureName": "SaveLastCopiedRowVersion",
+							"storedProcedureParameters": {
+								"lastCopiedValue": {
+									"value": "@activity('GetCurrentVersion').output.firstrow.EndRowVersion",
+									"type": "String"
+								},
+								"runId": {
+									"value": "@pipeline().RunId",
+									"type": "String"
+								},
+								"tableName": {
+									"value": "@pipeline().parameters.TableName",
+									"type": "String"
+								},
+								"trackerKey": {
+									"value": "@pipeline().parameters.TrackerKey",
+									"type": "String"
+								},
+								"runTimeStamp": {
+									"value": "@pipeline().TriggerTime",
+									"type": "DateTime"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase",
+							"type": "LinkedServiceReference",
+							"parameters": {
+								"DBName": "@pipeline().parameters.DBName"
+							}
+						}
+					}
+				],
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					},
+					"TableName": {
+						"type": "String"
+					},
+					"TrackerKey": {
+						"type": "String"
+					},
+					"DestTableName": {
+						"type": "String"
+					},
+					"ColumnList": {
+						"type": "String"
+					},
+					"TableMap": {
+						"type": "String"
+					},
+					"SourceTableStructure": {
+						"type": "Array"
+					},
+					"DestTableStructure": {
+						"type": "Array"
+					},
+					"GetSavedVersionStructure": {
+						"type": "Array",
+						"defaultValue": [
+							{
+								"name": "VenueId",
+								"type": "String"
+							}
+						]
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/AzureSqlDatabase')]",
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase')]",
+				"[concat(variables('factoryId'), '/datasets/AzureSqlDataWarehouse')]",
+				"[concat(variables('factoryId'), '/linkedServices/AzureStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDatabase')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2017-09-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": "@dataset().DBName"
+					}
+				},
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					},
+					"TableName": {
+						"type": "String"
+					},
+					"Structure": {
+						"type": "Array"
+					}
+				},
+				"type": "AzureSqlTable",
+				"structure": "@dataset().Structure",
+				"typeProperties": {
+					"tableName": "@dataset().TableName"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDatabase')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2017-09-01-preview",
+			"properties": {
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": {
+						"type": "SecureString",
+						"value": "[parameters('AzureSqlDatabase_connectionString')]"
+					}
+				},
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDataWarehouse')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2017-09-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDataWarehouse",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": "@dataset().DBName"
+					}
+				},
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					},
+					"TableName": {
+						"type": "String"
+					},
+					"Structure": {
+						"type": "Array"
+					}
+				},
+				"type": "AzureSqlDWTable",
+				"structure": "@dataset().Structure",
+				"typeProperties": {
+					"tableName": "@dataset().TableName"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDataWarehouse')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDataWarehouse')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2017-09-01-preview",
+			"properties": {
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": {
+						"type": "SecureString",
+						"value": "[parameters('AzureSqlDataWarehouse_connectionString')]"
+					}
+				},
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DBCopy')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2017-09-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "ReadTableConfig",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false
+						},
+						"typeProperties": {
+							"source": {
+								"type": "BlobSource",
+								"recursive": true
+							},
+							"dataset": {
+								"referenceName": "AzureBlob",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "CopyTable",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "ReadTableConfig",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('ReadTableConfig').output.value",
+								"type": "Expression"
+							},
+							"isSequential": false,
+							"activities": [
+								{
+									"name": "ExecuteTableCopy",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "TableCopy",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"DBName": "@pipeline().parameters.DBName",
+											"TableName": "@item().sourceTable",
+											"TrackerKey": "@item().trackerKey",
+											"DestTableName": "@item().destTableName",
+											"ColumnList": "@item().sourceColumns",
+											"TableMap": "@item().tableMap",
+											"SourceTableStructure": "@item().sourceStructure",
+											"DestTableStructure": "@item().destStructure"
+										}
+									}
+								}
+							]
+						}
+					}
+				],
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/AzureBlob')]",
+				"[concat(variables('factoryId'), '/pipelines/TableCopy')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureBlob')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2017-09-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureStorage",
+					"type": "LinkedServiceReference"
+				},
+				"type": "AzureBlob",
+				"typeProperties": {
+					"format": {
+						"type": "JsonFormat",
+						"filePattern": "arrayOfObjects"
+					},
+					"fileName": "TableConfig.json",
+					"folderPath": "configfile"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureStorage')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2017-09-01-preview",
+			"properties": {
+				"type": "AzureStorage",
+				"typeProperties": {
+					"connectionString": {
+						"type": "SecureString",
+						"value": "[parameters('AzureStorage_connectionString')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SQLDBToDW')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2017-09-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "GetDatabases",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false
+						},
+						"typeProperties": {
+							"source": {
+								"type": "SqlDWSource",
+								"sqlReaderQuery": "SELECT [ServerName] ,[DatabaseName] FROM [__ShardManagement].[ShardsGlobal] WHERE [Status] = '1'"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlDataWarehouse",
+								"type": "DatasetReference",
+								"parameters": {
+									"DBName": "tenantcatalog",
+									"TableName": "[concat(variables('leftBracket'), '__ShardManagement].[ShardsGlobal]')]",
+									"Structure": "@pipeline().parameters.GetDBStructure"
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "CopyDB",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "GetDatabases",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"typeProperties": {
+							"items": "@activity('GetDatabases').output.value",
+							"isSequential": false,
+							"activities": [
+								{
+									"name": "ExecuteDBCopy",
+									"type": "ExecutePipeline",
+									"dependsOn": [ ],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "DBCopy",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"DBName": "@item().DatabaseName"
+										}
+									}
+								}
+							]
+						}
+					},
+					{
+            "name": "TransformRawData",
+            "type": "SqlServerStoredProcedure",
+            "dependsOn": [
+              {
+                "activity": "CopyDB",
+                "dependencyConditions": [
+                  "Completed"
+                ]
+              }
+            ],
+            "policy": {
+              "timeout": "7.00:00:00",
+              "retry": 0,
+              "retryIntervalInSeconds": 30,
+              "secureOutput": false
+            },
+            "typeProperties": {
+              "storedProcedureName": "sp_TransformRawData"
+            },
+            "linkedServiceName": {
+              "referenceName": "AzureSqlDataWarehouse",
+              "type": "LinkedServiceReference",
+              "parameters": {
+                "DBName": "tenantanalytics-dw"
+              }
+            }
+          }
+				],
+				"parameters": {
+					"GetDBStructure": {
+						"type": "Array",
+						"defaultValue": [
+							{
+								"name": "ServerName",
+								"type": "String"
+							},
+							{
+								"name": "DatabaseName",
+								"type": "String"
+							}
+						]
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/AzureSqlDataWarehouse')]",
+				"[concat(variables('factoryId'), '/pipelines/DBCopy')]"
+			]
+		}
+	]
+}
