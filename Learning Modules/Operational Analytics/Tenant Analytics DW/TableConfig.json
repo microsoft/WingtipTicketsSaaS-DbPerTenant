@@ -1,0 +1,230 @@
+[
+  {
+    "sourceTable": "[dbo].[rawTickets]",
+    "sourceColumns": "[VenueId] ,[CustomerEmailId], [TicketPurchaseId] ,[PurchaseDate] ,[PurchaseTotal] ,[EventId] ,[RowNumber] ,[SeatNumber]",
+    "trackerKey": "[TicketPurchaseRowVersion]",
+    "destTableName": "[dbo].[raw_Tickets]",
+    "tableMap": "VenueId:VenueId, CustomerEmailId:CustomerEmailId, TicketPurchaseId:TicketPurchaseId, PurchaseDate:PurchaseDate, PurchaseTotal:PurchaseTotal, EventId:EventId, RowNumber:RowNumber, SeatNumber:SeatNumber",
+    "sourceStructure": [
+      {
+        "name": "VenueId",
+        "type": "Int16"
+      },
+      {
+        "name": "CustomerEmailId",
+        "type": "Int16"
+      },
+      {
+        "name": "TicketPurchaseId",
+        "type": "Int16"
+      },
+      {
+        "name": "PurchaseDate",
+        "type": "DateTime"
+      },
+      {
+        "name": "PurchaseTotal",
+        "type": "Int32"
+      },
+      {
+        "name": "EventId",
+        "type": "Int16"
+      },
+      {
+        "name": "RowNumber",
+        "type": "Int16"
+      },
+      {
+        "name": "SeatNumber",
+        "type": "Int16"
+      }
+    ],
+    "destStructure": [
+      {
+        "name": "VenueId",
+        "type": "Int16"
+      },
+      {
+        "name": "CustomerEmailId",
+        "type": "Int16"
+      },
+      {
+        "name": "TicketPurchaseId",
+        "type": "Int16"
+      },
+      {
+        "name": "PurchaseDate",
+        "type": "DateTime"
+      },
+      {
+        "name": "PurchaseTotal",
+        "type": "Int32"
+      },
+      {
+        "name": "EventId",
+        "type": "Int16"
+      },
+      {
+        "name": "RowNumber",
+        "type": "Int16"
+      },
+      {
+        "name": "SeatNumber",
+        "type": "Int16"
+      }
+    ]
+  },
+  {
+     "sourceTable": "[dbo].[rawCustomers]",
+     "sourceColumns": "[VenueId] ,[CustomerEmailId] ,[CustomerPostalCode] ,[CustomerCountryCode] ",
+     "trackerKey": "[CustomerRowVersion]",
+     "destTableName": "[dbo].[raw_Customers]",
+     "tableMap": "VenueId:VenueId, CustomerEmailId:CustomerEmailId, CustomerPostalCode:CustomerPostalCode, CustomerCountryCode:CustomerCountryCode",
+     "sourceStructure": [
+       {
+	  "name": "VenueId",
+	  "type": "Int16"
+	},
+	{
+	  "name": "CustomerEmailId",
+	  "type": "Int16"
+	},
+	{
+	   "name": "CustomerPostalCode",
+	   "type": "String"
+	},
+	{
+	   "name": "CustomerCountryCode",
+	   "type": "String"
+	}
+      ],
+      "destStructure": [
+        {
+      	   "name": "VenueId",
+      	   "type": "Int16"
+      	},
+      	{
+      	   "name": "CustomerEmailId",
+      	   "type": "Int16"
+      	},
+      	{
+      	   "name": "CustomerPostalCode",
+      	   "type": "String"
+      	},
+      	{
+      	   "name": "CustomerCountryCode",
+      	   "type": "String"
+      	}
+      ]
+  },
+  {
+     "sourceTable": "[dbo].[rawEvents]",
+     "sourceColumns": "[VenueId], [EventId] ,[EventName] ,[EventSubtitle] ,[EventDate]",
+     "trackerKey": "[EventRowVersion]",
+     "destTableName": "[dbo].[raw_Events]",
+     "tableMap": "VenueId:VenueId, EventId:EventId, EventName:EventName, EventSubtitle:EventSubtitle, EventDate:EventDate",
+     "sourceStructure": [
+        {
+           "name": "VenueId",
+           "type": "Int16"
+         },
+                       {
+            "name": "EventId",
+            "type": "Int16"
+         },
+         {
+            "name": "EventName",
+            "type": "String"
+          },
+          {
+             "name": "EventSubtitle",
+             "type": "String"
+          },
+          {
+             "name": "EventDate",
+             "type": "DateTime"
+           }
+        ],
+        "destStructure": [
+	  {
+	     "name": "VenueId",
+	     "type": "Int16"
+	  },
+          {
+	     "name": "EventId",
+	     "type": "Int16"
+	   },
+	   {
+	      "name": "EventName",
+	      "type": "String"
+	    },
+	    {
+	       "name": "EventSubtitle",
+	       "type": "String"
+	     },
+	     {
+		"name": "EventDate",
+		"type": "DateTime"
+	      }
+	   ]
+  },
+  {
+     "sourceTable": "[dbo].[rawVenues]",
+     "sourceColumns": "[VenueId] ,[VenueName] ,[VenueType] ,[VenuePostalCode] ,[VenueCountryCode] ,[VenueCapacity] ",
+     "trackerKey": "[VenueRowVersion]",
+     "destTableName": "[dbo].[raw_Venues]",
+     "tableMap": "VenueId:VenueId, VenueName:VenueName, VenueType:VenueType, VenuePostalCode:VenuePostalCode, VenueCountryCode:VenueCountryCode, VenueCapacity:VenueCapacity",
+     "sourceStructure": [
+	{
+	   "name": "VenueId",
+	   "type": "Int16"
+	},
+	{
+	   "name": "VenueName",
+	   "type": "String"
+	},
+	{
+	    "name": "VenueType",
+	    "type": "String"
+	},
+	{
+	    "name": "VenuePostalCode",
+	    "type": "String"
+	},
+	{
+	    "name": "VenueCountryCode",
+	    "type": "String"
+	},
+	{
+	    "name": "VenueCapacity",
+	    "type": "Int16"
+	}
+        ],
+	"destStructure": [
+	  {
+	     "name": "VenueId",
+	     "type": "Int16"
+	  },
+	  {
+	     "name": "VenueName",
+	     "type": "String"
+	  },
+	  {
+	     "name": "VenueType",
+	     "type": "String"
+	  },
+	  {
+	     "name": "VenuePostalCode",
+	     "type": "String"
+	  },
+	  {
+	      "name": "VenueCountryCode",
+	      "type": "String"
+	  },
+	  {
+	      "name": "VenueCapacity",
+	      "type": "Int16"
+	  }
+	  ]
+	}
+]
