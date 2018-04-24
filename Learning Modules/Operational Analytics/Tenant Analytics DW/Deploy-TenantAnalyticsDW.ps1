@@ -484,19 +484,18 @@ RENAME OBJECT dbo.[stage_fact_Tickets] TO [fact_Tickets];
 END
 ;
 
--- TODO When all testing is done, uncomment the following delete statements
 -- Delete the rows in the staging table that are already transformed
--- DELETE FROM raw_Tickets
--- WHERE RawTicketId <= @StagingTicketLastInsert 
+DELETE FROM raw_Tickets
+WHERE RawTicketId <= @StagingTicketLastInsert 
 
--- DELETE FROM [dbo].[raw_Events]
--- WHERE RawVenueEventId <= @StagingEventLastInsert 
+DELETE FROM [dbo].[raw_Events]
+WHERE RawEventId <= @StagingEventLastInsert 
 
--- DELETE FROM [dbo].[raw_Venues]
--- WHERE RawVenueEventId <= @StagingVenueLastInsert 
+DELETE FROM [dbo].[raw_Venues]
+WHERE RawVenueId <= @StagingVenueLastInsert 
 
--- DELETE FROM [dbo].[raw_Customers]
--- WHERE RawVenueEventId <= @StagingCustomerLastInsert 
+DELETE FROM [dbo].[raw_Customers]
+WHERE RawCustomerId <= @StagingCustomerLastInsert 
 GO
 "
 
