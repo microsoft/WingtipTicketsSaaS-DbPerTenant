@@ -27,9 +27,9 @@ namespace Events_TenantUserApp.Tests.ControllerTests
             var mockCatalogRepo = new Mock<ICatalogRepository>();
 
             var mockUtilities = new Mock<IUtilities>();
+            var mockLookupClient = new Mock<DnsClient.ILookupClient>();
 
-            _accountController = new AccountController(localizer, baseLocalizer, mockTenantRepo.Object, mockCatalogRepo.Object, logger, configuration);
-
+            _accountController = new AccountController(localizer, baseLocalizer, mockTenantRepo.Object, mockCatalogRepo.Object, logger, configuration, mockLookupClient.Object);
         }
 
         [Fact]
@@ -83,6 +83,7 @@ namespace Events_TenantUserApp.Tests.ControllerTests
         {
             return 1;
         }
+
         private async Task<CustomerModel> GetCustomerAsync()
         {
             return new CustomerModel
@@ -94,6 +95,5 @@ namespace Events_TenantUserApp.Tests.ControllerTests
                 LastName = "lastName"
             };
         }
-
     }
 }
