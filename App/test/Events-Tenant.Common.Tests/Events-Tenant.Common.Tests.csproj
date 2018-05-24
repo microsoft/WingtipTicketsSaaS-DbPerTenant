@@ -8,7 +8,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Events_Tenant.Common.Tests</RootNamespace>
     <AssemblyName>Events-Tenant.Common.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
@@ -16,6 +16,7 @@
     <ReferencePath>$(ProgramFiles)\Common Files\microsoft shared\VSTT\$(VisualStudioVersion)\UITestExtensionPackages</ReferencePath>
     <IsCodedUITest>False</IsCodedUITest>
     <TestProjectType>UnitTest</TestProjectType>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -138,7 +139,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Events-Tenant.Common\Events-Tenant.Common.csproj">
@@ -149,7 +152,7 @@
       <Project>{a8c26517-6521-4982-9c68-942fb4185c6b}</Project>
       <Name>Events-TenantUserApp.EF</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\src\Events-TenantUserApp\Events-TenantUserApp.xproj">
+    <ProjectReference Include="..\..\src\Events-TenantUserApp\Events-TenantUserApp.csproj">
       <Project>{f23dd200-d0f4-4cfc-b443-692fd6459587}</Project>
       <Name>Events-TenantUserApp</Name>
     </ProjectReference>
