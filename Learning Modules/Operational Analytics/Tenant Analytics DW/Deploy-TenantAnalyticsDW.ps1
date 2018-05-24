@@ -142,32 +142,14 @@ CREATE TABLE [dbo].[dim_Customers]
 )
 GO
 
--- Create a dimension table for dates.
-IF (OBJECT_ID('dim_Dates')) IS NOT NULL DROP TABLE dim_Dates
-CREATE TABLE [dbo].[dim_Dates](
-    [SK_DateId] int identity(1,1) NOT NULL,
-    [PurchaseDateID] [int] NULL,
-    [DateValue] [date] NULL,
-    [DateYear] [int] NULL,
-    [DateMonth] [int] NULL,
-    [DateDay] [int] NULL,
-    [DateDayOfYear] [int] NULL,
-    [DateWeekday] [int] NULL,
-    [DateWeek] [int] NULL,
-    [DateQuarter] [int] NULL,
-    [DateMonthName] [nvarchar](30) NULL,
-    [DateQuarterName] [nvarchar](31) NULL,
-    [DateWeekdayName] [nvarchar](30) NULL,
-    [MonthYear] [nvarchar](34) NULL
-)
-GO
-
--- Prepopulate date dimension table.
-IF (OBJECT_ID('dim_dates')) IS NOT NULL DROP TABLE dim_dates;
+-- Create and populate a dimension table for dates.
+IF (OBJECT_ID('dim_Dates')) IS NOT NULL DROP TABLE dim_Dates;
+CREATE TABLE dim_Dates
+WITH (DISTRIBUTION = REPLICATE)
+AS 
 WITH BaseData AS (SELECT A=0 UNION ALL SELECT A=1 UNION ALL SELECT A=2 UNION ALL SELECT A=3 UNION ALL SELECT A=4 UNION ALL SELECT A=5 UNION ALL SELECT A=6 UNION ALL SELECT A=7 UNION ALL SELECT A=8 UNION ALL SELECT A=9)
 ,DateSeed AS (SELECT RID = ROW_NUMBER() OVER (ORDER BY A.A) FROM BaseData A CROSS APPLY BaseData B CROSS APPLY BaseData C CROSS APPLY BaseData D CROSS APPLY BaseData E)
 ,DateBase AS (SELECT TOP 18628 DateValue = cast(DATEADD(D, RID,'1979-12-31')AS DATE) FROM DateSeed)
-
 SELECT DateID = cast(replace(cast(DateValue as varchar(25)),'-','')as int),
     DateValue = cast(DateValue as date),
     DateYear = DATEPART(year, DateValue),
@@ -181,8 +163,7 @@ SELECT DateID = cast(replace(cast(DateValue as varchar(25)),'-','')as int),
     DateQuarterName = 'Q'+DATENAME(quarter, DateValue),
     DateWeekdayName = DATENAME(weekday, DateValue),
     MonthYear = LEFT(DATENAME(month, DateValue),3)+'-'+DATENAME(year, DateValue)  
-INTO dim_Dates
-FROM DateBase
+FROM DateBase;
 
 -- Create a tickets fact table in tenantanalytics database 
 IF (OBJECT_ID('fact_Tickets')) IS NOT NULL DROP TABLE fact_Tickets
