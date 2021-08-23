@@ -72,7 +72,7 @@ function Start-AsynchronousDatabaseReplication
 
   # Construct replication parameters
   $originServerName = ($TenantDatabase.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
-  $originServer = Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.ResourceGroupName -ResourceNameEquals $originServerName
+  $originServer = Get-AzureRmResource -ResourceGroupName $wtpUser.ResourceGroupName -Name $originServerName
   $databaseId = "/subscriptions/$currentSubscriptionId/resourceGroups/$WingtipRecoveryResourceGroup/providers/Microsoft.Sql/servers/$($TenantDatabase.ServerName)/databases/$($TenantDatabase.DatabaseName)"
 
   # Delete existing tenant database

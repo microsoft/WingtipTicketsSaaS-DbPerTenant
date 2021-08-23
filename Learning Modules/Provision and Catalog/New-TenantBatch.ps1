@@ -41,7 +41,7 @@ $elasticPoolName = $config.TenantPoolNameStem + "1"
 Initialize-Subscription
 
 # Find tenant server in Azure 
-$serverResource = Find-AzureRmResource -ResourceNameEquals $serverName -ResourceType "Microsoft.Sql/servers"
+$serverResource = Get-AzureRmResource -Name $serverName -ResourceType "Microsoft.Sql/servers"
 if ($serverResource)
 {
     $WtpResourceGroupName = $serverResource.ResourceGroupName

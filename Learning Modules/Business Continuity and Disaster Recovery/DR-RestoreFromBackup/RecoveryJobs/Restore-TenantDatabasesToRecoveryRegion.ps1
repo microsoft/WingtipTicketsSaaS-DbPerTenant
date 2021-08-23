@@ -4,7 +4,7 @@
 
 .DESCRIPTION
   This script is intended to be run as a background job in the 'Restore-IntoSecondaryRegion' script that recovers the Wingtip SaaS app environment (apps, databases, servers e.t.c) into a recovery region.
-  The script restores tenant databases from automatic backups taken in the original Wingtip location. 
+  The script restores tenant databases from automatic backups taken in the original Wingtip location.
 
 .PARAMETER WingtipRecoveryResourceGroup
   Resource group that will be used to contain recovered resources
@@ -28,9 +28,9 @@ Import-Module "$using:scriptPath\..\..\UserConfig" -Force
 # Import-Module "$PSScriptRoot\..\..\..\WtpConfig" -Force
 # Import-Module "$PSScriptRoot\..\..\..\UserConfig" -Force
 
-# Stop execution on error 
+# Stop execution on error
 $ErrorActionPreference = "Stop"
-  
+
 # Login to Azure subscription
 $credentialLoad = Import-AzureRmContext -Path "$env:TEMP\profile.json"
 if (!$credentialLoad)
@@ -38,7 +38,7 @@ if (!$credentialLoad)
     Initialize-Subscription
 }
 
-# Get deployment configuration  
+# Get deployment configuration
 $sleepInterval = 10
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
@@ -50,9 +50,9 @@ $operationQueueMap = @{}
 
 # -------------------- Helper Functions -----------------------------------------
 <#
- .SYNOPSIS  
+ .SYNOPSIS
   Returns the highest priority tenant that does not have a recovery database.
-  Tenants are grouped by elastic pool and selected from the input catalog database. 
+  Tenants are grouped by elastic pool and selected from the input catalog database.
   Tenants not in an elastic pool are grouped by servername.
 #>
 function Select-HighestPriorityUnrecoveredTenantPerPool
@@ -60,7 +60,7 @@ function Select-HighestPriorityUnrecoveredTenantPerPool
   param
   (
     [parameter(Mandatory=$true)]
-    [object]$Catalog   
+    [object]$Catalog
   )
 
   $highestPriorityTenants = @{}
@@ -92,7 +92,7 @@ function Select-HighestPriorityUnrecoveredTenantPerPool
     {
       # Sort databases in pool by tenant priority
       $poolPriorityList = $recoveryQueueByPool[$pool] | Sort-Object -Property $sortOrder
-        
+
       # Select highest priority tenant for current pool
       if (!$highestPriorityTenants.ContainsKey($pool))
       {
@@ -104,11 +104,11 @@ function Select-HighestPriorityUnrecoveredTenantPerPool
   else
   {
     return $null
-  } 
+  }
 }
 
 <#
- .SYNOPSIS  
+ .SYNOPSIS
   Starts an asynchronous call to georestore a tenant database
   This function returns a task object that can be used to track the status of the operation
 #>
@@ -120,12 +120,12 @@ function Start-AsynchronousDatabaseRecovery
     [Microsoft.Azure.Management.Sql.Fluent.SqlManager]$AzureContext,
 
     [Parameter(Mandatory=$true)]
-    [object]$TenantDatabase       
+    [object]$TenantDatabase
   )
 
   # Construct geo-restore parameters
   $recoveredServerName = ($TenantDatabase.ServerName) + $config.RecoveryRoleSuffix
-  $recoveredServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceNameEquals $recoveredServerName
+  $recoveredServer = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -Name $recoveredServerName
   $databaseId = "/subscriptions/$currentSubscriptionId/resourceGroups/$($wtpUser.ResourceGroupName)/providers/Microsoft.Sql/servers/$($TenantDatabase.ServerName)/recoverabledatabases/$($TenantDatabase.DatabaseName)"
 
   if ($TenantDatabase.ServiceObjective -eq 'ElasticPool')
@@ -151,12 +151,12 @@ function Start-AsynchronousDatabaseRecovery
                     -DatabaseName $TenantDatabase.DatabaseName `
                     -SourceDatabaseId $databaseId `
                     -RequestedServiceObjectiveName $TenantDatabase.ServiceObjective
-  }  
+  }
   return $taskObject
 }
 
 <#
- .SYNOPSIS  
+ .SYNOPSIS
   Marks a tenant database recovery as complete when the database has been successfully geo-restored
 #>
 function Complete-AsynchronousDatabaseRecovery
@@ -200,7 +200,7 @@ while ($tenantCatalog.Database.ResourceGroupName -ne $WingtipRecoveryResourceGro
 }
 
 # Wait until all elastic pools have been restored to start restoring databases
-# This ensures that all required container resources have been acquired before database recovery begins 
+# This ensures that all required container resources have been acquired before database recovery begins
 $nonRecoveredPoolList = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$") -and ($_.RecoveryState -NotIn 'restored')}
 while ($nonRecoveredPoolList)
 {
@@ -219,7 +219,7 @@ if ($recoveringDatabases.Count -gt 0)
   $operationsLog = $operationsLog | Group-Object -Property 'CorrelationId'
 
   # Find all ongoing database recovery operations
-  $ongoingDeployments = @()  
+  $ongoingDeployments = @()
   foreach ($operationSequence in $operationsLog)
   {
     if ($operationSequence.Group.EventName.Value -notcontains "EndRequest")
@@ -248,7 +248,7 @@ if ($recoveringDatabases.Count -gt 0)
         "DatabaseName" = $tenantDatabaseName
         "ServiceObjective" = $null
         "ElasticPoolName" = $null
-      }     
+      }
 
       $jobId = $jobObject.Id
       if (!$operationQueueMap.ContainsKey("$jobId"))
@@ -258,9 +258,9 @@ if ($recoveringDatabases.Count -gt 0)
       }
     }
   }
-  
-  # Get all tenant databases that have been restored into the recovery region 
-  $recoveredDatabaseInstances = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
+
+  # Get all tenant databases that have been restored into the recovery region
+  $recoveredDatabaseInstances = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
 
   # Update recovery state of databases
   foreach ($database in $recoveringDatabases)
@@ -268,24 +268,24 @@ if ($recoveringDatabases.Count -gt 0)
     if ($recoveredDatabaseInstances.Name -match $database.DatabaseName)
     {
         # Mark database as restored
-        $recoveredDatabaseCount +=1 
+        $recoveredDatabaseCount +=1
         $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endRecovery" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
     }
     else
     {
-        # Mark errorState for databases that have not been recovered 
+        # Mark errorState for databases that have not been recovered
         $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $database.ServerName -DatabaseName $database.DatabaseName
     }
-  }  
+  }
 }
 
-# Get list of tenant databases to be recovered 
+# Get list of tenant databases to be recovered
 $tenantDatabases = @()
 $tenantDatabases += Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object {($_.ServerName -notmatch "$($config.RecoveryRoleSuffix)$")}
 $offlineTenantDatabases = $tenantDatabases | Where-Object {(($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$") -and ($_.RecoveryState -NotIn 'restored', 'failedOver', 'complete'))}
 
-# Output recovery progress 
-$tenantDatabaseCount = $tenantDatabases.length 
+# Output recovery progress
+$tenantDatabaseCount = $tenantDatabases.length
 $recoveredDatabaseCount = $tenantDatabaseCount - $offlineTenantDatabases.length
 $DatabaseRecoveryPercentage = [math]::Round($recoveredDatabaseCount/$tenantDatabaseCount,2)
 $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
@@ -329,19 +329,19 @@ while($true)
         if (!$operationQueueMap.ContainsKey("$operationId"))
         {
           $operationQueue += $operationObject
-          $operationQueueMap.Add("$operationId", $databaseDetails)      
-        }     
-      }     
-    }  
-  }  
-  else 
+          $operationQueueMap.Add("$operationId", $databaseDetails)
+        }
+      }
+    }
+  }
+  else
   {
-    # There are no more databases eligible for recovery     
+    # There are no more databases eligible for recovery
     break
   }
 }
 
-# Check on status of database recovery operations 
+# Check on status of database recovery operations
 while ($operationQueue.Count -gt 0)
 {
   foreach($recoveryJob in $operationQueue)
@@ -354,54 +354,54 @@ while ($operationQueue.Count -gt 0)
       if ($operationDetails.Status.Value -contains "Succeeded")
       {
         # Update tenant database recovery state
-        Complete-AsynchronousDatabaseRecovery -RecoveryJobId $recoveryJob.Id 
+        Complete-AsynchronousDatabaseRecovery -RecoveryJobId $recoveryJob.Id
 
         # Remove completed job from queue for polling
-        $operationQueue = $operationQueue -ne $recoveryJob      
+        $operationQueue = $operationQueue -ne $recoveryJob
 
-        # Output recovery progress 
+        # Output recovery progress
         $recoveredDatabaseCount+= 1
         $DatabaseRecoveryPercentage = [math]::Round($recoveredDatabaseCount/$tenantDatabaseCount,2)
         $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-        Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"  
+        Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"
       }
       elseif ($operationDetails.Status.Value -In 'Failed', 'Canceled')
       {
-        # Mark errorState for databases that have not been recovered 
+        # Mark errorState for databases that have not been recovered
         $databaseDetails = $operationQueueMap[$recoveryJob.Id]
         $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $databaseDetails.ServerName -DatabaseName $databaseDetails.DatabaseName
-      
+
         # Remove completed job from queue for polling
         $operationQueue = $operationQueue -ne $recoveryJob
-      }      
+      }
     }
     elseif (($recoveryJob.IsCompleted) -and ($recoveryJob.Status -eq 'RanToCompletion'))
     {
       # Update tenant database recovery state
-      Complete-AsynchronousDatabaseRecovery -RecoveryJobId $recoveryJob.Id 
+      Complete-AsynchronousDatabaseRecovery -RecoveryJobId $recoveryJob.Id
 
       # Remove completed job from queue for polling
-      $operationQueue = $operationQueue -ne $recoveryJob      
+      $operationQueue = $operationQueue -ne $recoveryJob
 
-      # Output recovery progress 
+      # Output recovery progress
       $recoveredDatabaseCount+= 1
       $DatabaseRecoveryPercentage = [math]::Round($recoveredDatabaseCount/$tenantDatabaseCount,2)
       $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-      Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"               
+      Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"
     }
     elseif (($recoveryJob.IsCompleted) -and ($recoveryJob.Status -eq "Faulted"))
     {
-      # Mark errorState for databases that have not been recovered 
+      # Mark errorState for databases that have not been recovered
       $databaseDetails = $operationQueueMap[$recoveryJob.Id]
       $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $databaseDetails.ServerName -DatabaseName $databaseDetails.DatabaseName
-      
+
       # Remove completed job from queue for polling
       $operationQueue = $operationQueue -ne $recoveryJob
     }
   }
 }
 
-# Output recovery progress 
+# Output recovery progress
 $DatabaseRecoveryPercentage = [math]::Round($recoveredDatabaseCount/$tenantDatabaseCount,2)
 $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
 Write-Output "$DatabaseRecoveryPercentage% ($($recoveredDatabaseCount) of $tenantDatabaseCount)"

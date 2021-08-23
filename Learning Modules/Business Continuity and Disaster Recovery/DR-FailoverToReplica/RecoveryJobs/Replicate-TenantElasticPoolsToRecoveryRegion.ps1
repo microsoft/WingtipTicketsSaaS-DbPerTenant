@@ -75,16 +75,16 @@ while (($pastDeployment) -and ($pastDeployment.ProvisioningState -NotIn "Succeed
 }
 
 # Wait until at least one tenant server has been replicated before starting elastic pool replication
-$replicatedServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameContains "tenants"
+$replicatedServers = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameContains "tenants"
 while (!$replicatedServers)
 {
   Write-Output "waiting for tenant server(s) to complete deployment ..."
   Start-Sleep $sleepInterval
-  $replicatedServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameContains "tenants"
+  $replicatedServers = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameContains "tenants"
 }
 
 # Check for elastic pools that have previously been recovered 
-$replicatedElasticPools = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
+$replicatedElasticPools = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
 foreach ($pool in $tenantElasticPools)
 {
   $recoveredServerName = $pool.ServerName + $config.RecoveryRoleSuffix
@@ -107,8 +107,8 @@ while ($recoveredPoolCount -lt $poolCount)
 {
   $poolRecoveryQueue = @()
   [array]$elasticPoolConfigurations = @()
-  $replicatedServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameContains "tenants"
-  $replicatedElasticPools = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
+  $replicatedServers = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers" -ResourceNameContains "tenants"
+  $replicatedElasticPools = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
 
   # Generate list of pools that will be recovered in current loop iteration
   foreach($elasticPool in $tenantElasticPools)
@@ -119,7 +119,7 @@ while ($recoveredPoolCount -lt $poolCount)
     if (($replicatedElasticPools.Name -notcontains $elasticPool.CompoundPoolName) -and ($replicatedServers.Name -contains $recoveredServerName))
     {
       $poolRecoveryQueue += $elasticPool
-      $recoveredServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceNameEquals $recoveredServerName
+      $recoveredServer = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -Name $recoveredServerName
       [array]$elasticPoolConfigurations += @{
         ServerName = "$($recoveredServer.Name)"
         Location = "$($recoveredServer.Location)"

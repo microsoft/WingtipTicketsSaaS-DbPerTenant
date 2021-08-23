@@ -78,7 +78,7 @@ function Start-AsynchronousDatabaseReplication
 
   # Construct replication parameters
   $recoveryServerName = $TenantDatabase.ServerName + $config.RecoveryRoleSuffix
-  $recoveryServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceNameEquals $recoveryServerName
+  $recoveryServer = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -Name $recoveryServerName
   $databaseId = "/subscriptions/$currentSubscriptionId/resourceGroups/$($wtpUser.ResourceGroupName)/providers/Microsoft.Sql/servers/$($TenantDatabase.ServerName)/databases/$($TenantDatabase.DatabaseName)"
 
   # Delete any existing tenant database in the recovery location
@@ -119,12 +119,12 @@ function Start-AsynchronousDatabaseReplication
 # This ensures that all required container resources have been acquired before database replication begins 
 $tenantPools = Get-ExtendedElasticPool -Catalog $tenantCatalog | Where-Object {$_.ServerName -notmatch "$($config.RecoveryRoleSuffix)$"} 
 $poolCount = @($tenantPools).Count
-$replicatedElasticPools = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
+$replicatedElasticPools = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
 
 while (@($replicatedElasticPools).Count -lt $poolCount)
 {
   Start-Sleep $sleepInterval
-  $replicatedElasticPools = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
+  $replicatedElasticPools = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
   Write-Output "waiting for pool(s) to complete deployment ..."
 }
 
@@ -175,7 +175,7 @@ if ($ongoingDeployments.Count -gt 0)
 }
   
 # Get all tenant databases that have replicated into the recovery region 
-$replicatedDatabaseInstances = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
+$replicatedDatabaseInstances = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
 
 # Get list of tenant databases to be replicated
 $tenantDatabaseList = Get-ExtendedDatabase -Catalog $tenantCatalog | Where-Object{$_.ServerName -notmatch "$($config.RecoveryRoleSuffix)$"}

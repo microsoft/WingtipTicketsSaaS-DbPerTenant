@@ -74,7 +74,7 @@ while (1 -eq 1)
         # Add tenant server to server list if not previously seen 
         if ($servers.ServerName -notcontains $tenantServerName)
         {
-            $serverResourceGroup = (Find-AzureRmResource -ResourceNameEquals $tenantServerName -ResourceType "Microsoft.Sql/servers").ResourceGroupName
+            $serverResourceGroup = (Get-AzureRmResource -Name $tenantServerName -ResourceType "Microsoft.Sql/servers").ResourceGroupName
             $servers += Get-AzureRMSqlServer -ResourceGroupName $serverResourceGroup -ServerName $tenantServerName
         }         
     }
@@ -158,7 +158,7 @@ while (1 -eq 1)
     foreach ($resource in $tenantResources)
     {
         $databaseName = "$($resource.ServerName)/$($resource.DatabaseName)"
-        $databaseResourceGroup = (Find-AzureRmResource -ResourceNameEquals $databaseName -ResourceType "Microsoft.Sql/servers/databases").ResourceGroupName
+        $databaseResourceGroup = (Get-AzureRmResource -Name $databaseName -ResourceType "Microsoft.Sql/servers/databases").ResourceGroupName
         $tenantDatabases += Get-AzureRmSqlDatabase -ResourceGroupName $databaseResourceGroup -ServerName $resource.ServerName -DatabaseName $resource.DatabaseName
     }
     $tenantDatabases = $tenantDatabases | sort DatabaseName

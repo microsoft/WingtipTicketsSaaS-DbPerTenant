@@ -79,7 +79,7 @@ while (($pastDeployment) -and ($pastDeployment.ProvisioningState -NotIn "Succeed
 }
 
 # Check for elastic pools that have previously been recovered 
-$restoredElasticPools = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
+$restoredElasticPools = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/elasticpools"
 foreach ($pool in $tenantElasticPools)
 {
   $recoveredServerName = ($pool.ServerName) + $config.RecoveryRoleSuffi
@@ -125,7 +125,7 @@ while ($recoveredPoolCount -lt $poolCount)
         {
           $poolRecoveryQueue += $elasticPool
           $recoveredServerName = ($elasticPool.ServerName) + $config.RecoveryRoleSuffix
-          $recoveredServer = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceNameEquals $recoveredServerName
+          $recoveredServer = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -Name $recoveredServerName
           [array]$elasticPoolConfigurations += @{
             ServerName = "$($recoveredServer.Name)"
             Location = "$($recoveredServer.Location)"

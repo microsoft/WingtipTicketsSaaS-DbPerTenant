@@ -28,9 +28,9 @@ Import-Module "$using:scriptPath\..\..\UserConfig" -Force
 # Import-Module "$PSScriptRoot\..\..\..\WtpConfig" -Force
 # Import-Module "$PSScriptRoot\..\..\..\UserConfig" -Force
 
-# Stop execution on error 
+# Stop execution on error
 $ErrorActionPreference = "Stop"
-  
+
 # Login to Azure subscription
 $credentialLoad = Import-AzureRmContext -Path "$env:TEMP\profile.json"
 if (!$credentialLoad)
@@ -38,7 +38,7 @@ if (!$credentialLoad)
     Initialize-Subscription
 }
 
-# Get deployment configuration  
+# Get deployment configuration
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
 $currentSubscriptionId = Get-SubscriptionId
@@ -55,7 +55,7 @@ $replicatedDatabaseCount = 0
 
 #---------------------- Helper Functions --------------------------------------------------------------
 <#
- .SYNOPSIS  
+ .SYNOPSIS
   Starts an asynchronous call to create a readable secondary replica of a tenant database
   This function returns a task object that can be used to track the status of the operation
 #>
@@ -67,12 +67,12 @@ function Start-AsynchronousDatabaseReplication
     [Microsoft.Azure.Management.Sql.Fluent.SqlManager]$AzureContext,
 
     [Parameter(Mandatory=$true)]
-    [object]$TenantDatabase       
+    [object]$TenantDatabase
   )
 
   # Construct replication parameters
   $originServerName = ($TenantDatabase.ServerName -split "$($config.RecoveryRoleSuffix)")[0]
-  $originServer = Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.ResourceGroupName -ResourceNameEquals $originServerName
+  $originServer = Get-AzureRmResource -ResourceGroupName $wtpUser.ResourceGroupName -Name $originServerName
   $databaseId = "/subscriptions/$currentSubscriptionId/resourceGroups/$WingtipRecoveryResourceGroup/providers/Microsoft.Sql/servers/$($TenantDatabase.ServerName)/databases/$($TenantDatabase.DatabaseName)"
 
   # Delete existing tenant database
@@ -102,12 +102,12 @@ function Start-AsynchronousDatabaseReplication
                     -DatabaseName $TenantDatabase.DatabaseName `
                     -SourceDatabaseId $databaseId `
                     -RequestedServiceObjectiveName $TenantDatabase.ServiceObjective
-  }  
+  }
   return $taskObject
 }
 
 <#
- .SYNOPSIS  
+ .SYNOPSIS
   Marks a tenant database replication as complete when the database has been successfully replicated
 #>
 function Complete-AsynchronousDatabaseReplication
@@ -169,7 +169,7 @@ foreach ($database in $recoveryDatabaseList)
     $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "endReplication" -ServerName $recoveryServerName -DatabaseName $database.DatabaseName
   }
 }
-$newDatabaseCount = $replicationQueue.length 
+$newDatabaseCount = $replicationQueue.length
 
 if ($newDatabaseCount -eq 0)
 {
@@ -178,7 +178,7 @@ if ($newDatabaseCount -eq 0)
 }
 else
 {
-  # Output recovery progress 
+  # Output recovery progress
   $DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$newDatabaseCount,2)
   $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
   Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $newDatabaseCount)"
@@ -191,7 +191,7 @@ else
 
     if ($currentDatabase)
     {
-      $replicationQueue = $replicationQueue -ne $currentDatabase      
+      $replicationQueue = $replicationQueue -ne $currentDatabase
       $operationObject = Start-AsynchronousDatabaseReplication -AzureContext $azureContext -TenantDatabase $currentDatabase
       $databaseDetails = @{
         "ServerName" = $currentDatabase.ServerName
@@ -218,17 +218,17 @@ else
         {
           $operationQueue += $operationObject
           $operationQueueMap.Add("$operationId", $databaseDetails)
-        }    
-      }         
-    }  
-    else 
+        }
+      }
+    }
+    else
     {
-      # There are no more databases eligible for replication     
+      # There are no more databases eligible for replication
       break
     }
   }
 
-  # Check on status of database replication operations 
+  # Check on status of database replication operations
   while ($operationQueue.Count -gt 0)
   {
     foreach($replicationJob in $operationQueue)
@@ -236,31 +236,31 @@ else
       if (($replicationJob.IsCompleted) -and ($replicationJob.Status -eq 'RanToCompletion'))
       {
         # Update database recovery state
-        Complete-AsynchronousDatabaseReplication -replicationJobId $replicationJob.Id 
+        Complete-AsynchronousDatabaseReplication -replicationJobId $replicationJob.Id
 
         # Remove completed job from queue for polling
-        $operationQueue = $operationQueue -ne $replicationJob      
+        $operationQueue = $operationQueue -ne $replicationJob
 
-        # Output recovery progress 
+        # Output recovery progress
         $replicatedDatabaseCount+= 1
         $DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$newDatabaseCount,2)
         $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
-        Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $newDatabaseCount)"               
+        Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $newDatabaseCount)"
       }
       elseif (($replicationJob.IsCompleted) -and ($replicationJob.Status -eq "Faulted"))
       {
-        # Mark errorState for databases that have not been replicated 
+        # Mark errorState for databases that have not been replicated
         $jobId = $replicationJob.Id
         $databaseDetails = $operationQueueMap["$jobId"]
         $dbState = Update-TenantResourceRecoveryState -Catalog $tenantCatalog -UpdateAction "markError" -ServerName $databaseDetails.ServerName -DatabaseName $databaseDetails.DatabaseName
-        
+
         # Remove completed job from queue for polling
         $operationQueue = $operationQueue -ne $replicationJob
       }
     }
   }
 
-  # Output recovery progress 
+  # Output recovery progress
   $DatabaseRecoveryPercentage = [math]::Round($replicatedDatabaseCount/$newDatabaseCount,2)
   $DatabaseRecoveryPercentage = $DatabaseRecoveryPercentage * 100
   Write-Output "$DatabaseRecoveryPercentage% ($($replicatedDatabaseCount) of $newDatabaseCount)"
