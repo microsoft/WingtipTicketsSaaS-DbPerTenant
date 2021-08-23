@@ -76,7 +76,7 @@ $serverList = @()
 $serverList += Get-ExtendedServer -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$")}
 $catalogServer = New-Object -TypeName PsObject -Property @{ServerName = $config.CatalogServerNameStem + $wtpUser.Name; RecoveryState = 'n/a'; State = 'created'}
 $serverList += $catalogServer
-$restoredServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers"
+$restoredServers = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers"
 
 foreach ($server in $serverList)
 {

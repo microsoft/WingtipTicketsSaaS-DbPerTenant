@@ -77,7 +77,7 @@ foreach($server in $recoveryRegionServers)
   $originServerName = ($server.ServerName -split $config.RecoveryRoleSuffix)[0]
 
   # Check if server exists in origin region
-  $originServerExists = Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.ResourceGroupName -ResourceNameEquals $originServerName -ResourceType "Microsoft.Sql/servers"
+  $originServerExists = Get-AzureRmResource -ResourceGroupName $wtpUser.ResourceGroupName -Name $originServerName -ResourceType "Microsoft.Sql/servers"
 
   if (!$originServerExists)
   {
@@ -99,7 +99,7 @@ foreach($pool in $recoveryRegionElasticPools)
 
   # Check if pool exists with correct configuration
   $originPoolSynced = $false
-  $originPoolExists = Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.ResourceGroupName -ResourceNameEquals "$originServerName/$($pool.ElasticPoolName)"
+  $originPoolExists = Get-AzureRmResource -ResourceGroupName $wtpUser.ResourceGroupName -Name "$originServerName/$($pool.ElasticPoolName)"
   
   if ($originPoolExists)
   {
