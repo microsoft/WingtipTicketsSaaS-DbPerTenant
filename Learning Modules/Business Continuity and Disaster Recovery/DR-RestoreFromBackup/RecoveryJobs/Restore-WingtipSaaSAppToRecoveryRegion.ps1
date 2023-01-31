@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Deploys an instance of the Wingtip web application with a traffic manager endpoint to a recovery region 
+  Deploys an instance of the Wingtip web application with a traffic manager endpoint to a recovery region
 
 .DESCRIPTION
   This script is intended to be run as a background job in the 'Restore-IntoSecondaryRegion' script that recovers the Wingtip SaaS app environment (apps, databases, servers e.t.c) into a recovery region.
@@ -20,9 +20,9 @@ Import-Module "$using:scriptPath\..\..\Common\CatalogAndDatabaseManagement" -For
 Import-Module "$using:scriptPath\..\..\WtpConfig" -Force
 Import-Module "$using:scriptPath\..\..\UserConfig" -Force
 
-# Stop execution on error 
+# Stop execution on error
 $ErrorActionPreference = "Stop"
-  
+
 # Login to Azure subscription
 $credentialLoad = Import-AzureRmContext -Path "$env:TEMP\profile.json"
 if (!$credentialLoad)
@@ -30,17 +30,17 @@ if (!$credentialLoad)
     Initialize-Subscription
 }
 
-# Get deployment configuration  
+# Get deployment configuration
 $wtpUser = Get-UserConfig
 $config = Get-Configuration
 $recoveryLocation = (Get-AzureRmResourceGroup -ResourceGroupName $WingtipRecoveryResourceGroup).Location
 
 # Get Wingtip web app if it exists
 $recoveryWebAppName = $config.EventsAppNameStem + $recoveryLocation + '-' + $wtpUser.Name
-$wingtipRecoveryApp = Find-AzureRmResource `
+$wingtipRecoveryApp = Get-AzureRmResource `
                         -ResourceType "Microsoft.Web/sites" `
-                        -ResourceGroupNameEquals $WingtipRecoveryResourceGroup `
-                        -ResourceNameEquals $recoveryWebAppName
+                        -ResourceGroupName $WingtipRecoveryResourceGroup `
+                        -Name $recoveryWebAppName
 
 if ($wingtipRecoveryApp)
 {
@@ -63,5 +63,5 @@ else
                     -TenantsRecoveryServer $tenantsRecoveryServerName `
                     -ErrorAction Stop
 
-    Write-Output "Done"                    
+    Write-Output "Done"
 }

@@ -77,8 +77,8 @@ while ($true)
     # Get list of offline tenant databases and their recovery status 
     $originTenantDatabases = @()
     $restoredTenantDatabases = @()
-    $originTenantDatabases += Find-AzureRmResource -ResourceGroupNameEquals $wtpUser.ResourceGroupName -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
-    $restoredTenantDatabases += Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
+    $originTenantDatabases += Get-AzureRmResource -ResourceGroupName $wtpUser.ResourceGroupName -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
+    $restoredTenantDatabases += Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers/databases" -ResourceNameContains "tenants"
     $databaseRecoveryStatuses = Get-ExtendedDatabase -Catalog $tenantCatalog
 
     # Output recovery progress 

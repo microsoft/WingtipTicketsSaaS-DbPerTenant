@@ -85,7 +85,7 @@ while (($pastDeployment) -and ($pastDeployment.ProvisioningState -NotIn "Succeed
 # Note: It is also possible to scope recovery to a smaller list of servers.
 $serverList = @()
 $serverList += Get-ExtendedServer -Catalog $tenantCatalog | Where-Object {($_.ServerName -NotMatch "$($config.RecoveryRoleSuffix)$")}
-$restoredServers = Find-AzureRmResource -ResourceGroupNameEquals $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers"
+$restoredServers = Get-AzureRmResource -ResourceGroupName $WingtipRecoveryResourceGroup -ResourceType "Microsoft.sql/servers"
 
 foreach ($server in $serverList)
 {
